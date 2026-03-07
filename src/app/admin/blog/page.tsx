@@ -132,19 +132,19 @@ export default function AdminBlogPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white font-display">Blog Posts</h1>
-          <p className="text-sm text-zinc-500 mt-1">Create and manage blog content.</p>
+          <h1 className="text-2xl font-bold text-gray-900 font-display">Blog Posts</h1>
+          <p className="text-sm text-gray-500 mt-1">Create and manage blog content.</p>
         </div>
         <Button onClick={openCreate}><Plus className="w-4 h-4" /> New Post</Button>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-          <Input placeholder="Search posts..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="pl-9" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+          <Input variant="admin" placeholder="Search posts..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="pl-9" />
         </div>
         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-          className="h-11 rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 text-sm text-zinc-300">
+          className="h-11 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700">
           {STATUSES.map((s) => <option key={s} value={s}>{s === "ALL" ? "All Statuses" : s}</option>)}
         </select>
       </div>
@@ -152,47 +152,47 @@ export default function AdminBlogPage() {
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 text-orange-500 animate-spin" /></div>
       ) : posts.length === 0 ? (
-        <Card><CardContent className="py-16 text-center">
-          <FileText className="w-10 h-10 text-zinc-700 mx-auto mb-3" />
-          <p className="text-zinc-500">No posts found</p>
+        <Card variant="admin"><CardContent className="py-16 text-center">
+          <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500">No posts found</p>
         </CardContent></Card>
       ) : (
-        <Card>
+        <Card variant="admin">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-zinc-800">
-                  <th className="text-left py-3 px-4 font-medium text-zinc-400">Title</th>
-                  <th className="text-left py-3 px-4 font-medium text-zinc-400 hidden sm:table-cell">Author</th>
-                  <th className="text-left py-3 px-4 font-medium text-zinc-400">Status</th>
-                  <th className="text-left py-3 px-4 font-medium text-zinc-400 hidden md:table-cell">Date</th>
-                  <th className="text-right py-3 px-4 font-medium text-zinc-400">Actions</th>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 font-medium text-gray-500">Title</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-500 hidden sm:table-cell">Author</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-500">Status</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-500 hidden md:table-cell">Date</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-500">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {posts.map((post) => (
-                  <tr key={post.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
+                  <tr key={post.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
                         {post.featured && <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500 shrink-0" />}
-                        <span className="font-medium text-white truncate max-w-62.5">{post.title}</span>
+                        <span className="font-medium text-gray-900 truncate max-w-62.5">{post.title}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-zinc-500 hidden sm:table-cell">
+                    <td className="py-3 px-4 text-gray-500 hidden sm:table-cell">
                       {post.author ? `${post.author.firstName || ""} ${post.author.lastName || ""}`.trim() || "Unknown" : "Unknown"}
                     </td>
                     <td className="py-3 px-4">{statusBadge(post.status)}</td>
-                    <td className="py-3 px-4 text-zinc-500 hidden md:table-cell">{new Date(post.createdAt).toLocaleDateString()}</td>
+                    <td className="py-3 px-4 text-gray-500 hidden md:table-cell">{new Date(post.createdAt).toLocaleDateString()}</td>
                     <td className="py-3 px-4">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => toggleFeatured(post)} className="p-1.5 rounded hover:bg-zinc-800 transition-colors" title="Toggle featured">
-                          <Star className={`w-3.5 h-3.5 ${post.featured ? "text-yellow-500 fill-yellow-500" : "text-zinc-400"}`} />
+                        <button onClick={() => toggleFeatured(post)} className="p-1.5 rounded hover:bg-gray-100 transition-colors" title="Toggle featured">
+                          <Star className={`w-3.5 h-3.5 ${post.featured ? "text-yellow-500 fill-yellow-500" : "text-gray-500"}`} />
                         </button>
-                        <Link href={`/blog/${post.slug}`} className="p-1.5 rounded hover:bg-zinc-800 transition-colors" title="View">
-                          <Eye className="w-3.5 h-3.5 text-zinc-400" />
+                        <Link href={`/blog/${post.slug}`} className="p-1.5 rounded hover:bg-gray-100 transition-colors" title="View">
+                          <Eye className="w-3.5 h-3.5 text-gray-500" />
                         </Link>
-                        <button onClick={() => openEdit(post)} className="p-1.5 rounded hover:bg-zinc-800 transition-colors" title="Edit">
-                          <Edit className="w-3.5 h-3.5 text-zinc-400" />
+                        <button onClick={() => openEdit(post)} className="p-1.5 rounded hover:bg-gray-100 transition-colors" title="Edit">
+                          <Edit className="w-3.5 h-3.5 text-gray-500" />
                         </button>
                         <button onClick={() => deletePost(post.id)} className="p-1.5 rounded hover:bg-red-500/10 transition-colors" title="Delete">
                           <Trash2 className="w-3.5 h-3.5 text-red-400" />
@@ -209,7 +209,7 @@ export default function AdminBlogPage() {
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-zinc-500">Page {page} of {totalPages}</p>
+          <p className="text-sm text-gray-500">Page {page} of {totalPages}</p>
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}><ChevronLeft className="w-4 h-4" /> Previous</Button>
             <Button variant="ghost" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next <ChevronRight className="w-4 h-4" /></Button>
@@ -220,29 +220,29 @@ export default function AdminBlogPage() {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowModal(false)} />
-          <div className="relative bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-4">
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowModal(false)} />
+          <div className="relative bg-white border border-gray-200 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-white">{editingPost ? "Edit Post" : "New Post"}</h2>
-              <button onClick={() => setShowModal(false)} className="p-1 rounded hover:bg-zinc-800"><X className="w-5 h-5 text-zinc-500" /></button>
+              <h2 className="text-lg font-bold text-gray-900">{editingPost ? "Edit Post" : "New Post"}</h2>
+              <button onClick={() => setShowModal(false)} className="p-1 rounded hover:bg-gray-100"><X className="w-5 h-5 text-gray-500" /></button>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm text-zinc-400 mb-1.5">Title</label>
-                <Input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} />
+                <label className="block text-sm text-gray-500 mb-1.5">Title</label>
+                <Input variant="admin" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm text-zinc-400 mb-1.5">Content</label>
-                <Textarea rows={6} value={formData.content} onChange={(e) => setFormData({ ...formData, content: e.target.value })} />
+                <label className="block text-sm text-gray-500 mb-1.5">Content</label>
+                <Textarea variant="admin" rows={6} value={formData.content} onChange={(e) => setFormData({ ...formData, content: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm text-zinc-400 mb-1.5">Excerpt</label>
-                <Textarea rows={2} value={formData.excerpt} onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })} />
+                <label className="block text-sm text-gray-500 mb-1.5">Excerpt</label>
+                <Textarea variant="admin" rows={2} value={formData.excerpt} onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm text-zinc-400 mb-1.5">Status</label>
+                <label className="block text-sm text-gray-500 mb-1.5">Status</label>
                 <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="h-11 w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 text-sm text-zinc-300">
+                  className="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700">
                   <option value="DRAFT">Draft</option>
                   <option value="PUBLISHED">Published</option>
                   <option value="ARCHIVED">Archived</option>

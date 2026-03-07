@@ -130,8 +130,8 @@ export default function AdminMessagesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white font-display">Messages</h1>
-          <p className="text-sm text-zinc-500 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900 font-display">Messages</h1>
+          <p className="text-sm text-gray-500 mt-1">
             View and manage contact form submissions.
             {unreadCount > 0 && <span className="text-orange-500 ml-2">({unreadCount} unread)</span>}
           </p>
@@ -141,15 +141,15 @@ export default function AdminMessagesPage() {
         </Button>
       </div>
 
-      <Card>
+      <Card variant="admin">
         <CardHeader className="pb-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-              <Input placeholder="Search messages..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <Input variant="admin" placeholder="Search messages..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
             </div>
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-11 rounded-lg border border-zinc-700 bg-zinc-800 text-zinc-300 text-sm px-3 focus:outline-none focus:ring-1 focus:ring-orange-500">
+              className="h-11 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm px-3 focus:outline-none focus:ring-1 focus:ring-orange-500">
               <option value="">All Messages</option>
               {STATUS_FILTERS.filter(Boolean).map((s) => (<option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>))}
             </select>
@@ -160,7 +160,7 @@ export default function AdminMessagesPage() {
             <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 text-orange-500 animate-spin" /></div>
           ) : (
             <>
-              <div className="divide-y divide-zinc-800/30">
+              <div className="divide-y divide-gray-100">
                 {messages.map((msg) => {
                   const status = getStatus(msg);
                   const config = statusConfig[status];
@@ -168,19 +168,19 @@ export default function AdminMessagesPage() {
                     <div
                       key={msg.id}
                       onClick={() => openMessage(msg)}
-                      className={`px-6 py-5 hover:bg-zinc-800/20 transition-colors cursor-pointer ${status === "unread" ? "bg-zinc-800/10" : ""}`}
+                      className={`px-6 py-5 hover:bg-gray-50 transition-colors cursor-pointer ${status === "unread" ? "bg-gray-50" : ""}`}
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-1">
-                            <p className={`text-sm font-medium ${status === "unread" ? "text-white" : "text-zinc-300"}`}>{msg.name}</p>
+                            <p className={`text-sm font-medium ${status === "unread" ? "text-gray-900" : "text-gray-700"}`}>{msg.name}</p>
                             <Badge variant={config.variant} className="text-[10px]">{config.label}</Badge>
                           </div>
-                          <p className="text-sm text-white mb-1">{msg.subject || "(No subject)"}</p>
-                          <p className="text-xs text-zinc-500 truncate">{msg.message}</p>
+                          <p className="text-sm text-gray-900 mb-1">{msg.subject || "(No subject)"}</p>
+                          <p className="text-xs text-gray-500 truncate">{msg.message}</p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-xs text-zinc-600">
+                          <span className="text-xs text-gray-400">
                             {new Date(msg.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                           </span>
                           <a href={`mailto:${msg.email}?subject=Re: ${msg.subject || "Your message"}`} onClick={(e) => e.stopPropagation()}>
@@ -197,12 +197,12 @@ export default function AdminMessagesPage() {
               </div>
 
               {messages.length === 0 && (
-                <div className="text-center py-12"><MessageSquare className="w-10 h-10 text-zinc-700 mx-auto mb-3" /><p className="text-sm text-zinc-500">No messages found.</p></div>
+                <div className="text-center py-12"><MessageSquare className="w-10 h-10 text-gray-300 mx-auto mb-3" /><p className="text-sm text-gray-500">No messages found.</p></div>
               )}
 
               {pagination.pages > 1 && (
-                <div className="flex items-center justify-between px-6 py-4 border-t border-zinc-800/50">
-                  <p className="text-xs text-zinc-500">Page {pagination.page} of {pagination.pages}</p>
+                <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+                  <p className="text-xs text-gray-500">Page {pagination.page} of {pagination.pages}</p>
                   <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" disabled={pagination.page <= 1} onClick={() => fetchMessages(pagination.page - 1)}><ChevronLeft className="w-4 h-4" /></Button>
                     <Button variant="outline" size="sm" disabled={pagination.page >= pagination.pages} onClick={() => fetchMessages(pagination.page + 1)}><ChevronRight className="w-4 h-4" /></Button>
@@ -217,25 +217,25 @@ export default function AdminMessagesPage() {
       {/* Message Detail Modal */}
       {selectedMessage && (
         <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedMessage(null)} />
-          <div className="relative w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl p-6">
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setSelectedMessage(null)} />
+          <div className="relative w-full max-w-lg bg-white border border-gray-200 rounded-xl shadow-xl p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-white font-display">Message Details</h2>
-              <button onClick={() => setSelectedMessage(null)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
+              <h2 className="text-lg font-bold text-gray-900 font-display">Message Details</h2>
+              <button onClick={() => setSelectedMessage(null)} className="text-gray-500 hover:text-gray-900"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div><p className="text-xs text-zinc-500 mb-1">From</p><p className="text-sm text-white">{selectedMessage.name}</p></div>
-                <div><p className="text-xs text-zinc-500 mb-1">Email</p><p className="text-sm text-orange-500">{selectedMessage.email}</p></div>
+                <div><p className="text-xs text-gray-500 mb-1">From</p><p className="text-sm text-gray-900">{selectedMessage.name}</p></div>
+                <div><p className="text-xs text-gray-500 mb-1">Email</p><p className="text-sm text-orange-500">{selectedMessage.email}</p></div>
               </div>
-              <div><p className="text-xs text-zinc-500 mb-1">Subject</p><p className="text-sm text-white">{selectedMessage.subject || "(No subject)"}</p></div>
+              <div><p className="text-xs text-gray-500 mb-1">Subject</p><p className="text-sm text-gray-900">{selectedMessage.subject || "(No subject)"}</p></div>
               <div>
-                <p className="text-xs text-zinc-500 mb-1">Message</p>
-                <div className="bg-zinc-800/50 border border-zinc-800 rounded-lg p-4">
-                  <p className="text-sm text-zinc-300 whitespace-pre-wrap">{selectedMessage.message}</p>
+                <p className="text-xs text-gray-500 mb-1">Message</p>
+                <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedMessage.message}</p>
                 </div>
               </div>
-              <div className="text-xs text-zinc-600">
+              <div className="text-xs text-gray-400">
                 Received: {new Date(selectedMessage.createdAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
               </div>
               <div className="flex items-center gap-3 pt-2">

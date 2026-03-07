@@ -14,7 +14,7 @@ const buttonVariants = cva(
         outline:
           "border-2 border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white",
         ghost:
-          "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 text-zinc-400 hover:text-white hover:bg-white/5",
+          "text-gray-500 hover:text-gray-800 hover:bg-gray-500/10",
         link:
           "text-orange-500 underline-offset-4 hover:underline p-0 h-auto",
         destructive:

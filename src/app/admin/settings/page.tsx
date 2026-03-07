@@ -102,8 +102,8 @@ export default function AdminSettingsPage() {
     <div className="space-y-6 max-w-3xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white font-display">Settings</h1>
-          <p className="text-sm text-zinc-500 mt-1">Configure platform settings and preferences.</p>
+          <h1 className="text-2xl font-bold text-gray-900 font-display">Settings</h1>
+          <p className="text-sm text-gray-500 mt-1">Configure platform settings and preferences.</p>
         </div>
         <Button onClick={handleSave} disabled={saving}>
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
@@ -112,7 +112,7 @@ export default function AdminSettingsPage() {
       </div>
 
       {/* General Settings */}
-      <Card>
+      <Card variant="admin">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Globe className="w-4 h-4 text-orange-500" />General
@@ -120,22 +120,22 @@ export default function AdminSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label className="block text-sm text-zinc-400 mb-1.5">Site Name</label>
-            <Input value={siteName} onChange={(e) => setSiteName(e.target.value)} className="max-w-md" />
+            <label className="block text-sm text-gray-500 mb-1.5">Site Name</label>
+            <Input variant="admin" value={siteName} onChange={(e) => setSiteName(e.target.value)} className="max-w-md" />
           </div>
           <div>
-            <label className="block text-sm text-zinc-400 mb-1.5">Tagline</label>
-            <Input value={tagline} onChange={(e) => setTagline(e.target.value)} className="max-w-md" />
+            <label className="block text-sm text-gray-500 mb-1.5">Tagline</label>
+            <Input variant="admin" value={tagline} onChange={(e) => setTagline(e.target.value)} className="max-w-md" />
           </div>
           <div>
-            <label className="block text-sm text-zinc-400 mb-1.5">Site Description</label>
-            <Textarea rows={3} value={siteDescription} onChange={(e) => setSiteDescription(e.target.value)} className="max-w-md" />
+            <label className="block text-sm text-gray-500 mb-1.5">Site Description</label>
+            <Textarea variant="admin" rows={3} value={siteDescription} onChange={(e) => setSiteDescription(e.target.value)} className="max-w-md" />
           </div>
         </CardContent>
       </Card>
 
       {/* Contact */}
-      <Card>
+      <Card variant="admin">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Mail className="w-4 h-4 text-orange-500" />Contact Information
@@ -143,22 +143,22 @@ export default function AdminSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label className="block text-sm text-zinc-400 mb-1.5">Admin Email</label>
-            <Input type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} className="max-w-md" placeholder="admin@integritymannetwork.org" />
+            <label className="block text-sm text-gray-500 mb-1.5">Admin Email</label>
+            <Input variant="admin" type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} className="max-w-md" placeholder="admin@integritymannetwork.org" />
           </div>
           <div>
-            <label className="block text-sm text-zinc-400 mb-1.5">Phone Number</label>
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} className="max-w-md" placeholder="+234 812 345 6789" />
+            <label className="block text-sm text-gray-500 mb-1.5">Phone Number</label>
+            <Input variant="admin" value={phone} onChange={(e) => setPhone(e.target.value)} className="max-w-md" placeholder="+234 812 345 6789" />
           </div>
           <div>
-            <label className="block text-sm text-zinc-400 mb-1.5">Address</label>
-            <Input value={address} onChange={(e) => setAddress(e.target.value)} className="max-w-md" placeholder="Accra, Ghana" />
+            <label className="block text-sm text-gray-500 mb-1.5">Address</label>
+            <Input variant="admin" value={address} onChange={(e) => setAddress(e.target.value)} className="max-w-md" placeholder="Accra, Ghana" />
           </div>
         </CardContent>
       </Card>
 
       {/* Notifications */}
-      <Card>
+      <Card variant="admin">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Bell className="w-4 h-4 text-orange-500" />Notifications
@@ -173,15 +173,15 @@ export default function AdminSettingsPage() {
             { label: "Event registrations", value: notifyEvents, setter: setNotifyEvents },
           ].map((pref) => (
             <label key={pref.label} className="flex items-center gap-3 cursor-pointer group">
-              <input type="checkbox" checked={pref.value} onChange={(e) => pref.setter(e.target.checked)} className="w-4 h-4 rounded bg-zinc-800 border-zinc-700 text-orange-500 focus:ring-orange-500/20" />
-              <span className="text-sm text-zinc-300 group-hover:text-white transition-colors">{pref.label}</span>
+              <input type="checkbox" checked={pref.value} onChange={(e) => pref.setter(e.target.checked)} className="w-4 h-4 rounded bg-white border-gray-300 text-orange-500 focus:ring-orange-500/20" />
+              <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">{pref.label}</span>
             </label>
           ))}
         </CardContent>
       </Card>
 
       {/* Security */}
-      <Card>
+      <Card variant="admin">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Shield className="w-4 h-4 text-orange-500" />Security
@@ -189,17 +189,17 @@ export default function AdminSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label className="block text-sm text-zinc-400 mb-1.5">Maintenance Mode</label>
+            <label className="block text-sm text-gray-500 mb-1.5">Maintenance Mode</label>
             <label className="flex items-center gap-3 cursor-pointer group">
-              <input type="checkbox" checked={maintenanceMode} onChange={(e) => setMaintenanceMode(e.target.checked)} className="w-4 h-4 rounded bg-zinc-800 border-zinc-700 text-orange-500 focus:ring-orange-500/20" />
-              <span className="text-sm text-zinc-300 group-hover:text-white transition-colors">Enable maintenance mode (shows a maintenance page to visitors)</span>
+              <input type="checkbox" checked={maintenanceMode} onChange={(e) => setMaintenanceMode(e.target.checked)} className="w-4 h-4 rounded bg-white border-gray-300 text-orange-500 focus:ring-orange-500/20" />
+              <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Enable maintenance mode (shows a maintenance page to visitors)</span>
             </label>
           </div>
           <div>
-            <label className="block text-sm text-zinc-400 mb-1.5">Registration</label>
+            <label className="block text-sm text-gray-500 mb-1.5">Registration</label>
             <label className="flex items-center gap-3 cursor-pointer group">
-              <input type="checkbox" checked={allowRegistration} onChange={(e) => setAllowRegistration(e.target.checked)} className="w-4 h-4 rounded bg-zinc-800 border-zinc-700 text-orange-500 focus:ring-orange-500/20" />
-              <span className="text-sm text-zinc-300 group-hover:text-white transition-colors">Allow public user registration</span>
+              <input type="checkbox" checked={allowRegistration} onChange={(e) => setAllowRegistration(e.target.checked)} className="w-4 h-4 rounded bg-white border-gray-300 text-orange-500 focus:ring-orange-500/20" />
+              <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Allow public user registration</span>
             </label>
           </div>
         </CardContent>
