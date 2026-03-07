@@ -51,7 +51,19 @@ export default function LoginPage() {
         setError("Invalid email or password.");
         setIsLoading(false);
       } else {
-        router.push("/dashboard");
+        // Check if user is admin and redirect accordingly
+        const callbackUrl = searchParams.get("callbackUrl");
+        if (callbackUrl) {
+          router.push(decodeURIComponent(callbackUrl));
+        } else {
+          // Fetch session to check role
+          const sessionRes = await fetch("/api/admin/auth/session");
+          if (sessionRes.ok) {
+            router.push("/admin");
+          } else {
+            router.push("/dashboard");
+          }
+        }
       }
     } catch {
       setError("Something went wrong. Please try again.");

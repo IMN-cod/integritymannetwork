@@ -2,9 +2,8 @@ import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const protectedRoutes = ["/dashboard", "/admin", "/community"];
+const protectedRoutes = ["/dashboard", "/community"];
 const authRoutes = ["/auth/login", "/auth/register"];
-const adminRoutes = ["/admin"];
 
 export default auth((req) => {
   const { nextUrl } = req;
@@ -19,26 +18,45 @@ export default auth((req) => {
   const isAuthRoute = authRoutes.some((route) =>
     nextUrl.pathname.startsWith(route)
   );
-  const isAdminRoute = adminRoutes.some((route) =>
-    nextUrl.pathname.startsWith(route)
-  );
+  const isAdminLogin = nextUrl.pathname === "/admin/login";
+  const isAdminRoute =
+    nextUrl.pathname.startsWith("/admin") && !isAdminLogin;
 
-  // Redirect logged-in users away from auth pages
-  if (isAuthRoute && isLoggedIn) {
-    return NextResponse.redirect(new URL("/", nextUrl));
+  // ── Admin login page ──
+  // If already logged in as admin, skip login page and go to dashboard
+  if (isAdminLogin && isLoggedIn && isAdmin) {
+    return NextResponse.redirect(new URL("/admin", nextUrl));
+  }
+  // Allow access to admin login page for everyone (it handles its own auth)
+  if (isAdminLogin) {
+    return NextResponse.next();
   }
 
-  // Redirect unauthenticated users to login
+  // ── Admin routes (everything except /admin/login) ──
+  // Must be logged in AND be an admin
+  if (isAdminRoute && !isLoggedIn) {
+    return NextResponse.redirect(new URL("/admin/login", nextUrl));
+  }
+  if (isAdminRoute && isLoggedIn && !isAdmin) {
+    return NextResponse.redirect(new URL("/admin/login", nextUrl));
+  }
+
+  // ── Auth pages ──
+  // Redirect logged-in users away from auth pages
+  if (isAuthRoute && isLoggedIn) {
+    // If user is admin, send them to the admin panel
+    if (isAdmin) {
+      return NextResponse.redirect(new URL("/admin", nextUrl));
+    }
+    return NextResponse.redirect(new URL("/dashboard", nextUrl));
+  }
+
+  // ── Protected member routes ──
   if (isProtectedRoute && !isLoggedIn) {
     const callbackUrl = encodeURIComponent(nextUrl.pathname);
     return NextResponse.redirect(
       new URL(`/auth/login?callbackUrl=${callbackUrl}`, nextUrl)
     );
-  }
-
-  // Redirect non-admin users away from admin routes
-  if (isAdminRoute && !isAdmin) {
-    return NextResponse.redirect(new URL("/", nextUrl));
   }
 
   return NextResponse.next();
