@@ -2,18 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
+import { createStripeDonationSession } from "@/lib/payments/stripe";
+import { initializePaystackTransaction } from "@/lib/payments/paystack";
+import { createPayPalOrder } from "@/lib/payments/paypal";
+
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 const donationSchema = z.object({
   amount: z.number().positive("Amount must be greater than 0"),
-  currency: z.string().default("NGN"),
+  currency: z.string().default("GHS"),
   isRecurring: z.boolean().default(false),
   paymentMethod: z.enum(["PAYSTACK", "STRIPE", "PAYPAL"]),
   campaignId: z.string().optional(),
   message: z.string().optional(),
+  donorEmail: z.string().email().optional(),
 });
 
 // ───────────────────────────────────────
-// POST /api/donate — Create donation record
+// POST /api/donate — Create donation record & initialize payment
 // ───────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -30,6 +36,14 @@ export async function POST(req: NextRequest) {
 
     const data = validation.data;
     const session = await auth();
+    const email = data.donorEmail || session?.user?.email;
+
+    if (!email) {
+      return NextResponse.json(
+        { error: "Email is required for payment processing" },
+        { status: 400 }
+      );
+    }
 
     const donation = await prisma.donation.create({
       data: {
@@ -48,14 +62,78 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // TODO: Initialize payment with Paystack/Stripe/PayPal
-    // and return the payment URL to the client
+    let paymentUrl: string;
+
+    switch (data.paymentMethod) {
+      case "STRIPE": {
+        const stripeSession = await createStripeDonationSession({
+          amount: data.amount,
+          donorEmail: email,
+          donationId: donation.id,
+          recurring: data.isRecurring,
+          successUrl: `${BASE_URL}/donate?status=success&ref=${donation.id}`,
+          cancelUrl: `${BASE_URL}/donate?status=cancelled`,
+        });
+        paymentUrl = stripeSession.url!;
+        // Store Stripe session ID for reference
+        await prisma.donation.update({
+          where: { id: donation.id },
+          data: { paymentId: stripeSession.id },
+        });
+        break;
+      }
+
+      case "PAYSTACK": {
+        const paystackResult = await initializePaystackTransaction({
+          email,
+          amount: data.amount,
+          reference: `DON-${donation.id}`,
+          callbackUrl: `${BASE_URL}/donate?status=success&ref=${donation.id}`,
+          metadata: {
+            donationId: donation.id,
+            type: "donation",
+          },
+        });
+        paymentUrl = paystackResult.authorization_url;
+        await prisma.donation.update({
+          where: { id: donation.id },
+          data: { paymentId: paystackResult.reference },
+        });
+        break;
+      }
+
+      case "PAYPAL": {
+        const paypalOrder = await createPayPalOrder({
+          amount: data.amount,
+          currency: data.currency,
+          description: "Donation — The Integrity Man Network",
+          orderId: donation.id,
+          returnUrl: `${BASE_URL}/donate?status=success&ref=${donation.id}`,
+          cancelUrl: `${BASE_URL}/donate?status=cancelled`,
+        });
+        const approveLink = paypalOrder.links.find(
+          (l) => l.rel === "approve"
+        );
+        paymentUrl = approveLink?.href || "";
+        await prisma.donation.update({
+          where: { id: donation.id },
+          data: { paymentId: paypalOrder.id },
+        });
+        break;
+      }
+
+      default:
+        return NextResponse.json(
+          { error: "Unsupported payment method" },
+          { status: 400 }
+        );
+    }
 
     return NextResponse.json(
       {
         message: "Donation initiated",
         donationId: donation.id,
-        // paymentUrl: "..." — will be returned after payment gateway integration
+        paymentUrl,
       },
       { status: 201 }
     );

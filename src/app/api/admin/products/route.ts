@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
+import { logAdminAction } from "@/lib/audit";
 
 // GET /api/admin/products — List all products
 export async function GET(req: NextRequest) {
@@ -129,6 +130,13 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    await logAdminAction({
+      action: "CREATE",
+      entity: "Product",
+      entityId: product.id,
+      details: { name, slug: finalSlug, price, sku },
+    });
+
     return NextResponse.json({ product }, { status: 201 });
   } catch (error) {
     console.error("[ADMIN_PRODUCTS_POST]", error);
@@ -180,6 +188,13 @@ export async function PATCH(req: NextRequest) {
       data,
     });
 
+    await logAdminAction({
+      action: "UPDATE",
+      entity: "Product",
+      entityId: id,
+      details: data,
+    });
+
     return NextResponse.json({ product });
   } catch (error) {
     console.error("[ADMIN_PRODUCTS_PATCH]", error);
@@ -211,6 +226,12 @@ export async function DELETE(req: NextRequest) {
     }
 
     await prisma.product.delete({ where: { id } });
+
+    await logAdminAction({
+      action: "DELETE",
+      entity: "Product",
+      entityId: id,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

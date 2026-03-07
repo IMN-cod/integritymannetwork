@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
+import { logAdminAction } from "@/lib/audit";
 
 // GET /api/admin/blog — List all blog posts (including drafts)
 export async function GET(req: NextRequest) {
@@ -124,6 +125,13 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    await logAdminAction({
+      action: "CREATE",
+      entity: "BlogPost",
+      entityId: post.id,
+      details: { title, slug: finalSlug, status: status || "DRAFT" },
+    });
+
     return NextResponse.json({ post }, { status: 201 });
   } catch (error) {
     console.error("[ADMIN_BLOG_POST]", error);
@@ -175,6 +183,13 @@ export async function PATCH(req: NextRequest) {
       data,
     });
 
+    await logAdminAction({
+      action: "UPDATE",
+      entity: "BlogPost",
+      entityId: id,
+      details: data,
+    });
+
     return NextResponse.json({ post });
   } catch (error) {
     console.error("[ADMIN_BLOG_PATCH]", error);
@@ -206,6 +221,12 @@ export async function DELETE(req: NextRequest) {
     }
 
     await prisma.blogPost.delete({ where: { id } });
+
+    await logAdminAction({
+      action: "DELETE",
+      entity: "BlogPost",
+      entityId: id,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

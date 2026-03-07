@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { z } from "zod";
 
 const contactSchema = z.object({
@@ -48,12 +49,22 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
-  // Admin-only endpoint — will be protected via middleware
+export async function GET(req: NextRequest) {
   try {
+    const session = await auth();
+    if (
+      !session?.user ||
+      !["ADMIN", "SUPER_ADMIN"].includes(session.user.role)
+    ) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const limit = parseInt(searchParams.get("limit") || "50");
+
     const messages = await prisma.contactMessage.findMany({
       orderBy: { createdAt: "desc" },
-      take: 50,
+      take: limit,
     });
 
     return NextResponse.json(messages);

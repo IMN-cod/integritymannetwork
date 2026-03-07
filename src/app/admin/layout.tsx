@@ -23,6 +23,7 @@ import {
   Shield,
   Search,
   ChevronDown,
+  ClipboardList,
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -33,9 +34,11 @@ const sidebarLinks = [
   { label: "Blog Posts", href: "/admin/blog", icon: FileText },
   { label: "Events", href: "/admin/events", icon: Calendar },
   { label: "Products", href: "/admin/products", icon: ShoppingBag },
+  { label: "Orders", href: "/admin/orders", icon: ClipboardList },
   { label: "Donations", href: "/admin/donations", icon: Heart },
   { label: "Messages", href: "/admin/messages", icon: MessageSquare },
   { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+  { label: "Audit Log", href: "/admin/audit-log", icon: Shield },
   { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 

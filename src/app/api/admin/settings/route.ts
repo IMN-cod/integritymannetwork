@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logAdminAction } from "@/lib/audit";
 
 // GET /api/admin/settings — Get all site settings
 export async function GET() {
@@ -61,6 +62,12 @@ export async function PUT(req: NextRequest) {
     );
 
     await Promise.all(upserts);
+
+    await logAdminAction({
+      action: "SETTINGS_UPDATE",
+      entity: "SiteSetting",
+      details: { keys: Object.keys(settings) },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

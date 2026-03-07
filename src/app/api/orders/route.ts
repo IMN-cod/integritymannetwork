@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { createStripeCheckoutSession } from "@/lib/payments/stripe";
+import { initializePaystackTransaction } from "@/lib/payments/paystack";
+import { createPayPalOrder } from "@/lib/payments/paypal";
+
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 // ═══════════════════════════════════════════════════════
 // POST /api/orders — Create new order
@@ -102,7 +107,80 @@ export async function POST(request: Request) {
       where: { userId: session.user.id },
     });
 
-    return NextResponse.json({ order }, { status: 201 });
+    // Initialize payment gateway
+    let paymentUrl: string;
+    const customerEmail =
+      (data.shipping.email as string) || session.user.email || "";
+
+    switch (data.paymentMethod) {
+      case "STRIPE": {
+        const stripeSession = await createStripeCheckoutSession({
+          orderId: order.id,
+          items: data.items.map((item) => ({
+            name: productNameMap.get(item.productId) || "Product",
+            price: item.price,
+            quantity: item.quantity,
+          })),
+          customerEmail,
+          successUrl: `${BASE_URL}/dashboard?order=success&ref=${order.orderNumber}`,
+          cancelUrl: `${BASE_URL}/checkout?status=cancelled`,
+        });
+        paymentUrl = stripeSession.url!;
+        await prisma.order.update({
+          where: { id: order.id },
+          data: { paymentId: stripeSession.id },
+        });
+        break;
+      }
+
+      case "PAYSTACK": {
+        const paystackResult = await initializePaystackTransaction({
+          email: customerEmail,
+          amount: total,
+          reference: order.orderNumber,
+          callbackUrl: `${BASE_URL}/dashboard?order=success&ref=${order.orderNumber}`,
+          metadata: {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            type: "order",
+          },
+        });
+        paymentUrl = paystackResult.authorization_url;
+        await prisma.order.update({
+          where: { id: order.id },
+          data: { paymentId: paystackResult.reference },
+        });
+        break;
+      }
+
+      case "PAYPAL": {
+        const paypalOrder = await createPayPalOrder({
+          amount: total,
+          currency: "GHS",
+          description: `Order ${order.orderNumber} — The Integrity Man Network`,
+          orderId: order.id,
+          returnUrl: `${BASE_URL}/dashboard?order=success&ref=${order.orderNumber}`,
+          cancelUrl: `${BASE_URL}/checkout?status=cancelled`,
+        });
+        const approveLink = paypalOrder.links.find(
+          (l) => l.rel === "approve"
+        );
+        paymentUrl = approveLink?.href || "";
+        await prisma.order.update({
+          where: { id: order.id },
+          data: { paymentId: paypalOrder.id },
+        });
+        break;
+      }
+
+      default:
+        return NextResponse.json(
+          { error: "Unsupported payment method" },
+          { status: 400 }
+        );
+    }
+
+    return NextResponse.json({ order, paymentUrl }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logAdminAction } from "@/lib/audit";
 
 // GET /api/admin/users — List all users with pagination and search
 export async function GET(req: NextRequest) {
@@ -122,6 +123,13 @@ export async function PATCH(req: NextRequest) {
       },
     });
 
+    await logAdminAction({
+      action: role !== undefined ? "ROLE_CHANGE" : "STATUS_CHANGE",
+      entity: "User",
+      entityId: userId,
+      details: { ...data, userName: `${user.firstName} ${user.lastName}` },
+    });
+
     return NextResponse.json({ user });
   } catch (error) {
     console.error("[ADMIN_USERS_PATCH]", error);
@@ -158,6 +166,12 @@ export async function DELETE(req: NextRequest) {
     }
 
     await prisma.user.delete({ where: { id: userId } });
+
+    await logAdminAction({
+      action: "DELETE",
+      entity: "User",
+      entityId: userId,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

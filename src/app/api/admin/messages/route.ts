@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logAdminAction } from "@/lib/audit";
 
 // GET /api/admin/messages — List all contact messages
 export async function GET(req: NextRequest) {
@@ -97,6 +98,13 @@ export async function PATCH(req: NextRequest) {
       data,
     });
 
+    await logAdminAction({
+      action: "STATUS_CHANGE",
+      entity: "ContactMessage",
+      entityId: id,
+      details: { isRead, replied: !!replied },
+    });
+
     return NextResponse.json({ message });
   } catch (error) {
     console.error("[ADMIN_MESSAGES_PATCH]", error);
@@ -128,6 +136,12 @@ export async function DELETE(req: NextRequest) {
     }
 
     await prisma.contactMessage.delete({ where: { id } });
+
+    await logAdminAction({
+      action: "DELETE",
+      entity: "ContactMessage",
+      entityId: id,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

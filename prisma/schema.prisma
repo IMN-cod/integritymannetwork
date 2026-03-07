@@ -27,6 +27,10 @@ model User {
   bio             String?   @db.Text
   role            Role      @default(MEMBER)
   isActive        Boolean   @default(true)
+  lastLoginAt     DateTime?
+  loginCount      Int       @default(0)
+  failedLogins    Int       @default(0)
+  lockedUntil     DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -43,6 +47,7 @@ model User {
   addresses          Address[]
   notifications      Notification[]
   channelMembers     ChannelMember[]
+  auditLogs          AdminAuditLog[]
 }
 
 enum Role {
@@ -539,4 +544,40 @@ model SiteSetting {
   key   String @id
   value String @db.Text
   type  String @default("string")
+}
+
+// ═══════════════════════════════════════════════════════
+// ADMIN AUDIT TRAIL & SECURITY
+// ═══════════════════════════════════════════════════════
+
+model AdminAuditLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  action    String   // CREATE, UPDATE, DELETE, LOGIN, EXPORT, etc.
+  entity    String   // User, BlogPost, Order, Product, Event, etc.
+  entityId  String?  // ID of the affected record
+  details   Json?    // Extra context (old values, changes made, etc.)
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  admin User @relation(fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([entity])
+  @@index([createdAt])
+  @@index([action])
+}
+
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  success   Boolean
+  ip        String?
+  userAgent String?
+  reason    String?  // "invalid_credentials", "account_locked", "not_admin", etc.
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([createdAt])
 }

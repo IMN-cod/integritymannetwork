@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
+import { logAdminAction } from "@/lib/audit";
 
 // GET /api/admin/events — List all events
 export async function GET(req: NextRequest) {
@@ -130,6 +131,13 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    await logAdminAction({
+      action: "CREATE",
+      entity: "Event",
+      entityId: event.id,
+      details: { title, slug: finalSlug, type, startDate },
+    });
+
     return NextResponse.json({ event }, { status: 201 });
   } catch (error) {
     console.error("[ADMIN_EVENTS_POST]", error);
@@ -183,6 +191,13 @@ export async function PATCH(req: NextRequest) {
       data,
     });
 
+    await logAdminAction({
+      action: "UPDATE",
+      entity: "Event",
+      entityId: id,
+      details: data,
+    });
+
     return NextResponse.json({ event });
   } catch (error) {
     console.error("[ADMIN_EVENTS_PATCH]", error);
@@ -214,6 +229,12 @@ export async function DELETE(req: NextRequest) {
     }
 
     await prisma.event.delete({ where: { id } });
+
+    await logAdminAction({
+      action: "DELETE",
+      entity: "Event",
+      entityId: id,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
