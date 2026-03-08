@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { ProtectedImage } from "@/components/ui/video-player";
@@ -19,6 +19,7 @@ import {
   Home,
   Heart,
   ChevronRight,
+  ChevronLeft,
   Sparkles,
   ArrowUpRight,
   Quote,
@@ -221,9 +222,178 @@ function DefinitionsSection() {
   );
 }
 
-//  CHANNELS PREVIEW — AUTO-SCROLLING MARQUEE 
+//  CHANNELS PREVIEW — INTERACTIVE AUTO-SCROLLING CAROUSEL 
 function ChannelsPreview() {
   const doubled = [...CHANNELS, ...CHANNELS]; // duplicate for seamless loop
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const autoScrollRef = useRef<number | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isDragging = useRef(false);
+  const dragStartX = useRef(0);
+  const scrollStartX = useRef(0);
+  const velocityRef = useRef(0);
+  const lastMoveX = useRef(0);
+  const lastMoveTime = useRef(0);
+
+  // Speed: pixels per frame (~60fps)
+  const SCROLL_SPEED = 0.8;
+  const RESUME_DELAY = 4000; // ms of inactivity before auto-scroll resumes
+
+  // Seamless loop: when past halfway, jump back
+  const resetLoopPosition = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const half = el.scrollWidth / 2;
+    if (el.scrollLeft >= half) {
+      el.scrollLeft -= half;
+    } else if (el.scrollLeft <= 0) {
+      el.scrollLeft += half;
+    }
+  }, []);
+
+  // Auto-scroll animation loop
+  const startAutoScroll = useCallback(() => {
+    const tick = () => {
+      const el = scrollRef.current;
+      if (el) {
+        el.scrollLeft += SCROLL_SPEED;
+        resetLoopPosition();
+      }
+      autoScrollRef.current = requestAnimationFrame(tick);
+    };
+    autoScrollRef.current = requestAnimationFrame(tick);
+  }, [resetLoopPosition]);
+
+  const stopAutoScroll = useCallback(() => {
+    if (autoScrollRef.current) {
+      cancelAnimationFrame(autoScrollRef.current);
+      autoScrollRef.current = null;
+    }
+  }, []);
+
+  // Pause auto-scroll and schedule resume
+  const pauseAndScheduleResume = useCallback(() => {
+    setIsPaused(true);
+    stopAutoScroll();
+    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    resumeTimerRef.current = setTimeout(() => {
+      setIsPaused(false);
+      startAutoScroll();
+    }, RESUME_DELAY);
+  }, [stopAutoScroll, startAutoScroll]);
+
+  // Start auto-scroll on mount
+  useEffect(() => {
+    startAutoScroll();
+    return () => {
+      stopAutoScroll();
+      if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    };
+  }, [startAutoScroll, stopAutoScroll]);
+
+  // Mouse drag handlers
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    isDragging.current = true;
+    dragStartX.current = e.clientX;
+    scrollStartX.current = scrollRef.current?.scrollLeft || 0;
+    lastMoveX.current = e.clientX;
+    lastMoveTime.current = Date.now();
+    velocityRef.current = 0;
+    pauseAndScheduleResume();
+  }, [pauseAndScheduleResume]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging.current || !scrollRef.current) return;
+    e.preventDefault();
+    const dx = e.clientX - dragStartX.current;
+    scrollRef.current.scrollLeft = scrollStartX.current - dx;
+    // Track velocity for momentum
+    const now = Date.now();
+    const dt = now - lastMoveTime.current;
+    if (dt > 0) {
+      velocityRef.current = (e.clientX - lastMoveX.current) / dt;
+    }
+    lastMoveX.current = e.clientX;
+    lastMoveTime.current = now;
+    resetLoopPosition();
+  }, [resetLoopPosition]);
+
+  const applyMomentum = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    let v = velocityRef.current * -15; // invert and scale
+    const decel = 0.95;
+    const tick = () => {
+      if (Math.abs(v) < 0.5) return;
+      el.scrollLeft += v;
+      v *= decel;
+      resetLoopPosition();
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [resetLoopPosition]);
+
+  const handleMouseUp = useCallback(() => {
+    if (isDragging.current) {
+      isDragging.current = false;
+      applyMomentum();
+    }
+  }, [applyMomentum]);
+
+  // Touch drag handlers
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    isDragging.current = true;
+    dragStartX.current = e.touches[0].clientX;
+    scrollStartX.current = scrollRef.current?.scrollLeft || 0;
+    lastMoveX.current = e.touches[0].clientX;
+    lastMoveTime.current = Date.now();
+    velocityRef.current = 0;
+    pauseAndScheduleResume();
+  }, [pauseAndScheduleResume]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isDragging.current || !scrollRef.current) return;
+    const dx = e.touches[0].clientX - dragStartX.current;
+    scrollRef.current.scrollLeft = scrollStartX.current - dx;
+    const now = Date.now();
+    const dt = now - lastMoveTime.current;
+    if (dt > 0) {
+      velocityRef.current = (e.touches[0].clientX - lastMoveX.current) / dt;
+    }
+    lastMoveX.current = e.touches[0].clientX;
+    lastMoveTime.current = now;
+    resetLoopPosition();
+  }, [resetLoopPosition]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (isDragging.current) {
+      isDragging.current = false;
+      applyMomentum();
+    }
+  }, [applyMomentum]);
+
+  // Arrow navigation: scroll by one card width
+  const scrollByCard = useCallback((direction: number) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    pauseAndScheduleResume();
+    el.scrollBy({ left: direction * 340, behavior: "smooth" });
+    setTimeout(() => resetLoopPosition(), 400);
+  }, [pauseAndScheduleResume, resetLoopPosition]);
+
+  // Wheel scroll support
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    // Only capture horizontal-ish or shift-wheel scrolls
+    if (Math.abs(e.deltaX) > 5 || e.shiftKey) {
+      e.preventDefault();
+      const el = scrollRef.current;
+      if (!el) return;
+      el.scrollLeft += e.deltaX || e.deltaY;
+      resetLoopPosition();
+      pauseAndScheduleResume();
+    }
+  }, [pauseAndScheduleResume, resetLoopPosition]);
 
   return (
     <section className="section-padding relative overflow-hidden">
@@ -235,14 +405,42 @@ function ChannelsPreview() {
           </motion.div>
         </div>
 
-        {/* Marquee container — full width, overflow hidden */}
-        <div className="mt-10 sm:mt-16 relative">
+        {/* Carousel container */}
+        <div className="mt-10 sm:mt-16 relative group/carousel">
           {/* Fade edges */}
           <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-32 bg-linear-to-r from-zinc-950 to-transparent z-10 pointer-events-none" />
           <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-32 bg-linear-to-l from-zinc-950 to-transparent z-10 pointer-events-none" />
 
-          <div className="overflow-hidden">
-            <div className="flex gap-4 sm:gap-6 animate-marquee hover:[animation-play-state:paused]">
+          {/* Navigation arrows */}
+          <button
+            onClick={() => scrollByCard(-1)}
+            className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/90 backdrop-blur-sm shadow-lg flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:bg-white hover:scale-110 active:scale-95"
+            aria-label="Scroll left"
+          >
+            <ChevronLeft className="w-5 h-5 text-zinc-800" />
+          </button>
+          <button
+            onClick={() => scrollByCard(1)}
+            className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/90 backdrop-blur-sm shadow-lg flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:bg-white hover:scale-110 active:scale-95"
+            aria-label="Scroll right"
+          >
+            <ChevronRight className="w-5 h-5 text-zinc-800" />
+          </button>
+
+          <div
+            ref={scrollRef}
+            className="overflow-hidden select-none"
+            style={{ cursor: isDragging.current ? "grabbing" : "grab" }}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onWheel={handleWheel}
+          >
+            <div className="flex gap-4 sm:gap-6 w-max">
               {doubled.map((channel, i) => {
                 const Icon = ICON_MAP[channel.icon];
                 const isEven = i % 2 === 0;
@@ -251,6 +449,13 @@ function ChannelsPreview() {
                     key={`${channel.id}-${i}`}
                     href={`/channels#${channel.id}`}
                     className="block shrink-0 w-80 sm:w-95 md:w-105"
+                    draggable={false}
+                    onClick={(e) => {
+                      // Prevent navigation if we were dragging
+                      if (Math.abs((scrollRef.current?.scrollLeft || 0) - scrollStartX.current) > 8) {
+                        e.preventDefault();
+                      }
+                    }}
                   >
                     <div className={cn(
                       "group relative h-full rounded-2xl overflow-hidden border transition-all duration-500 hover:border-orange-500/30 hover:-translate-y-1",
