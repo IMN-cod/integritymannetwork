@@ -21,6 +21,7 @@ import {
   MessageSquare,
   UserPlus,
   ArrowRight,
+  GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NAV_LINKS } from "@/lib/constants";
@@ -31,6 +32,7 @@ const NAV_ICONS: Record<string, React.ElementType> = {
   "/": Home,
   "/about": Info,
   "/channels": Megaphone,
+  "/school": GraduationCap,
   "/events": Calendar,
   "/blog": BookOpen,
   "/donate": Heart,

@@ -52,6 +52,7 @@ model User {
   receivedDMs        DirectMessage[]    @relation("ReceivedDMs")
   conversations1     Conversation[]     @relation("ConvUser1")
   conversations2     Conversation[]     @relation("ConvUser2")
+  courseEnrollments  CourseEnrollment[]
 }
 
 enum Role {
@@ -709,4 +710,83 @@ model LoginAttempt {
 
   @@index([email])
   @@index([createdAt])
+}
+
+// ═══════════════════════════════════════════════════════
+// SCHOOL OF INTEGRITY — COURSES & ENROLLMENT
+// ═══════════════════════════════════════════════════════
+
+model Course {
+  id              String       @id @default(cuid())
+  title           String
+  slug            String       @unique
+  description     String       @db.Text
+  summary         String?      @db.Text
+  coverImage      String?
+  instructor      String?
+  duration        String?                        // e.g. "6 weeks", "3 months"
+  level           CourseLevel  @default(BEGINNER)
+  category        String?                        // e.g. "Character Formation", "Leadership"
+  price           Decimal      @default(0) @db.Decimal(10, 2)
+  isFree          Boolean      @default(true)
+  featured        Boolean      @default(false)
+  status          CourseStatus  @default(DRAFT)
+  maxStudents     Int?
+  enrollmentCount Int          @default(0)
+  startDate       DateTime?
+  endDate         DateTime?
+  syllabus        String?      @db.Text          // JSON or rich text syllabus
+  prerequisites   String?      @db.Text
+  learningOutcomes String?     @db.Text
+  viewCount       Int          @default(0)
+  sortOrder       Int          @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  enrollments CourseEnrollment[]
+
+  @@index([status, sortOrder])
+  @@index([featured])
+  @@index([category])
+  @@index([level])
+}
+
+enum CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model CourseEnrollment {
+  id          String           @id @default(cuid())
+  courseId     String
+  userId      String?
+  guestName   String?
+  guestEmail  String?
+  guestPhone  String?
+  status      EnrollmentStatus @default(ENROLLED)
+  paidAmount  Decimal?         @default(0) @db.Decimal(10, 2)
+  paymentRef  String?
+  notes       String?          @db.Text
+  createdAt   DateTime         @default(now())
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id])
+
+  @@index([courseId])
+  @@index([userId])
+  @@index([status])
+}
+
+enum EnrollmentStatus {
+  ENROLLED
+  WAITLISTED
+  COMPLETED
+  DROPPED
 }

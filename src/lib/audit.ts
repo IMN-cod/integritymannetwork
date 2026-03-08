@@ -39,7 +39,9 @@ export type AuditEntity =
   | "DonationCampaign"
   | "DirectMessage"
   | "BotResponse"
-  | "Upload";
+  | "Upload"
+  | "Course"
+  | "CourseEnrollment";
 
 interface LogOptions {
   action: AuditAction;

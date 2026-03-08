@@ -148,6 +148,7 @@ export const NAV_LINKS = [
   { label: "Home", href: "/" },
   { label: "About", href: "/about" },
   { label: "Channels", href: "/channels" },
+  { label: "School", href: "/school" },
   { label: "Events", href: "/events" },
   { label: "Store", href: "/store" },
   { label: "Blog", href: "/blog" },

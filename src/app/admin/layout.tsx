@@ -25,6 +25,7 @@ import {
   ChevronDown,
   ClipboardList,
   Bot,
+  GraduationCap,
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ const sidebarLinks = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { label: "Users", href: "/admin/users", icon: Users },
   { label: "Blog Posts", href: "/admin/blog", icon: FileText },
+  { label: "Courses", href: "/admin/courses", icon: GraduationCap },
   { label: "Events", href: "/admin/events", icon: Calendar },
   { label: "Products", href: "/admin/products", icon: ShoppingBag },
   { label: "Orders", href: "/admin/orders", icon: ClipboardList },

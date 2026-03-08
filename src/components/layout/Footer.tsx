@@ -30,7 +30,7 @@ const FOOTER_LINKS = {
     { label: "Donate", href: "/donate" },
   ],
   channels: [
-    { label: "School of Integrity", href: "/channels#schools" },
+    { label: "School of Integrity", href: "/school" },
     { label: "Purpose Centers", href: "/channels#schools" },
     { label: "Campus Campaign", href: "/channels#outreach" },
     { label: "Corporate Outreach", href: "/channels#outreach" },
