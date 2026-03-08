@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
   ArrowLeft, Save, Eye, Loader2, ImageIcon, X, Plus, Tag, DollarSign,
   Package, ShoppingBag, Star, Globe, Settings, Trash2, AlertCircle,
-  CheckCircle2, Layers, Barcode, Weight, Truck, Sparkles,
+  CheckCircle2, Layers, Barcode, Weight, Truck, Sparkles, Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,7 +102,9 @@ export default function ProductEditor({ productId }: { productId?: string }) {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [showCategoryInput, setShowCategoryInput] = useState(false);
   const [tagInput, setTagInput] = useState("");
-  const [imageInput, setImageInput] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch categories
   const fetchCategories = useCallback(async () => {
@@ -340,18 +342,49 @@ export default function ProductEditor({ productId }: { productId?: string }) {
     }
   };
 
-  // Image management
-  const addImage = () => {
-    const url = imageInput.trim();
-    if (!url) {
-      const entered = prompt("Enter image URL:");
-      if (entered) {
-        setProduct((prev) => ({ ...prev, images: [...prev.images, entered] }));
+  // Image management — file upload
+  const uploadImages = async (files: FileList | File[]) => {
+    const fileArray = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (!fileArray.length) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      fileArray.forEach((file) => formData.append("files", file));
+
+      const res = await fetch("/api/admin/upload", { method: "POST", body: formData });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Upload failed");
       }
-      return;
+
+      const data = await res.json();
+      if (data.urls?.length) {
+        setProduct((prev) => ({ ...prev, images: [...prev.images, ...data.urls] }));
+      }
+      if (data.errors?.length) {
+        alert("Some files failed:\n" + data.errors.join("\n"));
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
-    setProduct((prev) => ({ ...prev, images: [...prev.images, url] }));
-    setImageInput("");
+  };
+
+  const handleFileDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files.length) {
+      uploadImages(e.dataTransfer.files);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.length) {
+      uploadImages(e.target.files);
+    }
   };
 
   const removeImage = (index: number) => {
@@ -543,20 +576,42 @@ export default function ProductEditor({ productId }: { productId?: string }) {
                   </div>
                 )}
 
-                {/* Add image */}
-                <div className="flex gap-2">
-                  <Input
-                    variant="admin"
-                    value={imageInput}
-                    onChange={(e) => setImageInput(e.target.value)}
-                    placeholder="Paste image URL..."
-                    className="text-sm"
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addImage())}
+                {/* Upload zone */}
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={handleFileDrop}
+                  onClick={() => !uploading && fileInputRef.current?.click()}
+                  className={cn(
+                    "border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all",
+                    dragOver
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-300 hover:border-blue-400 hover:bg-gray-50",
+                    uploading && "opacity-60 pointer-events-none"
+                  )}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                    multiple
+                    onChange={handleFileSelect}
+                    className="hidden"
                   />
-                  <Button variant="outline" size="sm" onClick={addImage}>
-                    <Plus className="w-4 h-4" />
-                    Add
-                  </Button>
+                  {uploading ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                      <p className="text-sm font-medium text-gray-600">Uploading...</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <Upload className="w-8 h-8 text-gray-400" />
+                      <p className="text-sm font-medium text-gray-600">
+                        Drop images here or <span className="text-blue-600 underline">browse</span>
+                      </p>
+                      <p className="text-xs text-gray-400">JPEG, PNG, WebP, GIF, AVIF — Max 5MB each</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

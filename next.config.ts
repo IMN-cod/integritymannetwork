@@ -70,6 +70,15 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
         ],
       },
+      // User uploads — cache with revalidation
+      {
+        source: "/uploads/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=2592000, stale-while-revalidate=86400" },
+          { key: "Content-Disposition", value: "inline" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+        ],
+      },
       // Cache fonts aggressively
       {
         source: "/fonts/:path*",

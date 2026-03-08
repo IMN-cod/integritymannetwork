@@ -10,7 +10,7 @@ import TextAlign from "@tiptap/extension-text-align";
 import Highlight from "@tiptap/extension-highlight";
 import { TextStyle } from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Bold,
   Italic,
@@ -34,6 +34,7 @@ import {
   Undo,
   Redo,
   Pilcrow,
+  Loader2,
 } from "lucide-react";
 
 interface RichTextEditorProps {
@@ -136,12 +137,35 @@ export default function RichTextEditor({
     }
   }, [content, editor]);
 
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+
   const addImage = useCallback(() => {
-    const url = prompt("Enter image URL:");
-    if (url && editor) {
-      editor.chain().focus().setImage({ src: url }).run();
-    }
-  }, [editor]);
+    imageInputRef.current?.click();
+  }, []);
+
+  const handleImageUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!e.target.files?.length || !editor) return;
+      setImageUploading(true);
+      try {
+        const formData = new FormData();
+        Array.from(e.target.files).forEach((f) => formData.append("files", f));
+        const res = await fetch("/api/admin/upload", { method: "POST", body: formData });
+        if (!res.ok) throw new Error("Upload failed");
+        const data = await res.json();
+        for (const url of data.urls || []) {
+          editor.chain().focus().setImage({ src: url }).run();
+        }
+      } catch {
+        alert("Image upload failed");
+      } finally {
+        setImageUploading(false);
+        if (imageInputRef.current) imageInputRef.current.value = "";
+      }
+    },
+    [editor]
+  );
 
   const setLink = useCallback(() => {
     if (!editor) return;
@@ -310,8 +334,16 @@ export default function RichTextEditor({
         <ToolbarDivider />
 
         {/* Media & links */}
-        <ToolbarButton onClick={addImage} title="Insert Image">
-          <ImageIcon className={iconSize} />
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+          multiple
+          onChange={handleImageUpload}
+          className="hidden"
+        />
+        <ToolbarButton onClick={addImage} disabled={imageUploading} title="Upload Image">
+          {imageUploading ? <Loader2 className={`${iconSize} animate-spin`} /> : <ImageIcon className={iconSize} />}
         </ToolbarButton>
         <ToolbarButton
           onClick={setLink}
