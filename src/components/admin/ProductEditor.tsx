@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { slugify, formatCurrency } from "@/lib/utils";
+import { slugify, formatCurrency, cn } from "@/lib/utils";
 
 const RichTextEditor = dynamic(
   () => import("@/components/admin/RichTextEditor"),
@@ -168,6 +168,78 @@ export default function ProductEditor({ productId }: { productId?: string }) {
     fetchProduct();
   }, [fetchCategories, fetchProduct]);
 
+  // ── Smart SEO Engine ──
+  const generateSeoTitle = useCallback((): string => {
+    const parts: string[] = [];
+    if (product.name) parts.push(product.name);
+    const cat = categories.find((c) => c.id === product.categoryId);
+    if (cat) parts.push(cat.name);
+    parts.push("TIMN Store");
+    return parts.join(" | ").slice(0, 60);
+  }, [product.name, product.categoryId, categories]);
+
+  const generateSeoDescription = useCallback((): string => {
+    const parts: string[] = [];
+    if (product.summary) {
+      parts.push(product.summary.slice(0, 110));
+    } else if (product.name) {
+      parts.push(`Shop ${product.name} at The Integrity Man Network Store.`);
+    }
+    if (product.price && parseFloat(product.price) > 0) {
+      parts.push(`From ${formatCurrency(parseFloat(product.price))}.`);
+    }
+    const cat = categories.find((c) => c.id === product.categoryId);
+    if (cat) parts.push(`Browse ${cat.name}.`);
+    if (!product.isDigital) parts.push("Fast shipping across Ghana.");
+    return parts.join(" ").slice(0, 160);
+  }, [product.name, product.summary, product.price, product.categoryId, product.isDigital, categories]);
+
+  const extractKeywords = useCallback((): string[] => {
+    const kw = new Set<string>();
+    if (product.name) {
+      product.name
+        .split(/[\s\-—]+/)
+        .filter((w) => w.length > 3)
+        .forEach((w) => kw.add(w.toLowerCase()));
+    }
+    product.tags.forEach((t) => kw.add(t.toLowerCase()));
+    const cat = categories.find((c) => c.id === product.categoryId);
+    if (cat) kw.add(cat.name.toLowerCase());
+    kw.add("integrity man network");
+    kw.add("timn store");
+    return Array.from(kw).slice(0, 12);
+  }, [product.name, product.tags, product.categoryId, categories]);
+
+  const seoScore = useMemo(() => {
+    const title = product.metaTitle || product.name;
+    const desc = product.metaDescription || product.summary;
+    const checks = [
+      { label: "Custom meta title", ok: !!product.metaTitle, tip: "Set a custom title for search engines" },
+      { label: "Title length (30–60)", ok: title.length >= 30 && title.length <= 60, tip: title.length < 30 ? "Too short — aim for 30+ chars" : title.length > 60 ? "May be truncated" : "Perfect" },
+      { label: "Meta description set", ok: !!product.metaDescription, tip: "Custom descriptions improve CTR" },
+      { label: "Description (100–160)", ok: (desc?.length || 0) >= 100 && (desc?.length || 0) <= 160, tip: (desc?.length || 0) < 100 ? "Too short — add detail" : (desc?.length || 0) > 160 ? "May be truncated" : "Perfect" },
+      { label: "Product images", ok: product.images.length > 0, tip: "Images improve rankings" },
+      { label: "3+ images", ok: product.images.length >= 3, tip: "Multiple angles help buyers" },
+      { label: "Summary filled in", ok: !!product.summary && product.summary.length > 20, tip: "Used in cards & previews" },
+      { label: "Rich description", ok: !!product.description && product.description.length > 50, tip: "Detailed content ranks higher" },
+      { label: "Category assigned", ok: !!product.categoryId, tip: "Improves navigation & structure" },
+      { label: "Tags added (2+)", ok: product.tags.length >= 2, tip: "Improves discoverability" },
+      { label: "Price set", ok: !!product.price && parseFloat(product.price) > 0, tip: "Helps search rich results" },
+      { label: "Clean URL slug", ok: !!product.slug && product.slug.length > 3 && !product.slug.includes("--"), tip: "Short descriptive URLs rank better" },
+    ];
+    const passed = checks.filter((c) => c.ok).length;
+    const score = Math.round((passed / checks.length) * 100);
+    return { score, checks };
+  }, [product]);
+
+  const autoFillSeo = () => {
+    setProduct((prev) => ({
+      ...prev,
+      metaTitle: generateSeoTitle(),
+      metaDescription: generateSeoDescription(),
+    }));
+  };
+
   // Auto-generate slug from name
   const handleNameChange = (name: string) => {
     setProduct((prev) => ({
@@ -209,8 +281,8 @@ export default function ProductEditor({ productId }: { productId?: string }) {
         weight: product.weight ? parseFloat(product.weight) : null,
         tags: product.tags,
         badge: product.badge || null,
-        metaTitle: product.metaTitle || null,
-        metaDescription: product.metaDescription || null,
+        metaTitle: product.metaTitle || generateSeoTitle(),
+        metaDescription: product.metaDescription || generateSeoDescription(),
         variants: product.variants,
       };
 
@@ -339,7 +411,7 @@ export default function ProductEditor({ productId }: { productId?: string }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
       </div>
     );
   }
@@ -410,7 +482,7 @@ export default function ProductEditor({ productId }: { productId?: string }) {
                 </div>
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">
-                    Slug · <span className="text-orange-500">/store/{product.slug || "..."}</span>
+                    Slug · <span className="text-blue-600 font-medium">/store/{product.slug || "..."}</span>
                   </label>
                   <Input
                     variant="admin"
@@ -453,7 +525,7 @@ export default function ProductEditor({ productId }: { productId?: string }) {
                         />
                         {index === 0 && (
                           <div className="absolute top-2 left-2">
-                            <span className="text-[9px] font-bold bg-orange-500 text-white px-1.5 py-0.5 rounded">
+                            <span className="text-[9px] font-bold bg-blue-600 text-white px-1.5 py-0.5 rounded">
                               MAIN
                             </span>
                           </div>
@@ -631,20 +703,20 @@ export default function ProductEditor({ productId }: { productId?: string }) {
                       type="checkbox"
                       checked={product.isActive}
                       onChange={(e) => setProduct((prev) => ({ ...prev, isActive: e.target.checked }))}
-                      className="w-4 h-4 rounded bg-white border-gray-300 text-orange-500 focus:ring-orange-500"
+                      className="w-4 h-4 rounded bg-white border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
-                    <span className="text-sm text-gray-600">Visible in store</span>
+                    <span className="text-sm text-gray-700">Visible in store</span>
                   </label>
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={product.isFeatured}
                       onChange={(e) => setProduct((prev) => ({ ...prev, isFeatured: e.target.checked }))}
-                      className="w-4 h-4 rounded bg-white border-gray-300 text-orange-500 focus:ring-orange-500"
+                      className="w-4 h-4 rounded bg-white border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                     <div className="flex items-center gap-1.5">
                       <Star className="w-3.5 h-3.5 text-amber-500" />
-                      <span className="text-sm text-gray-600">Featured product</span>
+                      <span className="text-sm text-gray-700">Featured product</span>
                     </div>
                   </label>
                   <label className="flex items-center gap-3 cursor-pointer">
@@ -652,9 +724,9 @@ export default function ProductEditor({ productId }: { productId?: string }) {
                       type="checkbox"
                       checked={product.isDigital}
                       onChange={(e) => setProduct((prev) => ({ ...prev, isDigital: e.target.checked }))}
-                      className="w-4 h-4 rounded bg-white border-gray-300 text-orange-500 focus:ring-orange-500"
+                      className="w-4 h-4 rounded bg-white border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
-                    <span className="text-sm text-gray-600">Digital product (no shipping)</span>
+                    <span className="text-sm text-gray-700">Digital product (no shipping)</span>
                   </label>
                 </div>
               </CardContent>
@@ -677,8 +749,8 @@ export default function ProductEditor({ productId }: { productId?: string }) {
                       onClick={() => setActiveTab(tab.id)}
                       className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-[11px] font-medium border-b-2 transition-all ${
                         activeTab === tab.id
-                          ? "border-orange-500 text-orange-600"
-                          : "border-transparent text-gray-400 hover:text-gray-600"
+                          ? "border-blue-600 text-blue-700"
+                          : "border-transparent text-gray-500 hover:text-gray-700"
                       }`}
                     >
                       <tab.icon className="w-3.5 h-3.5" />
@@ -734,7 +806,7 @@ export default function ProductEditor({ productId }: { productId?: string }) {
                         <select
                           value={product.categoryId}
                           onChange={(e) => setProduct((prev) => ({ ...prev, categoryId: e.target.value }))}
-                          className="w-full h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm text-gray-900 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none"
+                          className="w-full h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                           <option value="">No category</option>
                           {categories.map((cat) => (
@@ -746,7 +818,7 @@ export default function ProductEditor({ productId }: { productId?: string }) {
                         {!showCategoryInput ? (
                           <button
                             onClick={() => setShowCategoryInput(true)}
-                            className="text-[11px] text-orange-500 hover:text-orange-600 mt-1.5 font-medium"
+                            className="text-[11px] text-blue-600 hover:text-blue-700 mt-1.5 font-semibold"
                           >
                             + Create new category
                           </button>
@@ -777,7 +849,7 @@ export default function ProductEditor({ productId }: { productId?: string }) {
                         <select
                           value={product.badge}
                           onChange={(e) => setProduct((prev) => ({ ...prev, badge: e.target.value }))}
-                          className="w-full h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm text-gray-900 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none"
+                          className="w-full h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                           {BADGE_OPTIONS.map((b) => (
                             <option key={b} value={b}>
@@ -919,46 +991,165 @@ export default function ProductEditor({ productId }: { productId?: string }) {
                   {/* ── SEO TAB ── */}
                   {activeTab === "seo" && (
                     <>
+                      {/* SEO Score */}
+                      <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-xs font-bold text-gray-800 uppercase tracking-wider">SEO Score</h4>
+                          <span className={cn(
+                            "text-xl font-bold",
+                            seoScore.score >= 80 ? "text-emerald-600" : seoScore.score >= 50 ? "text-amber-600" : "text-red-500"
+                          )}>
+                            {seoScore.score}%
+                          </span>
+                        </div>
+                        <div className="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className={cn(
+                              "h-full rounded-full transition-all duration-500",
+                              seoScore.score >= 80 ? "bg-emerald-500" : seoScore.score >= 50 ? "bg-amber-500" : "bg-red-400"
+                            )}
+                            style={{ width: `${seoScore.score}%` }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-gray-500 mt-2">
+                          {seoScore.score >= 80 ? "Great! Well optimized for search." : seoScore.score >= 50 ? "Good start — fill in more items below." : "Needs work — complete the checklist."}
+                        </p>
+                      </div>
+
+                      {/* Auto-Generate */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={autoFillSeo}
+                        className="w-full border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800 font-semibold"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        Auto-Generate SEO Fields
+                      </Button>
+
+                      {/* Meta Title */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1.5">Meta Title</label>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="text-xs font-semibold text-gray-800">Meta Title</label>
+                          {!product.metaTitle && (
+                            <button
+                              onClick={() => setProduct((prev) => ({ ...prev, metaTitle: generateSeoTitle() }))}
+                              className="text-[10px] text-blue-600 hover:text-blue-700 font-semibold"
+                            >
+                              Auto-fill
+                            </button>
+                          )}
+                        </div>
                         <Input
                           variant="admin"
                           value={product.metaTitle}
                           onChange={(e) => setProduct((prev) => ({ ...prev, metaTitle: e.target.value }))}
-                          placeholder={product.name || "Product title for search engines"}
+                          placeholder={generateSeoTitle()}
                           className="text-sm"
                         />
-                        <p className="text-[10px] text-gray-400 mt-1">
+                        <p className={cn(
+                          "text-[10px] font-medium mt-1",
+                          (product.metaTitle || product.name).length > 60
+                            ? "text-red-500"
+                            : (product.metaTitle || product.name).length >= 30
+                              ? "text-emerald-600"
+                              : "text-amber-500"
+                        )}>
                           {(product.metaTitle || product.name).length}/60 characters
+                          {(product.metaTitle || product.name).length > 60 && " — will be truncated"}
+                          {(product.metaTitle || product.name).length >= 30 && (product.metaTitle || product.name).length <= 60 && " ✓"}
                         </p>
                       </div>
+
+                      {/* Meta Description */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1.5">Meta Description</label>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="text-xs font-semibold text-gray-800">Meta Description</label>
+                          {!product.metaDescription && (
+                            <button
+                              onClick={() => setProduct((prev) => ({ ...prev, metaDescription: generateSeoDescription() }))}
+                              className="text-[10px] text-blue-600 hover:text-blue-700 font-semibold"
+                            >
+                              Auto-fill
+                            </button>
+                          )}
+                        </div>
                         <Textarea
                           variant="admin"
                           value={product.metaDescription}
                           onChange={(e) => setProduct((prev) => ({ ...prev, metaDescription: e.target.value }))}
-                          placeholder={product.summary || "Product description for search engines"}
+                          placeholder={generateSeoDescription()}
                           rows={3}
                           className="text-sm"
                         />
-                        <p className="text-[10px] text-gray-400 mt-1">
-                          {(product.metaDescription || product.summary).length}/160 characters
+                        <p className={cn(
+                          "text-[10px] font-medium mt-1",
+                          (product.metaDescription || product.summary || "").length > 160
+                            ? "text-red-500"
+                            : (product.metaDescription || product.summary || "").length >= 100
+                              ? "text-emerald-600"
+                              : "text-amber-500"
+                        )}>
+                          {(product.metaDescription || product.summary || "").length}/160 characters
+                          {(product.metaDescription || product.summary || "").length > 160 && " — will be truncated"}
+                          {(product.metaDescription || product.summary || "").length >= 100 && (product.metaDescription || product.summary || "").length <= 160 && " ✓"}
                         </p>
                       </div>
 
-                      {/* Preview */}
-                      <div className="p-4 rounded-lg bg-gray-50 border border-gray-100 space-y-1">
-                        <p className="text-xs font-medium text-gray-500 mb-2">Search Preview</p>
-                        <p className="text-sm text-blue-700 font-medium truncate">
+                      {/* Suggested Keywords */}
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-800 mb-1.5">Suggested Keywords</label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {extractKeywords().map((kw) => (
+                            <span
+                              key={kw}
+                              className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-medium"
+                            >
+                              {kw}
+                            </span>
+                          ))}
+                          {extractKeywords().length === 0 && (
+                            <p className="text-[10px] text-gray-500 italic">Add name, tags & category for suggestions</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Google Preview */}
+                      <div className="p-4 rounded-xl bg-white border border-gray-200 shadow-sm space-y-1">
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Google Preview</p>
+                        <p className="text-[15px] text-blue-800 font-medium leading-snug truncate">
                           {product.metaTitle || product.name || "Product Title"}
                         </p>
-                        <p className="text-[11px] text-emerald-700 truncate">
-                          integritymannetwork.com/store/{product.slug || "..."}
+                        <p className="text-[12px] text-emerald-700 truncate">
+                          integritymannetwork.com › store › {product.slug || "..."}
                         </p>
-                        <p className="text-[11px] text-gray-500 line-clamp-2">
-                          {product.metaDescription || product.summary || "Product description will appear here..."}
+                        <p className="text-[12px] text-gray-600 line-clamp-2 leading-relaxed">
+                          {product.metaDescription || product.summary || "Product description will appear here in search results..."}
                         </p>
+                      </div>
+
+                      {/* SEO Checklist */}
+                      <div>
+                        <p className="text-xs font-bold text-gray-800 mb-2 uppercase tracking-wider">SEO Checklist</p>
+                        <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+                          {seoScore.checks.map((check) => (
+                            <div key={check.label} className="flex items-start gap-2">
+                              {check.ok ? (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                              ) : (
+                                <AlertCircle className="w-3.5 h-3.5 text-gray-300 shrink-0 mt-0.5" />
+                              )}
+                              <div>
+                                <p className={cn("text-[11px] font-medium", check.ok ? "text-gray-700" : "text-gray-400")}>
+                                  {check.label}
+                                </p>
+                                {!check.ok && (
+                                  <p className="text-[9px] text-gray-400">{check.tip}</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </>
                   )}
@@ -977,11 +1168,11 @@ export default function ProductEditor({ productId }: { productId?: string }) {
                               type="checkbox"
                               checked={product.isDigital}
                               onChange={(e) => setProduct((prev) => ({ ...prev, isDigital: e.target.checked }))}
-                              className="w-4 h-4 rounded bg-white border-gray-300 text-orange-500"
+                              className="w-4 h-4 rounded bg-white border-gray-300 text-blue-600"
                             />
                             <div>
                               <p className="text-sm text-gray-700 font-medium">Digital product</p>
-                              <p className="text-[10px] text-gray-400">No shipping required</p>
+                              <p className="text-[10px] text-gray-500">No shipping required</p>
                             </div>
                           </label>
                         </div>
@@ -990,13 +1181,13 @@ export default function ProductEditor({ productId }: { productId?: string }) {
                       {/* Product info */}
                       {product.id && (
                         <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 space-y-2">
-                          <p className="text-[11px] text-gray-500">
+                          <p className="text-[11px] text-gray-600">
                             <span className="font-medium text-gray-700">Product ID:</span>{" "}
                             <span className="font-mono">{product.id}</span>
                           </p>
-                          <p className="text-[11px] text-gray-500">
+                          <p className="text-[11px] text-gray-600">
                             <span className="font-medium text-gray-700">URL:</span>{" "}
-                            <a href={`/store/${product.slug}`} className="text-orange-500 hover:underline" target="_blank">
+                            <a href={`/store/${product.slug}`} className="text-blue-600 hover:text-blue-700 hover:underline" target="_blank">
                               /store/{product.slug}
                             </a>
                           </p>
