@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   BookOpen,
@@ -10,13 +10,17 @@ import {
   Search,
   ArrowRight,
   Tag,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { SectionHeading } from "@/components/ui/section-heading";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -25,78 +29,29 @@ const fadeInUp = {
   transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] },
 };
 
-const SAMPLE_POSTS = [
-  {
-    slug: "understanding-eternal-purpose",
-    title: "Understanding Eternal Purpose: Why You Were Created",
-    excerpt: "Every man was created with divine intention. Understanding your eternal purpose is the first step toward a life of integrity, alignment, and true fulfilment.",
-    category: "Purpose",
-    author: "TIMN Editorial",
-    date: "2025-03-01",
-    readTime: "8 min read",
-    featured: true,
-    image: null,
-  },
-  {
-    slug: "integrity-in-the-marketplace",
-    title: "Integrity in the Marketplace: Leading Without Compromise",
-    excerpt: "The corporate world tests integrity daily. Here's how men of purpose can thrive professionally while maintaining unwavering moral standards.",
-    category: "Leadership",
-    author: "TIMN Editorial",
-    date: "2025-02-20",
-    readTime: "6 min read",
-    featured: false,
-    image: null,
-  },
-  {
-    slug: "the-power-of-brotherhood",
-    title: "The Power of Brotherhood: Why Men Need Community",
-    excerpt: "Isolation weakens men, but covenant community strengthens destiny. Discover why every man needs an Integrity House.",
-    category: "Community",
-    author: "TIMN Editorial",
-    date: "2025-02-15",
-    readTime: "5 min read",
-    featured: false,
-    image: null,
-  },
-  {
-    slug: "raising-sons-with-purpose",
-    title: "Raising Sons With Purpose: Formation Over Information",
-    excerpt: "In a world overflowing with information, our children need formation. How Purpose Centers are reshaping early childhood development.",
-    category: "Family",
-    author: "TIMN Editorial",
-    date: "2025-02-10",
-    readTime: "7 min read",
-    featured: false,
-    image: null,
-  },
-  {
-    slug: "work-as-worship",
-    title: "Work as Worship: Redefining Success Through Scripture",
-    excerpt: "Matthew 6:33 reveals the divine order for true success. When we seek first His kingdom, everything else is added.",
-    category: "Faith",
-    author: "TIMN Editorial",
-    date: "2025-02-05",
-    readTime: "9 min read",
-    featured: false,
-    image: null,
-  },
-  {
-    slug: "the-absent-father-crisis",
-    title: "The Absent Father Crisis: Reclaiming Presence in the Home",
-    excerpt: "Men have vacated their God-given role. It's time to reclaim authority and presence in the family, not through provision alone, but through intentional fatherhood.",
-    category: "Family",
-    author: "TIMN Editorial",
-    date: "2025-01-28",
-    readTime: "10 min read",
-    featured: false,
-    image: null,
-  },
-];
+interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  coverImage: string | null;
+  featured: boolean;
+  viewCount: number;
+  readingTime: number;
+  publishedAt: string;
+  author: { firstName: string | null; lastName: string | null; avatar: string | null } | null;
+  category: { name: string; slug: string } | null;
+  tags: { tag: { id: string; name: string; slug: string } }[];
+  _count?: { comments: number };
+}
 
-const CATEGORIES = ["All", "Purpose", "Leadership", "Community", "Family", "Faith"];
+interface Category {
+  name: string;
+  slug: string;
+  _count?: { posts: number };
+}
 
-//  HERO 
+// ─── HERO ───
 function BlogHero() {
   return (
     <section className="relative hero-padding overflow-hidden">
@@ -124,8 +79,12 @@ function BlogHero() {
   );
 }
 
-//  FEATURED POST 
-function FeaturedPost({ post }: { post: (typeof SAMPLE_POSTS)[0] }) {
+// ─── FEATURED POST ───
+function FeaturedPost({ post }: { post: BlogPost }) {
+  const authorName = post.author
+    ? `${post.author.firstName || ""} ${post.author.lastName || ""}`.trim() || "TIMN Editorial"
+    : "TIMN Editorial";
+
   return (
     <motion.div {...fadeInUp}>
       <Link href={`/blog/${post.slug}`}>
@@ -133,16 +92,20 @@ function FeaturedPost({ post }: { post: (typeof SAMPLE_POSTS)[0] }) {
           <div className="h-1.5 bg-linear-to-r from-orange-500 via-orange-400 to-orange-600" />
           <CardContent className="p-0">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
-              <div className="aspect-16/10 lg:aspect-auto bg-white/5 relative flex items-center justify-center border-b lg:border-b-0 lg:border-r border-zinc-200">
-                <div className="text-center">
-                  <BookOpen className="w-12 h-12 text-zinc-700 mx-auto mb-3" />
-                  <p className="text-xs text-zinc-600">Featured Article</p>
-                </div>
+              <div className="aspect-16/10 lg:aspect-auto bg-white/5 relative flex items-center justify-center border-b lg:border-b-0 lg:border-r border-zinc-200 overflow-hidden">
+                {post.coverImage ? (
+                  <img src={post.coverImage} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                ) : (
+                  <div className="text-center">
+                    <BookOpen className="w-12 h-12 text-zinc-700 mx-auto mb-3" />
+                    <p className="text-xs text-zinc-600">Featured Article</p>
+                  </div>
+                )}
               </div>
 
               <div className="p-5 sm:p-8 md:p-12 flex flex-col justify-center">
                 <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                  <Badge>{post.category}</Badge>
+                  {post.category && <Badge>{post.category.name}</Badge>}
                   <Badge variant="outline">Featured</Badge>
                 </div>
 
@@ -155,9 +118,15 @@ function FeaturedPost({ post }: { post: (typeof SAMPLE_POSTS)[0] }) {
                 </p>
 
                 <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[10px] sm:text-xs text-zinc-500">
-                  <span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" />{post.author}</span>
-                  <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" />{new Date(post.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
-                  <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" />{post.readTime}</span>
+                  <span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" />{authorName}</span>
+                  <span className="flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5" />
+                    {new Date(post.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  </span>
+                  <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" />{post.readingTime} min read</span>
+                  {post.viewCount > 0 && (
+                    <span className="flex items-center gap-1.5"><Eye className="w-3.5 h-3.5" />{post.viewCount.toLocaleString()} views</span>
+                  )}
                 </div>
 
                 <div className="mt-4 sm:mt-6">
@@ -175,19 +144,27 @@ function FeaturedPost({ post }: { post: (typeof SAMPLE_POSTS)[0] }) {
   );
 }
 
-//  POST CARD 
-function PostCard({ post }: { post: (typeof SAMPLE_POSTS)[0] }) {
+// ─── POST CARD ───
+function PostCard({ post }: { post: BlogPost }) {
+  const authorName = post.author
+    ? `${post.author.firstName || ""} ${post.author.lastName || ""}`.trim() || "TIMN Editorial"
+    : "TIMN Editorial";
+
   return (
     <Link href={`/blog/${post.slug}`}>
       <Card variant="light" className="h-full overflow-hidden group hover:border-orange-500/20 transition-all duration-300">
-        <div className="aspect-video bg-white/5 relative flex items-center justify-center">
-          <BookOpen className="w-8 h-8 text-zinc-700" />
+        <div className="aspect-video bg-white/5 relative flex items-center justify-center overflow-hidden">
+          {post.coverImage ? (
+            <img src={post.coverImage} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          ) : (
+            <BookOpen className="w-8 h-8 text-zinc-700" />
+          )}
         </div>
 
         <CardContent className="p-4 sm:p-6">
           <div className="flex items-center gap-2 mb-2 sm:mb-3">
-            <Badge className="text-[10px]">{post.category}</Badge>
-            <span className="text-[10px] text-zinc-500">{post.readTime}</span>
+            {post.category && <Badge className="text-[10px]">{post.category.name}</Badge>}
+            <span className="text-[10px] text-zinc-500">{post.readingTime} min read</span>
           </div>
 
           <h3 className="text-base sm:text-lg font-bold text-zinc-900 font-display mb-2 sm:mb-3 line-clamp-2 group-hover:text-orange-500 transition-colors">
@@ -199,8 +176,13 @@ function PostCard({ post }: { post: (typeof SAMPLE_POSTS)[0] }) {
           </p>
 
           <div className="flex items-center justify-between text-xs text-zinc-500">
-            <span className="flex items-center gap-1.5"><User className="w-3 h-3" />{post.author}</span>
-            <span>{new Date(post.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+            <span className="flex items-center gap-1.5"><User className="w-3 h-3" />{authorName}</span>
+            <div className="flex items-center gap-3">
+              {post.viewCount > 0 && (
+                <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{post.viewCount}</span>
+              )}
+              <span>{new Date(post.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -208,19 +190,66 @@ function PostCard({ post }: { post: (typeof SAMPLE_POSTS)[0] }) {
   );
 }
 
-//  PAGE 
+// ─── MAIN PAGE ───
 export default function BlogPage() {
-  const [activeCategory, setActiveCategory] = useState("All");
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [featuredPost, setFeaturedPost] = useState<BlogPost | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalPosts, setTotalPosts] = useState(0);
 
-  const featuredPost = SAMPLE_POSTS.find((p) => p.featured);
-  const regularPosts = SAMPLE_POSTS.filter((p) => !p.featured);
+  // Fetch categories
+  useEffect(() => {
+    fetch("/api/blog/categories")
+      .then((r) => r.ok ? r.json() : { categories: [] })
+      .then((d) => setCategories(d.categories || []))
+      .catch(() => {});
+  }, []);
 
-  const filteredPosts = regularPosts.filter((post) => {
-    const matchesCategory = activeCategory === "All" || post.category === activeCategory;
-    const matchesSearch = !searchQuery || post.title.toLowerCase().includes(searchQuery.toLowerCase()) || post.excerpt.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  // Fetch featured post
+  useEffect(() => {
+    fetch("/api/blog?featured=true&limit=1")
+      .then((r) => r.ok ? r.json() : { posts: [] })
+      .then((d) => setFeaturedPost(d.posts?.[0] || null))
+      .catch(() => {});
+  }, []);
+
+  // Fetch posts
+  const fetchPosts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ page: String(page), limit: "9" });
+      if (activeCategory !== "all") params.set("category", activeCategory);
+      if (searchQuery) params.set("search", searchQuery);
+
+      const res = await fetch(`/api/blog?${params}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setPosts(data.posts || []);
+      setTotalPages(data.pagination?.totalPages || 1);
+      setTotalPosts(data.pagination?.total || 0);
+    } catch {
+      setPosts([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, activeCategory, searchQuery]);
+
+  useEffect(() => {
+    fetchPosts();
+  }, [fetchPosts]);
+
+  // Search debounce
+  useEffect(() => {
+    const timer = setTimeout(() => setPage(1), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const allCategories = [{ name: "All", slug: "all" }, ...categories];
 
   return (
     <>
@@ -229,49 +258,102 @@ export default function BlogPage() {
 
       <section className="section-padding">
         <div className="container-wide">
-          {featuredPost && (
+          {/* Featured Post */}
+          {featuredPost && page === 1 && activeCategory === "all" && !searchQuery && (
             <div className="mb-10 sm:mb-16">
               <FeaturedPost post={featuredPost} />
             </div>
           )}
 
+          {/* Filters */}
           <motion.div {...fadeInUp} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 mb-8 sm:mb-10">
             <div className="flex overflow-x-auto gap-2 pb-1 -mx-1 px-1 scrollbar-hide">
-              {CATEGORIES.map((cat) => (
+              {allCategories.map((cat) => (
                 <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
+                  key={cat.slug}
+                  onClick={() => { setActiveCategory(cat.slug); setPage(1); }}
                   className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
-                    activeCategory === cat
+                    activeCategory === cat.slug
                       ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20"
                       : "bg-zinc-800/50 text-zinc-400 hover:text-white border border-zinc-700/50 hover:border-zinc-600"
-                  }`}>
-                  {cat}
+                  }`}
+                >
+                  {cat.name}
                 </button>
               ))}
             </div>
 
             <div className="relative w-full sm:w-auto">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-              <Input placeholder="Search articles..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 w-full sm:w-64" />
+              <Input
+                placeholder="Search articles..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 w-full sm:w-64"
+              />
             </div>
           </motion.div>
 
-          {filteredPosts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {filteredPosts.map((post, index) => (
-                <motion.div key={post.slug} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] }}>
-                  <PostCard post={post} />
-                </motion.div>
-              ))}
+          {/* Posts Grid */}
+          {loading ? (
+            <div className="flex justify-center py-20">
+              <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
             </div>
+          ) : posts.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {posts.map((post, index) => (
+                  <motion.div
+                    key={post.id}
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: index * 0.08, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <PostCard post={post} />
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-4 mt-12">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page <= 1}
+                    onClick={() => setPage(page - 1)}
+                  >
+                    <ChevronLeft className="w-4 h-4" /> Previous
+                  </Button>
+                  <span className="text-sm text-zinc-500">
+                    Page {page} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page >= totalPages}
+                    onClick={() => setPage(page + 1)}
+                  >
+                    Next <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+            </>
           ) : (
             <div className="text-center py-20">
               <BookOpen className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
-              <p className="text-zinc-400">No articles found matching your criteria.</p>
-              <Button variant="outline" className="mt-4" onClick={() => { setActiveCategory("All"); setSearchQuery(""); }}>
-                Clear Filters
-              </Button>
+              <p className="text-zinc-400 mb-2">No articles found.</p>
+              <p className="text-sm text-zinc-600 mb-4">
+                {searchQuery
+                  ? "Try a different search term."
+                  : "Check back soon for new content."}
+              </p>
+              {(searchQuery || activeCategory !== "all") && (
+                <Button variant="outline" onClick={() => { setActiveCategory("all"); setSearchQuery(""); }}>
+                  Clear Filters
+                </Button>
+              )}
             </div>
           )}
         </div>

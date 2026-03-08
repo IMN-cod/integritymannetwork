@@ -48,6 +48,7 @@ export async function GET(req: NextRequest) {
           tags: {
             include: { tag: { select: { id: true, name: true, slug: true } } },
           },
+          _count: { select: { comments: true } },
         },
         orderBy: { publishedAt: "desc" },
         skip: (page - 1) * limit,
