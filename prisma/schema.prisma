@@ -194,25 +194,38 @@ model Comment {
 // ═══════════════════════════════════════════════════════
 
 model Event {
-  id          String      @id @default(cuid())
-  title       String
-  slug        String      @unique
-  description String      @db.Text
-  summary     String?     @db.Text
-  coverImage  String?
-  type        EventType
-  location    String?
-  locationUrl String?
-  startDate   DateTime
-  endDate     DateTime?
-  capacity    Int?
-  price       Decimal?    @default(0) @db.Decimal(10, 2)
-  isFree      Boolean     @default(true)
-  status      EventStatus @default(UPCOMING)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id           String      @id @default(cuid())
+  title        String
+  slug         String      @unique
+  description  String      @db.Text
+  summary      String?     @db.Text
+  coverImage   String?
+  type         EventType
+  location     String?
+  locationUrl  String?
+  venue        String?
+  address      String?
+  startDate    DateTime
+  endDate      DateTime?
+  capacity     Int?
+  maxPerPerson Int         @default(5)
+  price        Decimal?    @default(0) @db.Decimal(10, 2)
+  isFree       Boolean     @default(true)
+  featured     Boolean     @default(false)
+  status       EventStatus @default(UPCOMING)
+  organizer    String?
+  contactEmail String?
+  contactPhone String?
+  schedule     String?
+  viewCount    Int         @default(0)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   registrations EventRegistration[]
+
+  @@index([status, startDate])
+  @@index([featured])
+  @@index([type])
 }
 
 enum EventType {
@@ -232,17 +245,27 @@ enum EventStatus {
 }
 
 model EventRegistration {
-  id         String             @id @default(cuid())
-  eventId    String
-  userId     String
-  status     RegistrationStatus @default(REGISTERED)
-  paidAmount Decimal?           @default(0) @db.Decimal(10, 2)
-  createdAt  DateTime           @default(now())
+  id          String             @id @default(cuid())
+  eventId     String
+  userId      String?
+  guestName   String?
+  guestEmail  String?
+  guestPhone  String?
+  ticketCount Int                @default(1)
+  ticketType  String?            @default("General")
+  status      RegistrationStatus @default(REGISTERED)
+  paidAmount  Decimal?           @default(0) @db.Decimal(10, 2)
+  paymentRef  String?
+  notes       String?            @db.Text
+  checkInAt   DateTime?
+  createdAt   DateTime           @default(now())
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id])
+  user  User? @relation(fields: [userId], references: [id])
 
-  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+  @@index([status])
 }
 
 enum RegistrationStatus {

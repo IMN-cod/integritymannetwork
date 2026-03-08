@@ -98,10 +98,6 @@ function HeroSection() {
           </motion.div>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }} className="hidden sm:flex absolute bottom-10 left-1/2 -translate-x-1/2 flex-col items-center gap-2">
-          <span className="text-[10px] tracking-[0.2em] uppercase text-zinc-600">Scroll</span>
-          <div className="w-px h-12 bg-linear-to-b from-orange-500/50 to-transparent" />
-        </motion.div>
       </div>
     </section>
   );
