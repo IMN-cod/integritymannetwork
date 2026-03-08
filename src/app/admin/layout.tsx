@@ -24,6 +24,7 @@ import {
   Search,
   ChevronDown,
   ClipboardList,
+  Bot,
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,7 @@ const sidebarLinks = [
   { label: "Orders", href: "/admin/orders", icon: ClipboardList },
   { label: "Donations", href: "/admin/donations", icon: Heart },
   { label: "Messages", href: "/admin/messages", icon: MessageSquare },
+  { label: "Live Chat", href: "/admin/chat", icon: Bot },
   { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { label: "Audit Log", href: "/admin/audit-log", icon: Shield },
   { label: "Settings", href: "/admin/settings", icon: Settings },

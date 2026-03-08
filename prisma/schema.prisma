@@ -48,6 +48,10 @@ model User {
   notifications      Notification[]
   channelMembers     ChannelMember[]
   auditLogs          AdminAuditLog[]
+  sentDMs            DirectMessage[]    @relation("SentDMs")
+  receivedDMs        DirectMessage[]    @relation("ReceivedDMs")
+  conversations1     Conversation[]     @relation("ConvUser1")
+  conversations2     Conversation[]     @relation("ConvUser2")
 }
 
 enum Role {
@@ -504,6 +508,68 @@ enum MessageType {
   IMAGE
   FILE
   SYSTEM
+}
+
+// ═══════════════════════════════════════════════════════
+// DIRECT MESSAGING (1-on-1)
+// ═══════════════════════════════════════════════════════
+
+model Conversation {
+  id            String   @id @default(cuid())
+  user1Id       String
+  user2Id       String
+  lastMessageAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  user1    User            @relation("ConvUser1", fields: [user1Id], references: [id])
+  user2    User            @relation("ConvUser2", fields: [user2Id], references: [id])
+  messages DirectMessage[]
+
+  @@unique([user1Id, user2Id])
+  @@index([user1Id, lastMessageAt])
+  @@index([user2Id, lastMessageAt])
+}
+
+model DirectMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  receiverId     String
+  content        String   @db.Text
+  type           MessageType @default(TEXT)
+  mediaUrl       String?
+  isRead         Boolean  @default(false)
+  isEdited       Boolean  @default(false)
+  isDeleted      Boolean  @default(false)
+  isBot          Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation("SentDMs", fields: [senderId], references: [id])
+  receiver     User         @relation("ReceivedDMs", fields: [receiverId], references: [id])
+
+  @@index([conversationId, createdAt])
+  @@index([receiverId, isRead])
+}
+
+// ═══════════════════════════════════════════════════════
+// BOT SYSTEM (Automated Responses)
+// ═══════════════════════════════════════════════════════
+
+model BotResponse {
+  id        String   @id @default(cuid())
+  trigger   String   // keyword or pattern
+  response  String   @db.Text
+  category  String?  // e.g. "greeting", "faq", "support"
+  isActive  Boolean  @default(true)
+  priority  Int      @default(0)
+  useCount  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([trigger])
+  @@index([category])
 }
 
 // ═══════════════════════════════════════════════════════
