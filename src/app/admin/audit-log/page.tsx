@@ -5,6 +5,7 @@ import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
+import type { PieLabelRenderProps } from "recharts";
 import {
   Shield, Search, Filter, Download, RefreshCw, Loader2,
   ChevronLeft, ChevronRight, Clock, Activity, AlertTriangle,
@@ -968,7 +969,7 @@ export default function AuditLogPage() {
                             innerRadius={50}
                             outerRadius={85}
                             paddingAngle={2}
-                            label={({ action, count }) => `${action} (${count})`}
+                            label={(props: PieLabelRenderProps) => `${props.name || ""} (${props.value || 0})`}
                           >
                             {stats.actionBreakdown.map((_, i) => (
                               <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />

@@ -69,6 +69,17 @@ export async function PUT(
     if (body.metaDescription !== undefined) data.metaDescription = body.metaDescription || null;
     if (body.readingTime !== undefined) data.readingTime = body.readingTime;
     if (body.scheduledAt !== undefined) data.scheduledAt = body.scheduledAt ? new Date(body.scheduledAt) : null;
+    // SEO fields
+    if (body.seoTitle !== undefined) data.seoTitle = body.seoTitle || null;
+    if (body.focusKeyword !== undefined) data.focusKeyword = body.focusKeyword || null;
+    if (body.canonicalUrl !== undefined) data.canonicalUrl = body.canonicalUrl || null;
+    if (body.ogImage !== undefined) data.ogImage = body.ogImage || null;
+    if (body.ogTitle !== undefined) data.ogTitle = body.ogTitle || null;
+    if (body.ogDescription !== undefined) data.ogDescription = body.ogDescription || null;
+    if (body.twitterImage !== undefined) data.twitterImage = body.twitterImage || null;
+    if (body.noIndex !== undefined) data.noIndex = body.noIndex;
+    if (body.noFollow !== undefined) data.noFollow = body.noFollow;
+    if (body.seoScore !== undefined) data.seoScore = body.seoScore;
 
     if (body.status !== undefined) {
       data.status = body.status;

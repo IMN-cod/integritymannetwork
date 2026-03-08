@@ -50,6 +50,7 @@ interface Post {
   category: { id: string; name: string; slug: string; color: string | null } | null;
   tags: { tag: { id: string; name: string; slug: string } }[];
   _count: { comments: number };
+  seoScore?: number;
 }
 
 interface Stats {
@@ -213,7 +214,7 @@ export default function AdminBlogPage() {
           <h1 className="text-2xl font-bold text-gray-900 font-display">Blog Posts</h1>
           <p className="text-sm text-gray-500 mt-1">Create, manage, and publish your blog content.</p>
         </div>
-        <Button onClick={() => router.push("/admin/blog/new")} className="bg-orange-500 hover:bg-orange-600 text-white shadow-sm">
+        <Button onClick={() => router.push("/admin/blog/new")} className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
           <Plus className="w-4 h-4" /> New Post
         </Button>
       </div>
@@ -254,7 +255,7 @@ export default function AdminBlogPage() {
             <tab.icon className="w-3.5 h-3.5" />
             {tab.label}
             <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-              statusFilter === tab.key ? "bg-orange-100 text-orange-600" : "bg-gray-200 text-gray-500"
+              statusFilter === tab.key ? "bg-blue-100 text-blue-600" : "bg-gray-200 text-gray-500"
             }`}>
               {getTabCount(tab.key)}
             </span>
@@ -318,7 +319,7 @@ export default function AdminBlogPage() {
       {/* Content */}
       {loading ? (
         <div className="flex justify-center py-20">
-          <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+          <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
         </div>
       ) : posts.length === 0 ? (
         <Card variant="admin">
@@ -331,7 +332,7 @@ export default function AdminBlogPage() {
               {search ? "Try a different search term." : "Create your first blog post to get started."}
             </p>
             {!search && (
-              <Button onClick={() => router.push("/admin/blog/new")} className="bg-orange-500 hover:bg-orange-600 text-white">
+              <Button onClick={() => router.push("/admin/blog/new")} className="bg-blue-600 hover:bg-blue-700 text-white">
                 <Plus className="w-4 h-4" /> Create Post
               </Button>
             )}
@@ -346,7 +347,7 @@ export default function AdminBlogPage() {
                   <th className="py-3 px-4 text-left w-10">
                     <button onClick={toggleSelectAll} className="text-gray-400 hover:text-gray-600">
                       {selectedIds.size === posts.length && posts.length > 0 ? (
-                        <CheckSquare className="w-4 h-4 text-orange-500" />
+                        <CheckSquare className="w-4 h-4 text-blue-600" />
                       ) : (
                         <Square className="w-4 h-4" />
                       )}
@@ -364,6 +365,7 @@ export default function AdminBlogPage() {
                       <Eye className="w-3 h-3" /> Views {sortBy === "viewCount" && <ArrowUpDown className="w-3 h-3" />}
                     </button>
                   </th>
+                  <th className="py-3 px-4 text-left hidden lg:table-cell font-medium text-gray-500">SEO</th>
                   <th className="py-3 px-4 text-left hidden md:table-cell">
                     <button onClick={() => toggleSort("createdAt")} className="flex items-center gap-1.5 font-medium text-gray-500 hover:text-gray-700">
                       Date {sortBy === "createdAt" && <ArrowUpDown className="w-3 h-3" />}
@@ -376,14 +378,14 @@ export default function AdminBlogPage() {
                 {posts.map((post) => (
                   <tr
                     key={post.id}
-                    className={`border-b border-gray-100 hover:bg-orange-50/30 transition-colors ${
-                      selectedIds.has(post.id) ? "bg-orange-50/50" : ""
+                    className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${
+                      selectedIds.has(post.id) ? "bg-blue-50/50" : ""
                     }`}
                   >
                     <td className="py-3 px-4">
                       <button onClick={() => toggleSelect(post.id)} className="text-gray-400 hover:text-gray-600">
                         {selectedIds.has(post.id) ? (
-                          <CheckSquare className="w-4 h-4 text-orange-500" />
+                          <CheckSquare className="w-4 h-4 text-blue-600" />
                         ) : (
                           <Square className="w-4 h-4" />
                         )}
@@ -404,7 +406,7 @@ export default function AdminBlogPage() {
                             {post.featured && <Star className="w-3 h-3 text-yellow-500 fill-yellow-500 shrink-0" />}
                             <Link
                               href={`/admin/blog/${post.id}/edit`}
-                              className="font-medium text-gray-900 hover:text-orange-600 transition-colors truncate block max-w-75"
+                              className="font-medium text-gray-900 hover:text-blue-600 transition-colors truncate block max-w-75"
                             >
                               {post.title}
                             </Link>
@@ -455,6 +457,19 @@ export default function AdminBlogPage() {
                         <Eye className="w-3 h-3 text-gray-400" />
                         <span className="text-sm">{post.viewCount.toLocaleString()}</span>
                       </div>
+                    </td>
+                    <td className="py-3 px-4 hidden lg:table-cell">
+                      {post.seoScore !== undefined && post.seoScore !== null ? (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                          post.seoScore >= 80 ? "bg-emerald-50 text-emerald-700" :
+                          post.seoScore >= 50 ? "bg-amber-50 text-amber-700" :
+                          "bg-red-50 text-red-700"
+                        }`}>
+                          {post.seoScore}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
                     </td>
                     <td className="py-3 px-4 hidden md:table-cell">
                       <span className="text-sm text-gray-500">
@@ -529,7 +544,7 @@ export default function AdminBlogPage() {
                     onClick={() => setPage(pageNum)}
                     className={`w-8 h-8 rounded-md text-sm font-medium transition-colors ${
                       page === pageNum
-                        ? "bg-orange-500 text-white"
+                        ? "bg-blue-600 text-white"
                         : "text-gray-600 hover:bg-gray-100"
                     }`}
                   >

@@ -57,6 +57,7 @@ export async function GET(req: NextRequest) {
           featured: true,
           viewCount: true,
           readingTime: true,
+          seoScore: true,
           publishedAt: true,
           createdAt: true,
           updatedAt: true,
@@ -122,7 +123,11 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { title, content, excerpt, coverImage, categoryId, tagIds, status, featured, metaDescription, scheduledAt } = body;
+    const {
+      title, content, excerpt, coverImage, categoryId, tagIds, status, featured,
+      metaDescription, scheduledAt, seoTitle, focusKeyword, canonicalUrl,
+      ogImage, ogTitle, ogDescription, twitterImage, noIndex, noFollow, seoScore,
+    } = body;
 
     if (!title || !content) {
       return NextResponse.json({ error: "Title and content are required" }, { status: 400 });
@@ -150,6 +155,16 @@ export async function POST(req: NextRequest) {
         featured: featured || false,
         readingTime,
         metaDescription: metaDescription || null,
+        seoTitle: seoTitle || null,
+        focusKeyword: focusKeyword || null,
+        canonicalUrl: canonicalUrl || null,
+        ogImage: ogImage || null,
+        ogTitle: ogTitle || null,
+        ogDescription: ogDescription || null,
+        twitterImage: twitterImage || null,
+        noIndex: noIndex || false,
+        noFollow: noFollow || false,
+        seoScore: seoScore || 0,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
         authorId: session.user.id,
         publishedAt: status === "PUBLISHED" ? new Date() : null,

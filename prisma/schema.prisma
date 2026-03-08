@@ -129,11 +129,24 @@ model BlogPost {
   featured        Boolean    @default(false)
   viewCount       Int        @default(0)
   readingTime     Int        @default(0)        // minutes
-  metaDescription String?    @db.Text
   scheduledAt     DateTime?
   publishedAt     DateTime?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
+
+  // ── Advanced SEO ──
+  seoTitle        String?    @db.Text           // custom title tag (vs post title)
+  metaDescription String?    @db.Text           // meta description
+  focusKeyword    String?                       // primary keyword/keyphrase
+  canonicalUrl    String?                       // canonical URL override
+  ogImage         String?                       // Open Graph image (separate from cover)
+  ogTitle         String?                       // Open Graph title override
+  ogDescription   String?    @db.Text           // Open Graph description override
+  twitterImage    String?                       // Twitter card image override
+  noIndex         Boolean    @default(false)    // prevent indexing
+  noFollow        Boolean    @default(false)    // prevent link following
+  seoScore        Int        @default(0)        // calculated SEO score 0-100
+  structuredData  Json?                         // custom JSON-LD overrides
 
   author   User          @relation(fields: [authorId], references: [id])
   category BlogCategory? @relation(fields: [categoryId], references: [id])
@@ -144,6 +157,7 @@ model BlogPost {
   @@index([categoryId])
   @@index([featured])
   @@index([viewCount])
+  @@index([focusKeyword])
 }
 
 enum PostStatus {
