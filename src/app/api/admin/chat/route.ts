@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logAdminAction } from "@/lib/audit";
 
 // ──────────────────────────────────────────────────────────
 // GET  /api/admin/chat — list all conversations (admin view)
@@ -149,6 +150,8 @@ export async function POST(req: NextRequest) {
         data: { lastMessageAt: new Date() },
       });
 
+      await logAdminAction({ action: "SEND_MESSAGE", entity: "DirectMessage", entityId: message.id, details: { recipientId: userId, content: content.trim().slice(0, 100) } });
+
       return NextResponse.json({ message, conversationId: conversation.id });
     }
 
@@ -165,12 +168,14 @@ export async function POST(req: NextRequest) {
           where: { id },
           data: { trigger, response, category: category || null, isActive: isActive ?? true, priority: priority ?? 0 },
         });
+        await logAdminAction({ action: "BOT_UPDATE", entity: "BotResponse", entityId: id, details: { trigger, isActive } });
         return NextResponse.json({ botResponse: updated });
       }
 
       const created = await prisma.botResponse.create({
         data: { trigger, response, category: category || null, isActive: isActive ?? true, priority: priority ?? 0 },
       });
+      await logAdminAction({ action: "BOT_CREATE", entity: "BotResponse", entityId: created.id, details: { trigger, category } });
       return NextResponse.json({ botResponse: created });
     }
 
@@ -179,6 +184,7 @@ export async function POST(req: NextRequest) {
       const { id } = body;
       if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
       await prisma.botResponse.delete({ where: { id } });
+      await logAdminAction({ action: "BOT_DELETE", entity: "BotResponse", entityId: id });
       return NextResponse.json({ success: true });
     }
 
@@ -216,6 +222,8 @@ export async function POST(req: NextRequest) {
         await prisma.conversation.update({ where: { id: conv.id }, data: { lastMessageAt: new Date() } });
         sent++;
       }
+
+      await logAdminAction({ action: "BROADCAST", entity: "DirectMessage", details: { recipientCount: sent, contentPreview: content.trim().slice(0, 100) } });
 
       return NextResponse.json({ success: true, sent });
     }

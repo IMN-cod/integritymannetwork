@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
+import { logAdminAction } from "@/lib/audit";
 
 // GET /api/admin/blog/tags — List all tags
 export async function GET() {
@@ -45,6 +46,8 @@ export async function POST(req: NextRequest) {
     const tag = await prisma.blogTag.create({
       data: { name, slug },
     });
+
+    await logAdminAction({ action: "CREATE", entity: "BlogTag", entityId: tag.id, details: { name } });
 
     return NextResponse.json({ tag }, { status: 201 });
   } catch (error) {

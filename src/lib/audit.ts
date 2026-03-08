@@ -13,19 +13,33 @@ export type AuditAction =
   | "STATUS_CHANGE"
   | "ROLE_CHANGE"
   | "SETTINGS_UPDATE"
-  | "BULK_ACTION";
+  | "BULK_ACTION"
+  | "UPLOAD"
+  | "BROADCAST"
+  | "BOT_CREATE"
+  | "BOT_UPDATE"
+  | "BOT_DELETE"
+  | "SEND_MESSAGE"
+  | "CHECKIN";
 
 export type AuditEntity =
   | "User"
   | "BlogPost"
+  | "BlogCategory"
+  | "BlogTag"
   | "Event"
+  | "EventRegistration"
   | "Product"
+  | "ProductCategory"
   | "Order"
   | "Donation"
   | "ContactMessage"
   | "SiteSetting"
   | "Session"
-  | "DonationCampaign";
+  | "DonationCampaign"
+  | "DirectMessage"
+  | "BotResponse"
+  | "Upload";
 
 interface LogOptions {
   action: AuditAction;

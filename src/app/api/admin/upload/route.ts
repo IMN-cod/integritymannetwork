@@ -4,6 +4,7 @@ import { writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
 import crypto from "crypto";
+import { logAdminAction } from "@/lib/audit";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"];
 const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
@@ -57,6 +58,10 @@ export async function POST(req: NextRequest) {
 
       // Return the public URL path
       uploaded.push(`/uploads/${uniqueName}`);
+    }
+
+    if (uploaded.length > 0) {
+      await logAdminAction({ action: "UPLOAD", entity: "Upload", details: { fileCount: uploaded.length, files: uploaded } });
     }
 
     return NextResponse.json({

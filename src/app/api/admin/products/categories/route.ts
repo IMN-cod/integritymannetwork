@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
+import { logAdminAction } from "@/lib/audit";
 
 // GET /api/admin/products/categories — List all categories
 export async function GET() {
@@ -57,6 +58,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    await logAdminAction({ action: "CREATE", entity: "ProductCategory", entityId: category.id, details: { name } });
+
     return NextResponse.json({ category }, { status: 201 });
   } catch (error) {
     console.error("[ADMIN_CATEGORIES_POST]", error);
@@ -81,6 +84,7 @@ export async function DELETE(req: NextRequest) {
     });
 
     await prisma.productCategory.delete({ where: { id } });
+    await logAdminAction({ action: "DELETE", entity: "ProductCategory", entityId: id });
 
     return NextResponse.json({ success: true });
   } catch (error) {

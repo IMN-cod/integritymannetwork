@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logAdminAction } from "@/lib/audit";
 
 // GET /api/admin/events/[id]/registrations — List registrations for an event
 export async function GET(
@@ -134,6 +135,8 @@ export async function PATCH(
         data,
       });
 
+      await logAdminAction({ action: action === "checkin" ? "CHECKIN" : "STATUS_CHANGE", entity: "EventRegistration", entityId: registrationId, details: { action, newStatus: data.status } });
+
       return NextResponse.json({ registration: reg });
     }
 
@@ -151,6 +154,8 @@ export async function PATCH(
         where: { id: { in: registrationIds } },
         data,
       });
+
+      await logAdminAction({ action: "BULK_ACTION", entity: "EventRegistration", details: { action, count: registrationIds.length, ids: registrationIds } });
 
       return NextResponse.json({ success: true, count: registrationIds.length });
     }
@@ -178,6 +183,7 @@ export async function DELETE(
     }
 
     await prisma.eventRegistration.delete({ where: { id: registrationId } });
+    await logAdminAction({ action: "DELETE", entity: "EventRegistration", entityId: registrationId });
 
     return NextResponse.json({ success: true });
   } catch (error) {

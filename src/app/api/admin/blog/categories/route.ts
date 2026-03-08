@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
+import { logAdminAction } from "@/lib/audit";
 
 // GET /api/admin/blog/categories — List all categories
 export async function GET() {
@@ -45,6 +46,8 @@ export async function POST(req: NextRequest) {
     const category = await prisma.blogCategory.create({
       data: { name, slug, description: description || null, color: color || "#f97316" },
     });
+
+    await logAdminAction({ action: "CREATE", entity: "BlogCategory", entityId: category.id, details: { name } });
 
     return NextResponse.json({ category }, { status: 201 });
   } catch (error) {
