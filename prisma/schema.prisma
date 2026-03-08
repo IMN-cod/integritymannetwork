@@ -280,29 +280,40 @@ enum RegistrationStatus {
 // ═══════════════════════════════════════════════════════
 
 model ProductCategory {
-  id       String    @id @default(cuid())
-  name     String    @unique
-  slug     String    @unique
-  image    String?
-  products Product[]
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  image       String?
+  sortOrder   Int       @default(0)
+  products    Product[]
 }
 
 model Product {
-  id           String   @id @default(cuid())
-  name         String
-  slug         String   @unique
-  description  String?  @db.Text
-  price        Decimal  @db.Decimal(10, 2)
-  comparePrice Decimal? @db.Decimal(10, 2)
-  images       String[]
-  categoryId   String?
-  sku          String?  @unique
-  stock        Int      @default(0)
-  isActive     Boolean  @default(true)
-  isFeatured   Boolean  @default(false)
-  weight       Decimal? @db.Decimal(10, 2)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  description     String?  @db.Text
+  summary         String?  @db.Text
+  price           Decimal  @db.Decimal(10, 2)
+  comparePrice    Decimal? @db.Decimal(10, 2)
+  images          String[]
+  categoryId      String?
+  sku             String?  @unique
+  stock           Int      @default(0)
+  lowStockAlert   Int      @default(5)
+  isActive        Boolean  @default(true)
+  isFeatured      Boolean  @default(false)
+  isDigital       Boolean  @default(false)
+  weight          Decimal? @db.Decimal(10, 2)
+  tags            String[]
+  badge           String?
+  viewCount       Int      @default(0)
+  salesCount      Int      @default(0)
+  metaTitle       String?
+  metaDescription String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   category   ProductCategory? @relation(fields: [categoryId], references: [id])
   variants   ProductVariant[]
@@ -350,6 +361,10 @@ model Order {
   shippingAddress Json?
   billingAddress  Json?
   notes           String?       @db.Text
+  trackingNumber  String?
+  trackingUrl     String?
+  customerEmail   String?
+  customerPhone   String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 

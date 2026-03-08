@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   ShoppingBag,
@@ -11,6 +12,8 @@ import {
   ChevronLeft,
   Check,
   Truck,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,16 +22,107 @@ import { formatCurrency } from "@/lib/utils";
 
 type Step = "shipping" | "payment" | "review";
 
+interface ShippingInfo {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+}
+
 export default function CheckoutPage() {
-  const { items, subtotal, totalItems } = useCartStore();
+  const { items, subtotal, totalItems, clearCart } = useCartStore();
   const [step, setStep] = useState<Step>("shipping");
   const [paymentMethod, setPaymentMethod] = useState<
-    "paystack" | "stripe" | "paypal"
-  >("paystack");
+    "PAYSTACK" | "STRIPE" | "PAYPAL"
+  >("PAYSTACK");
+  const [placing, setPlacing] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
+
+  const [shipping, setShipping] = useState<ShippingInfo>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    country: "Ghana",
+  });
 
   const shippingCost = subtotal() > 50000 ? 0 : 3500;
   const total = subtotal() + shippingCost;
 
+  /* ─── Handlers ─── */
+  const updateShipping = (field: keyof ShippingInfo, value: string) => {
+    setShipping((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const validateShipping = (): boolean => {
+    const required: (keyof ShippingInfo)[] = [
+      "firstName",
+      "lastName",
+      "email",
+      "phone",
+      "address",
+      "city",
+      "state",
+      "country",
+    ];
+    return required.every((field) => shipping[field].trim().length > 0);
+  };
+
+  const handlePlaceOrder = async () => {
+    setPlacing(true);
+    setOrderError(null);
+
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shipping,
+          paymentMethod,
+          items: items.map((item) => ({
+            productId: item.id,
+            variantId: item.variant || undefined,
+            quantity: item.quantity,
+            price: item.salePrice ?? item.price,
+          })),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          setOrderError("Please sign in to place an order.");
+          return;
+        }
+        setOrderError(data.error || "Failed to create order. Please try again.");
+        return;
+      }
+
+      // Clear cart
+      clearCart();
+
+      // Redirect to payment gateway
+      if (data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+      } else {
+        window.location.href = `/dashboard?order=success&ref=${data.order?.orderNumber}`;
+      }
+    } catch {
+      setOrderError("Something went wrong. Please try again.");
+    } finally {
+      setPlacing(false);
+    }
+  };
+
+  /* ─── Empty cart ─── */
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
@@ -82,13 +176,16 @@ export default function CheckoutPage() {
             const isDone = idx < stepIndex;
             return (
               <div key={s.key} className="flex items-center gap-3">
-                <div
+                <button
+                  onClick={() => {
+                    if (isDone) setStep(s.key);
+                  }}
                   className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition-all ${
                     isActive
                       ? "bg-orange-500/10 border border-orange-500/30 text-orange-500"
                       : isDone
-                      ? "bg-green-500/10 border border-green-500/30 text-green-400"
-                      : "bg-zinc-800/30 border border-zinc-800/50 text-zinc-500"
+                      ? "bg-green-500/10 border border-green-500/30 text-green-400 cursor-pointer hover:bg-green-500/15"
+                      : "bg-zinc-800/30 border border-zinc-800/50 text-zinc-500 cursor-default"
                   }`}
                 >
                   {isDone ? (
@@ -97,7 +194,7 @@ export default function CheckoutPage() {
                     <s.icon className="w-4 h-4" />
                   )}
                   {s.label}
-                </div>
+                </button>
                 {idx < steps.length - 1 && (
                   <div className="w-8 h-px bg-zinc-800" />
                 )}
@@ -124,62 +221,109 @@ export default function CheckoutPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm text-zinc-400 mb-1.5">
-                      First Name
+                      First Name *
                     </label>
-                    <Input placeholder="John" />
+                    <Input
+                      placeholder="John"
+                      value={shipping.firstName}
+                      onChange={(e) =>
+                        updateShipping("firstName", e.target.value)
+                      }
+                    />
                   </div>
                   <div>
                     <label className="block text-sm text-zinc-400 mb-1.5">
-                      Last Name
+                      Last Name *
                     </label>
-                    <Input placeholder="Doe" />
+                    <Input
+                      placeholder="Doe"
+                      value={shipping.lastName}
+                      onChange={(e) =>
+                        updateShipping("lastName", e.target.value)
+                      }
+                    />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm text-zinc-400 mb-1.5">
-                    Email
+                    Email *
                   </label>
-                  <Input type="email" placeholder="john@example.com" />
+                  <Input
+                    type="email"
+                    placeholder="john@example.com"
+                    value={shipping.email}
+                    onChange={(e) => updateShipping("email", e.target.value)}
+                  />
                 </div>
 
                 <div>
                   <label className="block text-sm text-zinc-400 mb-1.5">
-                    Phone
+                    Phone *
                   </label>
-                  <Input type="tel" placeholder="+234 812 345 6789" />
+                  <Input
+                    type="tel"
+                    placeholder="+233 20 123 4567"
+                    value={shipping.phone}
+                    onChange={(e) => updateShipping("phone", e.target.value)}
+                  />
                 </div>
 
                 <div>
                   <label className="block text-sm text-zinc-400 mb-1.5">
-                    Address
+                    Address *
                   </label>
-                  <Input placeholder="123 Main Street" />
+                  <Input
+                    placeholder="123 Main Street"
+                    value={shipping.address}
+                    onChange={(e) => updateShipping("address", e.target.value)}
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm text-zinc-400 mb-1.5">
-                      City
+                      City *
                     </label>
-                    <Input placeholder="Accra" />
+                    <Input
+                      placeholder="Accra"
+                      value={shipping.city}
+                      onChange={(e) => updateShipping("city", e.target.value)}
+                    />
                   </div>
                   <div>
                     <label className="block text-sm text-zinc-400 mb-1.5">
-                      Region
+                      Region *
                     </label>
-                    <Input placeholder="Greater Accra" />
+                    <Input
+                      placeholder="Greater Accra"
+                      value={shipping.state}
+                      onChange={(e) => updateShipping("state", e.target.value)}
+                    />
                   </div>
                   <div>
                     <label className="block text-sm text-zinc-400 mb-1.5">
-                      Country
+                      Country *
                     </label>
-                    <Input placeholder="Ghana" />
+                    <Input
+                      placeholder="Ghana"
+                      value={shipping.country}
+                      onChange={(e) =>
+                        updateShipping("country", e.target.value)
+                      }
+                    />
                   </div>
                 </div>
 
                 <div className="flex justify-end pt-2">
-                  <Button onClick={() => setStep("payment")}>
+                  <Button
+                    onClick={() => {
+                      if (validateShipping()) {
+                        setStep("payment");
+                      }
+                    }}
+                    disabled={!validateShipping()}
+                  >
                     Continue to Payment
                   </Button>
                 </div>
@@ -201,17 +345,17 @@ export default function CheckoutPage() {
                 <div className="space-y-3">
                   {[
                     {
-                      id: "paystack" as const,
+                      id: "PAYSTACK" as const,
                       label: "Paystack",
-                      desc: "Pay with card, bank transfer, or USSD",
+                      desc: "Pay with card, bank transfer, mobile money, or USSD",
                     },
                     {
-                      id: "stripe" as const,
+                      id: "STRIPE" as const,
                       label: "Stripe",
-                      desc: "International card payments",
+                      desc: "International card payments (Visa, Mastercard)",
                     },
                     {
-                      id: "paypal" as const,
+                      id: "PAYPAL" as const,
                       label: "PayPal",
                       desc: "Pay with your PayPal account",
                     },
@@ -243,10 +387,7 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="flex justify-between pt-2">
-                  <Button
-                    variant="ghost"
-                    onClick={() => setStep("shipping")}
-                  >
+                  <Button variant="ghost" onClick={() => setStep("shipping")}>
                     Back
                   </Button>
                   <Button onClick={() => setStep("review")}>
@@ -268,19 +409,85 @@ export default function CheckoutPage() {
                   Order Review
                 </h2>
 
+                {/* Shipping summary */}
+                <div className="p-4 rounded-lg bg-zinc-800/20 border border-zinc-800/30 space-y-1">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                      Shipping To
+                    </h3>
+                    <button
+                      onClick={() => setStep("shipping")}
+                      className="text-[10px] text-orange-500 hover:text-orange-400 transition-colors"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                  <p className="text-sm text-white">
+                    {shipping.firstName} {shipping.lastName}
+                  </p>
+                  <p className="text-xs text-zinc-500">{shipping.email}</p>
+                  <p className="text-xs text-zinc-500">{shipping.phone}</p>
+                  <p className="text-xs text-zinc-500">
+                    {shipping.address}, {shipping.city}, {shipping.state},{" "}
+                    {shipping.country}
+                  </p>
+                </div>
+
+                {/* Payment method summary */}
+                <div className="p-4 rounded-lg bg-zinc-800/20 border border-zinc-800/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                      Payment
+                    </h3>
+                    <button
+                      onClick={() => setStep("payment")}
+                      className="text-[10px] text-orange-500 hover:text-orange-400 transition-colors"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                  <p className="text-sm text-white">
+                    {paymentMethod === "PAYSTACK"
+                      ? "Paystack"
+                      : paymentMethod === "STRIPE"
+                      ? "Stripe"
+                      : "PayPal"}
+                  </p>
+                </div>
+
+                {/* Order items */}
                 <div className="space-y-3">
+                  <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                    Items ({totalItems()})
+                  </h3>
                   {items.map((item) => (
                     <div
-                      key={item.id}
+                      key={`${item.id}-${item.variant}`}
                       className="flex items-center justify-between py-3 border-b border-zinc-800/30 last:border-0"
                     >
-                      <div>
-                        <p className="text-sm font-medium text-white">
-                          {item.name}
-                        </p>
-                        <p className="text-xs text-zinc-500">
-                          Qty: {item.quantity}
-                        </p>
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-lg bg-zinc-800/50 border border-zinc-700/30 flex items-center justify-center shrink-0 overflow-hidden relative">
+                          {item.image ? (
+                            <Image
+                              src={item.image}
+                              alt={item.name}
+                              fill
+                              className="object-cover"
+                              sizes="48px"
+                            />
+                          ) : (
+                            <ShoppingBag className="w-4 h-4 text-zinc-600" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-white">
+                            {item.name}
+                          </p>
+                          <p className="text-xs text-zinc-500">
+                            Qty: {item.quantity}
+                            {item.variant && ` · ${item.variant}`}
+                          </p>
+                        </div>
                       </div>
                       <p className="text-sm text-white font-medium">
                         {formatCurrency(
@@ -291,6 +498,7 @@ export default function CheckoutPage() {
                   ))}
                 </div>
 
+                {/* Totals */}
                 <div className="space-y-2 pt-3 border-t border-zinc-800/50">
                   <div className="flex justify-between text-sm">
                     <span className="text-zinc-400">Subtotal</span>
@@ -314,16 +522,34 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
+                {/* Error message */}
+                {orderError && (
+                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-400">{orderError}</p>
+                  </div>
+                )}
+
                 <div className="flex justify-between pt-2">
-                  <Button
-                    variant="ghost"
-                    onClick={() => setStep("payment")}
-                  >
+                  <Button variant="ghost" onClick={() => setStep("payment")}>
                     Back
                   </Button>
-                  <Button className="gap-2">
-                    <Lock className="w-4 h-4" />
-                    Place Order  {formatCurrency(total)}
+                  <Button
+                    className="gap-2"
+                    onClick={handlePlaceOrder}
+                    disabled={placing}
+                  >
+                    {placing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="w-4 h-4" />
+                        Place Order — {formatCurrency(total)}
+                      </>
+                    )}
                   </Button>
                 </div>
               </motion.div>
@@ -340,18 +566,28 @@ export default function CheckoutPage() {
               <div className="space-y-3 mb-4 max-h-48 overflow-y-auto">
                 {items.map((item) => (
                   <div
-                    key={item.id}
+                    key={`${item.id}-${item.variant}`}
                     className="flex items-center gap-3"
                   >
-                    <div className="w-10 h-10 rounded-md bg-zinc-800/50 border border-zinc-700/50 flex items-center justify-center shrink-0">
-                      <ShoppingBag className="w-4 h-4 text-zinc-600" />
+                    <div className="w-10 h-10 rounded-md bg-zinc-800/50 border border-zinc-700/50 flex items-center justify-center shrink-0 overflow-hidden relative">
+                      {item.image ? (
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          fill
+                          className="object-cover"
+                          sizes="40px"
+                        />
+                      ) : (
+                        <ShoppingBag className="w-4 h-4 text-zinc-600" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-white truncate">
                         {item.name}
                       </p>
                       <p className="text-[10px] text-zinc-500">
-                        {item.quantity}  {formatCurrency(item.salePrice ?? item.price)}
+                        {item.quantity} × {formatCurrency(item.salePrice ?? item.price)}
                       </p>
                     </div>
                   </div>
@@ -383,11 +619,11 @@ export default function CheckoutPage() {
               <div className="mt-6 pt-4 border-t border-zinc-800/50 space-y-2">
                 <div className="flex items-center gap-2 text-xs text-zinc-500">
                   <Shield className="w-3.5 h-3.5 text-green-400" />
-                  Secure checkout  SSL encrypted
+                  Secure checkout — SSL encrypted
                 </div>
                 <div className="flex items-center gap-2 text-xs text-zinc-500">
                   <Truck className="w-3.5 h-3.5 text-green-400" />
-                  Free shipping over 50,000
+                  Free shipping over GH₵500
                 </div>
               </div>
             </div>

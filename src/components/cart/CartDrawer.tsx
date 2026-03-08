@@ -10,6 +10,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useCartStore } from "@/stores";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
@@ -82,9 +83,19 @@ export function CartDrawer() {
                         key={`${item.id}-${item.variant}`}
                         className="flex gap-4 p-4 rounded-lg bg-zinc-900/50 border border-zinc-800/30"
                       >
-                        {/* Image placeholder */}
-                        <div className="w-16 h-16 rounded-md bg-zinc-800/50 border border-zinc-700/50 flex items-center justify-center shrink-0">
-                          <ShoppingBag className="w-5 h-5 text-zinc-600" />
+                        {/* Image */}
+                        <div className="w-16 h-16 rounded-md bg-zinc-800/50 border border-zinc-700/50 flex items-center justify-center shrink-0 overflow-hidden relative">
+                          {item.image ? (
+                            <Image
+                              src={item.image}
+                              alt={item.name}
+                              fill
+                              className="object-cover"
+                              sizes="64px"
+                            />
+                          ) : (
+                            <ShoppingBag className="w-5 h-5 text-zinc-600" />
+                          )}
                         </div>
 
                         <div className="flex-1 min-w-0">

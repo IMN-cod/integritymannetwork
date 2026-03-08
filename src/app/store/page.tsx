@@ -1,23 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ShoppingBag,
-  Search,
-  Star,
-  ShoppingCart,
-  Eye,
-  Truck,
-  Shield,
-  Tag,
-  ChevronDown,
-  X,
-  Grid3X3,
-  LayoutList,
-  ArrowUpDown,
-  Package,
-  CheckCircle2,
+  ShoppingBag, Search, Star, ShoppingCart, Eye, Truck, Shield, Tag,
+  ChevronDown, X, Grid3X3, LayoutList, ArrowUpDown, Package,
+  CheckCircle2, Loader2, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -26,116 +14,45 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useCartStore } from "@/stores";
 
-// ──────────────────────────────────────────
-// DATA
-// ──────────────────────────────────────────
+interface Product {
+  id: string;
+  name: string;
+  slug: string;
+  summary: string | null;
+  price: number;
+  comparePrice: number | null;
+  images: string[];
+  stock: number;
+  badge: string | null;
+  tags: string[];
+  isFeatured: boolean;
+  isDigital: boolean;
+  salesCount: number;
+  createdAt: string;
+  category: { name: string; slug: string } | null;
+  variants: { id: string; name: string; value: string; price: number | null; stock: number }[];
+}
 
-const PRODUCTS = [
-  {
-    slug: "integrity-journal",
-    name: "The Integrity Journal",
-    description: "A premium guided journal designed for men pursuing purpose. 90-day structured reflections with scripture, prompts, and accountability tracking.",
-    price: 120,
-    comparePrice: null,
-    category: "Books & Journals",
-    rating: 4.8,
-    reviews: 24,
-    isNew: true,
-    inStock: true,
-    image: null,
-    badge: "Bestseller",
-  },
-  {
-    slug: "purpose-driven-man-book",
-    name: "The Purpose-Driven Man",
-    description: "A foundational teaching on eternal purpose, work, and integrity — distilled from the core teachings of The Integrity Man Network.",
-    price: 70,
-    comparePrice: 95,
-    category: "Books & Journals",
-    rating: 4.9,
-    reviews: 56,
-    isNew: false,
-    inStock: true,
-    image: null,
-    badge: null,
-  },
-  {
-    slug: "integrity-cap-black",
-    name: "Integrity Cap — Midnight",
-    description: "Premium structured cap with embroidered TIMN shield logo. Adjustable strap, breathable fabric.",
-    price: 60,
-    comparePrice: null,
-    category: "Apparel",
-    rating: 4.7,
-    reviews: 18,
-    isNew: true,
-    inStock: true,
-    image: null,
-    badge: null,
-  },
-  {
-    slug: "timn-tshirt-orange",
-    name: "TIMN Statement Tee — Orange",
-    description: "Premium cotton tee with 'God. Work. Integrity.' statement print. Comfortable fit for everyday wear.",
-    price: 95,
-    comparePrice: null,
-    category: "Apparel",
-    rating: 4.6,
-    reviews: 32,
-    isNew: false,
-    inStock: true,
-    image: null,
-    badge: null,
-  },
-  {
-    slug: "integrity-mug",
-    name: "Integrity Ceramic Mug",
-    description: "Matt black ceramic mug with orange TIMN branding. 350ml capacity, microwave & dishwasher safe.",
-    price: 40,
-    comparePrice: null,
-    category: "Accessories",
-    rating: 4.5,
-    reviews: 12,
-    isNew: false,
-    inStock: true,
-    image: null,
-    badge: null,
-  },
-  {
-    slug: "matthew-633-wallart",
-    name: "Matthew 6:33 Wall Art",
-    description: "Premium canvas print featuring Matthew 6:33 in elegant typography with the TIMN brand treatment. 50×70cm.",
-    price: 200,
-    comparePrice: 250,
-    category: "Accessories",
-    rating: 5.0,
-    reviews: 8,
-    isNew: true,
-    inStock: true,
-    image: null,
-    badge: "Limited",
-  },
-];
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  image: string | null;
+  _count: { products: number };
+}
 
-const CATEGORIES = [
-  { id: "all", label: "All Products", count: PRODUCTS.length },
-  { id: "Books & Journals", label: "Books & Journals", count: PRODUCTS.filter((p) => p.category === "Books & Journals").length },
-  { id: "Apparel", label: "Apparel", count: PRODUCTS.filter((p) => p.category === "Apparel").length },
-  { id: "Accessories", label: "Accessories", count: PRODUCTS.filter((p) => p.category === "Accessories").length },
-];
-
-type SortOption = "featured" | "price-asc" | "price-desc" | "rating" | "newest";
+type SortOption = "newest" | "price-asc" | "price-desc" | "popular" | "name";
 
 const SORT_OPTIONS: { id: SortOption; label: string }[] = [
-  { id: "featured", label: "Featured" },
+  { id: "newest", label: "Newest Arrivals" },
+  { id: "popular", label: "Most Popular" },
   { id: "price-asc", label: "Price: Low to High" },
   { id: "price-desc", label: "Price: High to Low" },
-  { id: "rating", label: "Avg. Customer Rating" },
-  { id: "newest", label: "Newest Arrivals" },
+  { id: "name", label: "Name (A-Z)" },
 ];
 
 // ──────────────────────────────────────────
-// HERO — Compact store banner
+// HERO
 // ──────────────────────────────────────────
 
 function StoreHero() {
@@ -168,7 +85,6 @@ function StoreHero() {
             the values you stand for.
           </p>
 
-          {/* Trust bar */}
           <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-zinc-500">
             {[
               { icon: Truck, text: "Free shipping over GH₵500" },
@@ -188,32 +104,27 @@ function StoreHero() {
 }
 
 // ──────────────────────────────────────────
-// PRODUCT CARD — Amazon-style
+// PRODUCT CARD
 // ──────────────────────────────────────────
 
-function ProductCard({
-  product,
-  layout,
-}: {
-  product: (typeof PRODUCTS)[0];
-  layout: "grid" | "list";
-}) {
+function ProductCard({ product, layout }: { product: Product; layout: "grid" | "list" }) {
   const { addItem, openCart } = useCartStore();
 
-  const discount = product.comparePrice
-    ? Math.round(((product.comparePrice - product.price) / product.comparePrice) * 100)
-    : null;
+  const price = Number(product.price);
+  const comparePrice = product.comparePrice ? Number(product.comparePrice) : null;
+  const discount = comparePrice ? Math.round(((comparePrice - price) / comparePrice) * 100) : null;
+  const inStock = product.isDigital || product.stock > 0;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     addItem({
-      id: product.slug,
+      id: product.id,
       name: product.name,
       slug: product.slug,
-      price: product.price,
-      salePrice: product.comparePrice ? product.price : undefined,
-      image: product.image ?? undefined,
+      price,
+      salePrice: comparePrice ? price : undefined,
+      image: product.images?.[0] ?? undefined,
     });
     openCart();
   };
@@ -222,9 +133,12 @@ function ProductCard({
     return (
       <Link href={`/store/${product.slug}`}>
         <div className="group flex gap-4 sm:gap-6 p-4 rounded-2xl border border-zinc-800/60 bg-zinc-900/40 hover:border-zinc-700/80 hover:bg-zinc-900/60 transition-all duration-300">
-          {/* Image */}
           <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-xl bg-zinc-800/40 border border-zinc-800/40 flex items-center justify-center shrink-0 relative overflow-hidden">
-            <ShoppingBag className="w-8 h-8 text-zinc-700" />
+            {product.images?.[0] ? (
+              <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+            ) : (
+              <ShoppingBag className="w-8 h-8 text-zinc-700" />
+            )}
             {product.badge && (
               <div className="absolute top-2 left-2">
                 <span className="text-[9px] font-bold uppercase tracking-wider bg-orange-500 text-white px-2 py-0.5 rounded">
@@ -234,50 +148,37 @@ function ProductCard({
             )}
           </div>
 
-          {/* Info */}
           <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
             <div>
-              <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1">{product.category}</p>
+              <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1">
+                {product.category?.name || "Uncategorized"}
+              </p>
               <h3 className="text-sm sm:text-base font-bold text-white font-display group-hover:text-orange-500 transition-colors line-clamp-1 mb-1.5">
                 {product.name}
               </h3>
               <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed hidden sm:block">
-                {product.description}
+                {product.summary}
               </p>
-
-              {/* Rating */}
-              <div className="flex items-center gap-1.5 mt-2">
-                <div className="flex items-center">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star
-                      key={i}
-                      className={cn(
-                        "w-3 h-3",
-                        i < Math.floor(product.rating)
-                          ? "text-orange-500 fill-orange-500"
-                          : "text-zinc-700"
-                      )}
-                    />
-                  ))}
-                </div>
-                <span className="text-[10px] text-zinc-500">{product.rating} ({product.reviews})</span>
-              </div>
             </div>
 
             <div className="flex items-end justify-between mt-3">
               <div className="flex items-baseline gap-2">
-                <span className="text-lg sm:text-xl font-bold text-white">{formatCurrency(product.price)}</span>
-                {product.comparePrice && (
+                <span className="text-lg sm:text-xl font-bold text-white">{formatCurrency(price)}</span>
+                {comparePrice && (
                   <>
-                    <span className="text-xs text-zinc-600 line-through">{formatCurrency(product.comparePrice)}</span>
+                    <span className="text-xs text-zinc-600 line-through">{formatCurrency(comparePrice)}</span>
                     <span className="text-[10px] font-bold text-emerald-400">-{discount}%</span>
                   </>
                 )}
               </div>
-              <Button size="sm" className="hidden sm:inline-flex" onClick={handleAddToCart}>
-                <ShoppingCart className="w-3.5 h-3.5" />
-                Add to Cart
-              </Button>
+              {inStock ? (
+                <Button size="sm" className="hidden sm:inline-flex" onClick={handleAddToCart}>
+                  <ShoppingCart className="w-3.5 h-3.5" />
+                  Add to Cart
+                </Button>
+              ) : (
+                <Badge variant="destructive" className="text-[10px]">Out of Stock</Badge>
+              )}
             </div>
           </div>
         </div>
@@ -289,30 +190,33 @@ function ProductCard({
   return (
     <Link href={`/store/${product.slug}`}>
       <div className="group h-full rounded-2xl border border-zinc-800/60 bg-zinc-900/40 overflow-hidden hover:border-zinc-700/80 hover:bg-zinc-900/60 transition-all duration-300 flex flex-col">
-        {/* Image area */}
         <div className="aspect-square bg-zinc-800/30 relative flex items-center justify-center overflow-hidden">
-          <ShoppingBag className="w-12 h-12 text-zinc-700/60" />
+          {product.images?.[0] ? (
+            <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          ) : (
+            <ShoppingBag className="w-12 h-12 text-zinc-700/60" />
+          )}
 
-          {/* Hover overlay */}
-          <div className="absolute inset-0 bg-zinc-950/70 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-2">
-            <Button size="sm" variant="white" className="shadow-xl text-xs">
-              <Eye className="w-3.5 h-3.5" />
-              Quick View
-            </Button>
-            <Button size="sm" className="shadow-xl text-xs" onClick={handleAddToCart}>
-              <ShoppingCart className="w-3.5 h-3.5" />
-              Add
-            </Button>
-          </div>
+          {inStock && (
+            <div className="absolute inset-0 bg-zinc-950/70 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-2">
+              <Button size="sm" variant="white" className="shadow-xl text-xs">
+                <Eye className="w-3.5 h-3.5" />
+                View
+              </Button>
+              <Button size="sm" className="shadow-xl text-xs" onClick={handleAddToCart}>
+                <ShoppingCart className="w-3.5 h-3.5" />
+                Add
+              </Button>
+            </div>
+          )}
 
-          {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-1.5">
             {product.badge && (
               <span className="text-[9px] font-bold uppercase tracking-wider bg-orange-500 text-white px-2 py-0.5 rounded shadow-lg shadow-orange-500/20">
                 {product.badge}
               </span>
             )}
-            {product.isNew && !product.badge && (
+            {!product.badge && new Date(product.createdAt) > new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) && (
               <span className="text-[9px] font-bold uppercase tracking-wider bg-white text-zinc-900 px-2 py-0.5 rounded shadow-lg">
                 New
               </span>
@@ -324,20 +228,24 @@ function ProductCard({
             )}
           </div>
 
-          {/* Stock indicator */}
-          {product.inStock && (
+          {inStock ? (
             <div className="absolute bottom-3 right-3">
               <span className="text-[9px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full backdrop-blur-sm">
                 In Stock
               </span>
             </div>
+          ) : (
+            <div className="absolute bottom-3 right-3">
+              <span className="text-[9px] font-medium text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full backdrop-blur-sm">
+                Out of Stock
+              </span>
+            </div>
           )}
         </div>
 
-        {/* Product info */}
         <div className="p-4 sm:p-5 flex flex-col flex-1">
           <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1.5">
-            {product.category}
+            {product.category?.name || "Uncategorized"}
           </p>
 
           <h3 className="text-sm sm:text-base font-bold text-white font-display mb-1.5 line-clamp-2 group-hover:text-orange-500 transition-colors leading-snug">
@@ -345,46 +253,23 @@ function ProductCard({
           </h3>
 
           <p className="text-[11px] sm:text-xs text-zinc-500 line-clamp-2 mb-3 leading-relaxed flex-1">
-            {product.description}
+            {product.summary}
           </p>
 
-          {/* Rating */}
-          <div className="flex items-center gap-1.5 mb-3">
-            <div className="flex items-center">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Star
-                  key={i}
-                  className={cn(
-                    "w-3 h-3",
-                    i < Math.floor(product.rating)
-                      ? "text-orange-500 fill-orange-500"
-                      : "text-zinc-700/60"
-                  )}
-                />
-              ))}
-            </div>
-            <span className="text-[10px] text-zinc-500">
-              {product.rating}
-            </span>
-            <span className="text-[10px] text-zinc-600">
-              ({product.reviews})
-            </span>
-          </div>
+          {product.variants.length > 0 && (
+            <p className="text-[10px] text-zinc-500 mb-3">
+              {product.variants.length} variant{product.variants.length > 1 ? "s" : ""} available
+            </p>
+          )}
 
-          {/* Price */}
           <div className="flex items-baseline gap-2 mt-auto">
-            <span className="text-lg font-bold text-white">
-              {formatCurrency(product.price)}
-            </span>
-            {product.comparePrice && (
-              <span className="text-xs text-zinc-600 line-through">
-                {formatCurrency(product.comparePrice)}
-              </span>
+            <span className="text-lg font-bold text-white">{formatCurrency(price)}</span>
+            {comparePrice && (
+              <span className="text-xs text-zinc-600 line-through">{formatCurrency(comparePrice)}</span>
             )}
           </div>
 
-          {/* Shipping hint */}
-          {product.price >= 500 && (
+          {price >= 500 && (
             <p className="text-[10px] text-emerald-400/70 mt-1.5 flex items-center gap-1">
               <Truck className="w-3 h-3" />
               Free shipping
@@ -401,52 +286,60 @@ function ProductCard({
 // ──────────────────────────────────────────
 
 export default function StorePage() {
-  const [activeCategory, setActiveCategory] = useState("all");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({ page: 1, limit: 12, total: 0, totalPages: 0 });
+  const [activeCategory, setActiveCategory] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<SortOption>("featured");
+  const [searchInput, setSearchInput] = useState("");
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [layout, setLayout] = useState<"grid" | "list">("grid");
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  const filteredProducts = useMemo(() => {
-    let results = PRODUCTS.filter((product) => {
-      const matchesCategory =
-        activeCategory === "all" || product.category === activeCategory;
-      const matchesSearch =
-        !searchQuery ||
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
-    });
+  const fetchProducts = useCallback(async (page = 1) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: "12",
+        sort: sortBy,
+      });
+      if (activeCategory) params.set("category", activeCategory);
+      if (searchQuery) params.set("search", searchQuery);
 
-    // Sort
-    switch (sortBy) {
-      case "price-asc":
-        results = [...results].sort((a, b) => a.price - b.price);
-        break;
-      case "price-desc":
-        results = [...results].sort((a, b) => b.price - a.price);
-        break;
-      case "rating":
-        results = [...results].sort((a, b) => b.rating - a.rating);
-        break;
-      case "newest":
-        results = [...results].sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));
-        break;
-      default:
-        break;
+      const res = await fetch(`/api/store?${params}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setProducts(data.products);
+      setCategories(data.categories);
+      setPagination(data.pagination);
+    } catch {
+      setProducts([]);
+    } finally {
+      setLoading(false);
     }
-
-    return results;
   }, [activeCategory, searchQuery, sortBy]);
 
-  const clearFilters = () => {
-    setActiveCategory("all");
-    setSearchQuery("");
-    setSortBy("featured");
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSearchQuery(searchInput);
   };
 
-  const hasActiveFilters = activeCategory !== "all" || searchQuery || sortBy !== "featured";
+  const clearFilters = () => {
+    setActiveCategory("");
+    setSearchQuery("");
+    setSearchInput("");
+    setSortBy("newest");
+  };
+
+  const hasActiveFilters = activeCategory || searchQuery || sortBy !== "newest";
+  const totalProductCount = categories.reduce((sum, c) => sum + c._count.products, 0);
 
   return (
     <>
@@ -456,67 +349,58 @@ export default function StorePage() {
       <section className="py-8 sm:py-10 md:py-14">
         <div className="container-wide">
           <div className="flex flex-col lg:flex-row gap-8">
-            {/* ── SIDEBAR — Desktop ── */}
+            {/* ── SIDEBAR ── */}
             <aside className="hidden lg:block w-60 shrink-0 space-y-6">
               {/* Categories */}
               <div>
-                <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-3">
-                  Categories
-                </h3>
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-3">Categories</h3>
                 <nav className="space-y-0.5">
-                  {CATEGORIES.map((cat) => (
+                  <button
+                    onClick={() => setActiveCategory("")}
+                    className={cn(
+                      "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all",
+                      !activeCategory
+                        ? "bg-orange-500/10 text-orange-500 font-semibold"
+                        : "text-zinc-400 hover:text-white hover:bg-zinc-800/40"
+                    )}
+                  >
+                    <span>All Products</span>
+                    <span className={cn(
+                      "text-[10px] font-medium px-1.5 py-0.5 rounded-full",
+                      !activeCategory ? "bg-orange-500/20 text-orange-400" : "bg-zinc-800 text-zinc-500"
+                    )}>
+                      {totalProductCount}
+                    </span>
+                  </button>
+                  {categories.map((cat) => (
                     <button
                       key={cat.id}
-                      onClick={() => setActiveCategory(cat.id)}
+                      onClick={() => setActiveCategory(cat.slug)}
                       className={cn(
                         "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all",
-                        activeCategory === cat.id
+                        activeCategory === cat.slug
                           ? "bg-orange-500/10 text-orange-500 font-semibold"
                           : "text-zinc-400 hover:text-white hover:bg-zinc-800/40"
                       )}
                     >
-                      <span>{cat.label}</span>
+                      <span>{cat.name}</span>
                       <span className={cn(
                         "text-[10px] font-medium px-1.5 py-0.5 rounded-full",
-                        activeCategory === cat.id
+                        activeCategory === cat.slug
                           ? "bg-orange-500/20 text-orange-400"
                           : "bg-zinc-800 text-zinc-500"
                       )}>
-                        {cat.count}
+                        {cat._count.products}
                       </span>
                     </button>
                   ))}
                 </nav>
               </div>
 
-              {/* Price ranges */}
-              <div>
-                <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-3">
-                  Price Range
-                </h3>
-                <div className="space-y-0.5">
-                  {[
-                    { label: "Under GH₵50", filter: () => {} },
-                    { label: "GH₵50 – GH₵100", filter: () => {} },
-                    { label: "GH₵100 – GH₵200", filter: () => {} },
-                    { label: "Over GH₵200", filter: () => {} },
-                  ].map((range) => (
-                    <button
-                      key={range.label}
-                      className="w-full text-left px-3 py-2 rounded-lg text-sm text-zinc-400 hover:text-white hover:bg-zinc-800/40 transition-all"
-                    >
-                      {range.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Promo card */}
+              {/* Promo */}
               <div className="rounded-xl bg-linear-to-br from-orange-500/10 to-orange-600/5 border border-orange-500/20 p-4">
                 <Tag className="w-5 h-5 text-orange-500 mb-2" />
-                <p className="text-sm font-bold text-white font-display mb-1">
-                  Free Shipping
-                </p>
+                <p className="text-sm font-bold text-white font-display mb-1">Free Shipping</p>
                 <p className="text-[11px] text-zinc-400 leading-relaxed">
                   On all orders over GH₵500. No code needed.
                 </p>
@@ -527,24 +411,24 @@ export default function StorePage() {
             <div className="flex-1 min-w-0">
               {/* Toolbar */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-6">
-                {/* Search */}
-                <div className="relative w-full sm:max-w-xs">
+                <form onSubmit={handleSearch} className="relative w-full sm:max-w-xs">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                   <Input
                     placeholder="Search products..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
                     className="pl-10 h-10 bg-zinc-900/40 border-zinc-800/60 text-sm"
                   />
-                  {searchQuery && (
+                  {searchInput && (
                     <button
-                      onClick={() => setSearchQuery("")}
+                      type="button"
+                      onClick={() => { setSearchInput(""); setSearchQuery(""); }}
                       className="absolute right-3 top-1/2 -translate-y-1/2"
                     >
                       <X className="w-3.5 h-3.5 text-zinc-500 hover:text-white transition-colors" />
                     </button>
                   )}
-                </div>
+                </form>
 
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   {/* Mobile filter toggle */}
@@ -583,10 +467,7 @@ export default function StorePage() {
                             {SORT_OPTIONS.map((option) => (
                               <button
                                 key={option.id}
-                                onClick={() => {
-                                  setSortBy(option.id);
-                                  setShowSortMenu(false);
-                                }}
+                                onClick={() => { setSortBy(option.id); setShowSortMenu(false); }}
                                 className={cn(
                                   "w-full text-left px-4 py-2.5 text-xs font-medium transition-colors",
                                   sortBy === option.id
@@ -612,9 +493,7 @@ export default function StorePage() {
                       onClick={() => setLayout("grid")}
                       className={cn(
                         "p-2 transition-colors",
-                        layout === "grid"
-                          ? "bg-zinc-800 text-white"
-                          : "text-zinc-500 hover:text-white"
+                        layout === "grid" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-white"
                       )}
                     >
                       <Grid3X3 className="w-3.5 h-3.5" />
@@ -623,9 +502,7 @@ export default function StorePage() {
                       onClick={() => setLayout("list")}
                       className={cn(
                         "p-2 transition-colors",
-                        layout === "list"
-                          ? "bg-zinc-800 text-white"
-                          : "text-zinc-500 hover:text-white"
+                        layout === "list" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-white"
                       )}
                     >
                       <LayoutList className="w-3.5 h-3.5" />
@@ -634,7 +511,7 @@ export default function StorePage() {
                 </div>
               </div>
 
-              {/* Mobile filters panel */}
+              {/* Mobile filters */}
               <AnimatePresence>
                 {showMobileFilters && (
                   <motion.div
@@ -644,18 +521,29 @@ export default function StorePage() {
                     className="lg:hidden overflow-hidden mb-4"
                   >
                     <div className="flex flex-wrap gap-2 p-4 rounded-xl border border-zinc-800/60 bg-zinc-900/40">
-                      {CATEGORIES.map((cat) => (
+                      <button
+                        onClick={() => setActiveCategory("")}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+                          !activeCategory
+                            ? "bg-orange-500 text-white"
+                            : "bg-zinc-800/50 text-zinc-400 border border-zinc-700/40"
+                        )}
+                      >
+                        All ({totalProductCount})
+                      </button>
+                      {categories.map((cat) => (
                         <button
                           key={cat.id}
-                          onClick={() => setActiveCategory(cat.id)}
+                          onClick={() => setActiveCategory(cat.slug)}
                           className={cn(
                             "px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
-                            activeCategory === cat.id
+                            activeCategory === cat.slug
                               ? "bg-orange-500 text-white"
                               : "bg-zinc-800/50 text-zinc-400 border border-zinc-700/40"
                           )}
                         >
-                          {cat.label} ({cat.count})
+                          {cat.name} ({cat._count.products})
                         </button>
                       ))}
                     </div>
@@ -666,11 +554,16 @@ export default function StorePage() {
               {/* Results header */}
               <div className="flex items-center justify-between mb-5">
                 <p className="text-xs text-zinc-500">
-                  Showing{" "}
-                  <span className="text-zinc-300 font-medium">{filteredProducts.length}</span>{" "}
-                  {filteredProducts.length === 1 ? "product" : "products"}
-                  {activeCategory !== "all" && (
-                    <> in <span className="text-orange-500">{CATEGORIES.find((c) => c.id === activeCategory)?.label}</span></>
+                  {loading ? "Loading..." : (
+                    <>
+                      Showing{" "}
+                      <span className="text-zinc-300 font-medium">{products.length}</span>{" "}
+                      of <span className="text-zinc-300 font-medium">{pagination.total}</span>{" "}
+                      products
+                      {activeCategory && (
+                        <> in <span className="text-orange-500">{categories.find((c) => c.slug === activeCategory)?.name}</span></>
+                      )}
+                    </>
                   )}
                 </p>
                 {hasActiveFilters && (
@@ -684,46 +577,79 @@ export default function StorePage() {
                 )}
               </div>
 
-              {/* Product grid/list */}
-              {filteredProducts.length > 0 ? (
-                <div
-                  className={cn(
-                    layout === "grid"
-                      ? "grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
-                      : "space-y-3"
-                  )}
-                >
-                  {filteredProducts.map((product, index) => (
-                    <motion.div
-                      key={product.slug}
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{
-                        duration: 0.4,
-                        delay: index * 0.05,
-                        ease: [0.22, 1, 0.36, 1],
-                      }}
-                    >
-                      <ProductCard product={product} layout={layout} />
-                    </motion.div>
-                  ))}
+              {/* Products */}
+              {loading ? (
+                <div className="flex items-center justify-center py-24">
+                  <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
                 </div>
+              ) : products.length > 0 ? (
+                <>
+                  <div
+                    className={cn(
+                      layout === "grid"
+                        ? "grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
+                        : "space-y-3"
+                    )}
+                  >
+                    {products.map((product, index) => (
+                      <motion.div
+                        key={product.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.4, delay: index * 0.05, ease: [0.22, 1, 0.36, 1] }}
+                      >
+                        <ProductCard product={product} layout={layout} />
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  {/* Pagination */}
+                  {pagination.totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-3 mt-10">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={pagination.page <= 1}
+                        onClick={() => fetchProducts(pagination.page - 1)}
+                        className="border-zinc-800 text-zinc-400"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        Previous
+                      </Button>
+                      <span className="text-xs text-zinc-500 font-medium">
+                        Page {pagination.page} of {pagination.totalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={pagination.page >= pagination.totalPages}
+                        onClick={() => fetchProducts(pagination.page + 1)}
+                        className="border-zinc-800 text-zinc-400"
+                      >
+                        Next
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="text-center py-24">
                   <div className="w-16 h-16 rounded-2xl bg-zinc-800/40 border border-zinc-800/60 flex items-center justify-center mx-auto mb-5">
                     <Search className="w-7 h-7 text-zinc-700" />
                   </div>
-                  <p className="text-white font-display font-bold text-lg mb-1">
-                    No products found
-                  </p>
+                  <p className="text-white font-display font-bold text-lg mb-1">No products found</p>
                   <p className="text-sm text-zinc-500 mb-6">
-                    Try adjusting your filters or search term.
+                    {searchQuery
+                      ? "Try adjusting your search term."
+                      : "Check back soon for new arrivals."}
                   </p>
-                  <Button variant="outline" onClick={clearFilters}>
-                    <X className="w-3.5 h-3.5" />
-                    Clear Filters
-                  </Button>
+                  {hasActiveFilters && (
+                    <Button variant="outline" onClick={clearFilters}>
+                      <X className="w-3.5 h-3.5" />
+                      Clear Filters
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
