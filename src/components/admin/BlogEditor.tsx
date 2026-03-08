@@ -36,7 +36,7 @@ const RichTextEditor = dynamic(() => import("@/components/admin/RichTextEditor")
   loading: () => (
     <div className="border border-gray-200 rounded-xl bg-white">
       <div className="h-12 bg-gray-50 border-b border-gray-200 rounded-t-xl animate-pulse" />
-      <div className="min-h-[400px] p-6">
+      <div className="min-h-100 p-6">
         <div className="space-y-3">
           <div className="h-4 w-3/4 bg-gray-100 rounded animate-pulse" />
           <div className="h-4 w-1/2 bg-gray-100 rounded animate-pulse" />
@@ -436,7 +436,7 @@ export default function BlogEditorPage({ postId }: { postId?: string }) {
               type="text"
               value={post.slug}
               onChange={(e) => setPost((prev) => ({ ...prev, slug: e.target.value }))}
-              className="border-none outline-none bg-transparent text-gray-600 min-w-[200px]"
+              className="border-none outline-none bg-transparent text-gray-600 min-w-50"
             />
           </div>
 
@@ -504,7 +504,7 @@ export default function BlogEditorPage({ postId }: { postId?: string }) {
         </div>
 
         {/* Right Sidebar */}
-        <div className="w-80 border-l border-gray-200 bg-gray-50/50 p-5 space-y-5 shrink-0 overflow-y-auto max-h-[calc(100vh-65px)] sticky top-[65px]">
+        <div className="w-80 border-l border-gray-200 bg-gray-50/50 p-5 space-y-5 shrink-0 overflow-y-auto max-h-[calc(100vh-65px)] sticky top-16.25">
           {/* Tab Navigation */}
           <div className="flex rounded-lg bg-gray-100 p-0.5">
             {(["general", "seo", "scheduling"] as const).map((tab) => (

@@ -404,7 +404,7 @@ export default function AdminBlogPage() {
                             {post.featured && <Star className="w-3 h-3 text-yellow-500 fill-yellow-500 shrink-0" />}
                             <Link
                               href={`/admin/blog/${post.id}/edit`}
-                              className="font-medium text-gray-900 hover:text-orange-600 transition-colors truncate block max-w-[300px]"
+                              className="font-medium text-gray-900 hover:text-orange-600 transition-colors truncate block max-w-75"
                             >
                               {post.title}
                             </Link>

@@ -107,7 +107,7 @@ function FeaturedBanner({ event }: { event: EventCard }) {
         <Card variant="light" className="overflow-hidden">
           <CardContent className="p-0">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
-              <div className="relative aspect-video lg:aspect-auto lg:min-h-[320px] overflow-hidden">
+              <div className="relative aspect-video lg:aspect-auto lg:min-h-80 overflow-hidden">
                 {event.coverImage ? (
                   <img src={event.coverImage} alt={event.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                 ) : (
@@ -170,7 +170,7 @@ function EventCardItem({ event }: { event: EventCard }) {
       <Link href={`/events/${event.slug}`} className="group block h-full">
         <Card variant="light" className="h-full overflow-hidden hover:border-orange-300 transition-colors">
           <CardContent className="p-0 flex flex-col h-full">
-            <div className="relative aspect-[16/9] overflow-hidden">
+            <div className="relative aspect-video overflow-hidden">
               {event.coverImage ? (
                 <img src={event.coverImage} alt={event.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
               ) : (
@@ -209,7 +209,7 @@ function EventCardItem({ event }: { event: EventCard }) {
               <div className="flex items-center justify-between pt-3 border-t border-zinc-100">
                 <div className="flex items-center gap-3 text-xs text-zinc-500">
                   {(event.venue || event.location) && (
-                    <span className="flex items-center gap-1 truncate max-w-[140px]"><MapPin className="w-3 h-3" />{event.venue || event.location}</span>
+                    <span className="flex items-center gap-1 truncate max-w-35"><MapPin className="w-3 h-3" />{event.venue || event.location}</span>
                   )}
                 </div>
                 <span className="text-xs font-medium text-orange-500 group-hover:text-orange-600 transition-colors flex items-center gap-1">
@@ -335,7 +335,7 @@ export default function EventsPage() {
                 <select
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value)}
-                  className="h-10 rounded-lg border border-zinc-200 bg-white text-zinc-700 text-sm px-3 min-w-[140px]"
+                  className="h-10 rounded-lg border border-zinc-200 bg-white text-zinc-700 text-sm px-3 min-w-35"
                 >
                   <option value="">All Types</option>
                   {Object.entries(EVENT_TYPES).map(([k, v]) => (

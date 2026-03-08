@@ -376,7 +376,7 @@ export default function EventRegistrationsPage({ params }: { params: Promise<{ i
                             <span className="text-gray-400">—</span>
                           )}
                           {reg.paymentRef && (
-                            <p className="text-[10px] text-gray-400 mt-0.5 truncate max-w-[100px]">{reg.paymentRef}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5 truncate max-w-25">{reg.paymentRef}</p>
                           )}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">

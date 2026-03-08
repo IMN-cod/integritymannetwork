@@ -301,7 +301,7 @@ export default function EventEditor({ eventId }: EventEditorProps) {
             <CardContent className="p-6">
               <label className="block text-sm font-medium text-gray-700 mb-3">Event Description</label>
               {showPreview ? (
-                <div className="prose prose-gray max-w-none min-h-[300px] p-6 border border-gray-200 rounded-xl bg-gray-50">
+                <div className="prose prose-gray max-w-none min-h-75 p-6 border border-gray-200 rounded-xl bg-gray-50">
                   <div dangerouslySetInnerHTML={{ __html: description }} />
                 </div>
               ) : (

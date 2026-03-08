@@ -115,10 +115,10 @@ export default function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "prose prose-gray max-w-none min-h-[400px] p-6 focus:outline-none " +
+          "prose prose-gray max-w-none min-h-100 p-6 focus:outline-none " +
           "prose-headings:font-display prose-headings:text-gray-900 prose-headings:font-bold " +
           "prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl " +
-          "prose-p:text-gray-700 prose-p:leading-relaxed prose-p:text-[16px] " +
+          "prose-p:text-gray-700 prose-p:leading-relaxed prose-p:text-base " +
           "prose-a:text-orange-600 prose-strong:text-gray-900 " +
           "prose-ul:list-disc prose-ol:list-decimal " +
           "prose-blockquote:border-l-4 prose-blockquote:border-orange-500 " +
@@ -183,7 +183,7 @@ export default function RichTextEditor({
     return (
       <div className={`border border-gray-200 rounded-xl bg-white ${className}`}>
         <div className="h-12 bg-gray-50 border-b border-gray-200 rounded-t-xl animate-pulse" />
-        <div className="min-h-[400px] p-6">
+        <div className="min-h-100 p-6">
           <div className="space-y-3">
             <div className="h-4 w-3/4 bg-gray-100 rounded animate-pulse" />
             <div className="h-4 w-1/2 bg-gray-100 rounded animate-pulse" />
