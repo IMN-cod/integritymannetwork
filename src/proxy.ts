@@ -1,6 +1,5 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 
 const protectedRoutes = ["/dashboard", "/community"];
 const authRoutes = ["/auth/login", "/auth/register"];

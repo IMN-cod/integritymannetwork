@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
@@ -9,12 +11,10 @@ import {
   User,
   Search,
   ArrowRight,
-  Tag,
   Eye,
   ChevronLeft,
   ChevronRight,
   Loader2,
-  MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -200,8 +200,6 @@ export default function BlogPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [totalPosts, setTotalPosts] = useState(0);
-
   // Fetch categories
   useEffect(() => {
     fetch("/api/blog/categories")
@@ -231,7 +229,6 @@ export default function BlogPage() {
       const data = await res.json();
       setPosts(data.posts || []);
       setTotalPages(data.pagination?.totalPages || 1);
-      setTotalPosts(data.pagination?.total || 0);
     } catch {
       setPosts([]);
     } finally {
