@@ -115,7 +115,7 @@ export default function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "prose prose-gray max-w-none min-h-100 p-6 focus:outline-none " +
+          "prose prose-gray max-w-none min-h-100 p-6 focus:outline-none text-gray-800 bg-white " +
           "prose-headings:font-display prose-headings:text-gray-900 prose-headings:font-bold " +
           "prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl " +
           "prose-p:text-gray-700 prose-p:leading-relaxed prose-p:text-base " +
