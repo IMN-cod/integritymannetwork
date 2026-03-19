@@ -1,9 +1,11 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ShoppingBag, Search, Star, ShoppingCart, Eye, Truck, Shield, Tag,
+  ShoppingBag, Search, ShoppingCart, Eye, Truck, Shield, Tag,
   ChevronDown, X, Grid3X3, LayoutList, ArrowUpDown, Package,
   CheckCircle2, Loader2, ChevronLeft, ChevronRight,
 } from "lucide-react";
@@ -42,6 +44,8 @@ interface Category {
 }
 
 type SortOption = "newest" | "price-asc" | "price-desc" | "popular" | "name";
+
+const NEW_PRODUCT_CUTOFF_MS = Date.now() - 14 * 24 * 60 * 60 * 1000;
 
 const SORT_OPTIONS: { id: SortOption; label: string }[] = [
   { id: "newest", label: "Newest Arrivals" },
@@ -114,6 +118,7 @@ function ProductCard({ product, layout }: { product: Product; layout: "grid" | "
   const comparePrice = product.comparePrice ? Number(product.comparePrice) : null;
   const discount = comparePrice ? Math.round(((comparePrice - price) / comparePrice) * 100) : null;
   const inStock = product.isDigital || product.stock > 0;
+  const isNewProduct = !product.badge && new Date(product.createdAt).getTime() > NEW_PRODUCT_CUTOFF_MS;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -216,7 +221,7 @@ function ProductCard({ product, layout }: { product: Product; layout: "grid" | "
                 {product.badge}
               </span>
             )}
-            {!product.badge && new Date(product.createdAt) > new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) && (
+            {isNewProduct && (
               <span className="text-[9px] font-bold uppercase tracking-wider bg-white text-zinc-900 px-2 py-0.5 rounded shadow-lg">
                 New
               </span>

@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
       // Totals
       totalUsers,
       totalOrders,
-      _totalDonations,
+      ,
       totalProducts,
       totalBlogPosts,
       totalEvents,

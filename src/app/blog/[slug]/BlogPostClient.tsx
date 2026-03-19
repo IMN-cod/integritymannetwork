@@ -1,11 +1,12 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   Calendar,
   Clock,
-  ArrowLeft,
   BookOpen,
   Tag,
   Eye,

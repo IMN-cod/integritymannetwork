@@ -14,6 +14,8 @@
 
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useRef, useState, useCallback } from "react";
 import {
   Upload,

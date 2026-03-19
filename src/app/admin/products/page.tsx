@@ -1,13 +1,14 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ShoppingBag, Search, Plus, Eye, Edit, Trash2, Loader2,
   ChevronLeft, ChevronRight, RefreshCw, Star, ArrowUpDown,
   CheckSquare, Square, MoreHorizontal, TrendingUp, Package,
-  DollarSign, AlertTriangle, Filter, ChevronDown, X,
+  DollarSign, AlertTriangle, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,7 +75,6 @@ const SORT_OPTIONS: { id: SortOption; label: string }[] = [
 ];
 
 export default function AdminProductsPage() {
-  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, active: 0, lowStock: 0, featured: 0, totalSales: 0, totalRevenue: 0 });
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, pages: 0 });
@@ -121,7 +121,8 @@ export default function AdminProductsPage() {
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };

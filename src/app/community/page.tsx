@@ -1,13 +1,15 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Hash, Users, Send, Plus, Shield, Search, Settings, Bell,
-  MessageSquare, ChevronDown, Smile, Paperclip, MoreHorizontal,
-  ArrowLeft, X, Reply, Trash2, Edit3, UserPlus, LogOut, Loader2,
-  Bot, Star, Crown, Wifi, WifiOff, AtSign, Image as ImageIcon,
+  Hash, Users, Send, Plus, Shield, Search,
+  MessageSquare, Smile,
+  ArrowLeft, X, Reply, Loader2,
+  Bot, Crown, Wifi, WifiOff,
   MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";

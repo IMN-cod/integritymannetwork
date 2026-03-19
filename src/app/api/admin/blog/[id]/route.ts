@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { slugify } from "@/lib/utils";
 import { logAdminAction } from "@/lib/audit";
 
 // GET /api/admin/blog/[id] — Get a single post by ID

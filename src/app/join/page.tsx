@@ -6,20 +6,17 @@ import {
   Shield,
   User,
   Mail,
-  Phone,
   MapPin,
   Briefcase,
   BookOpen,
   CheckCircle2,
   ArrowRight,
-  ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { VideoPlayer, VideoCard } from "@/components/ui/video-player";
 

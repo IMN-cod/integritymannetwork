@@ -57,12 +57,6 @@ export default function AdminLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
-  // Close sidebar & profile dropdown on route change
-  useEffect(() => {
-    setSidebarOpen(false);
-    setProfileOpen(false);
-  }, [pathname]);
-
   // Prevent body scroll when mobile sidebar is open
   useEffect(() => {
     if (sidebarOpen) {
@@ -81,6 +75,11 @@ export default function AdminLayout({
   const handleSignOut = async () => {
     await signOut({ redirect: false });
     router.push("/admin/login");
+  };
+
+  const closePanels = () => {
+    setSidebarOpen(false);
+    setProfileOpen(false);
   };
 
   const isActive = (href: string) => {
@@ -150,6 +149,7 @@ export default function AdminLayout({
         <div className="flex items-center gap-3">
           <Link
             href="/"
+            onClick={closePanels}
             className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
           >
             <ExternalLink className="w-3 h-3" />
@@ -184,7 +184,7 @@ export default function AdminLayout({
                   </div>
                   <Link
                     href="/admin/settings"
-                    onClick={() => setProfileOpen(false)}
+                    onClick={closePanels}
                     className="flex items-center gap-2 px-4 py-2.5 text-xs text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors"
                   >
                     <Settings className="w-3.5 h-3.5" />
@@ -243,6 +243,7 @@ export default function AdminLayout({
               <Link
                 key={link.href}
                 href={link.href}
+                onClick={closePanels}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group",
                   active

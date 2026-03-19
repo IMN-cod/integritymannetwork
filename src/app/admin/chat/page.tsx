@@ -1,13 +1,15 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Bot, MessageSquare, Send, Search, Users, Plus, Trash2, Edit3,
-  Shield, Crown, ArrowLeft, MoreHorizontal, Loader2, X, ChevronDown,
-  Megaphone, Eye, MessageCircle, Hash, Activity, ToggleLeft, ToggleRight,
-  Zap, RefreshCw, Filter, Save,
+  Bot, MessageSquare, Send, Search, Plus, Trash2, Edit3,
+  ArrowLeft, Loader2, X,
+  Megaphone, MessageCircle, Activity, ToggleLeft, ToggleRight,
+  RefreshCw, Save,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -397,7 +399,7 @@ export default function AdminChatPage() {
               </div>
             </div>
 
-            <div className="max-h-[600px] overflow-y-auto divide-y divide-gray-100">
+            <div className="max-h-150 overflow-y-auto divide-y divide-gray-100">
               {conversations.length === 0 ? (
                 <div className="p-8 text-center">
                   <MessageCircle className="w-8 h-8 text-gray-300 mx-auto mb-2" />
@@ -468,7 +470,7 @@ export default function AdminChatPage() {
                   </Badge>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-3 max-h-[450px]">
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 max-h-112.5">
                   {convMessages.map((msg) => (
                     <div key={msg.id} className={cn("flex gap-3", msg.isMine ? "justify-end" : "justify-start")}>
                       {!msg.isMine && (

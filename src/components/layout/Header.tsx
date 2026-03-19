@@ -10,7 +10,6 @@ import {
   X,
   ShoppingBag,
   User,
-  ChevronDown,
   LogIn,
   Home,
   Info,
@@ -46,6 +45,7 @@ export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const pathname = usePathname();
+  const closeMobileMenu = () => setIsMobileOpen(false);
 
   useEffect(() => {
     let ticking = false;
@@ -61,11 +61,6 @@ export function Header() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  // Close mobile menu on route change
-  useEffect(() => {
-    setIsMobileOpen(false);
-  }, [pathname]);
 
   // Prevent body scroll when mobile menu open
   useEffect(() => {
@@ -95,7 +90,7 @@ export function Header() {
         <div className="container-wide">
           <div className="flex items-center justify-between h-16 sm:h-20">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group">
+            <Link href="/" onClick={closeMobileMenu} className="flex items-center gap-2.5 sm:gap-3 group">
               <div className="relative">
                 <Image
                   src="/images/Integrity Man Official Logo.png"
@@ -125,6 +120,7 @@ export function Header() {
                   <Link
                     key={link.href}
                     href={link.href}
+                    onClick={closeMobileMenu}
                     className={cn(
                       "relative px-4 py-2 text-sm font-medium transition-colors duration-200 rounded-lg",
                       isActive
@@ -157,13 +153,13 @@ export function Header() {
 
               {/* Auth  desktop only */}
               <div className="hidden sm:flex items-center gap-2">
-                <Link href="/auth/login">
+                <Link href="/auth/login" onClick={closeMobileMenu}>
                   <Button variant="ghost" size="sm" className="gap-2">
                     <LogIn className="w-4 h-4" />
                     Sign In
                   </Button>
                 </Link>
-                <Link href="/join">
+                <Link href="/join" onClick={closeMobileMenu}>
                   <Button size="sm">Join Us</Button>
                 </Link>
               </div>
@@ -222,7 +218,7 @@ export function Header() {
                   <span className="text-sm font-bold text-white">Menu</span>
                 </div>
                 <button
-                  onClick={() => setIsMobileOpen(false)}
+                  onClick={closeMobileMenu}
                   className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400"
                 >
                   <X className="w-5 h-5" />
@@ -244,6 +240,7 @@ export function Header() {
                       >
                         <Link
                           href={link.href}
+                          onClick={closeMobileMenu}
                           className={cn(
                             "flex items-center gap-4 px-4 py-3.5 rounded-xl text-base font-medium transition-all duration-200",
                             isActive
@@ -282,13 +279,13 @@ export function Header() {
 
               {/* Bottom Actions */}
               <div className="px-6 py-6 space-y-3">
-                <Link href="/auth/login" className="block">
+                <Link href="/auth/login" onClick={closeMobileMenu} className="block">
                   <Button variant="secondary" className="w-full justify-center h-12 text-base" size="lg">
                     <LogIn className="w-4 h-4" />
                     Sign In
                   </Button>
                 </Link>
-                <Link href="/join" className="block">
+                <Link href="/join" onClick={closeMobileMenu} className="block">
                   <Button className="w-full justify-center h-12 text-base" size="lg">
                     Join The Network
                     <ArrowRight className="w-4 h-4" />

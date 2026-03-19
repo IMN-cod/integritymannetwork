@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
@@ -7,14 +9,12 @@ import {
   MapPin,
   Search,
   ArrowRight,
-  Users,
   Clock,
   Ticket,
   Loader2,
   ChevronLeft,
   ChevronRight,
   Star,
-  Filter,
 } from "lucide-react";
 import Link from "next/link";
 import { ProtectedImage } from "@/components/ui/video-player";

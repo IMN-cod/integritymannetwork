@@ -2,6 +2,8 @@
 // PAYSTACK INTEGRATION
 // ═══════════════════════════════════════════════════════
 
+import crypto from "crypto";
+
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || "";
 const PAYSTACK_BASE_URL = "https://api.paystack.co";
 
@@ -127,7 +129,6 @@ export function validatePaystackWebhook(
   body: string,
   signature: string
 ): boolean {
-  const crypto = require("crypto");
   const hash = crypto
     .createHmac("sha512", PAYSTACK_SECRET_KEY)
     .update(body)

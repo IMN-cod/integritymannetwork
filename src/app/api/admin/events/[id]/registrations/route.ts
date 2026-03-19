@@ -102,10 +102,7 @@ export async function GET(
 }
 
 // PATCH /api/admin/events/[id]/registrations — Update registration status or check-in
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user || !["ADMIN", "SUPER_ADMIN"].includes(session.user.role)) {

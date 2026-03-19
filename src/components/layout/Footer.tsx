@@ -1,16 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
 import {
-  Mail,
-  Phone,
-  MapPin,
   Facebook,
   Instagram,
   Twitter,
   Youtube,
   ArrowUpRight,
 } from "lucide-react";
-import { SITE, NAV_LINKS } from "@/lib/constants";
+import { SITE } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 

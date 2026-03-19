@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { use, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -10,7 +12,6 @@ import {
   Loader2,
   CheckCircle,
   XCircle,
-  Clock,
   Download,
   RefreshCw,
   Mail,

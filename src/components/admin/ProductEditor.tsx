@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
-  ArrowLeft, Save, Eye, Loader2, ImageIcon, X, Plus, Tag, DollarSign,
+  ArrowLeft, Save, Eye, Loader2, X, Plus, Tag, DollarSign,
   Package, ShoppingBag, Star, Globe, Settings, AlertCircle,
   CheckCircle2, Layers, Barcode, Weight, Truck, Sparkles, Trash2,
 } from "lucide-react";
@@ -691,7 +691,7 @@ export default function ProductEditor({ productId }: { productId?: string }) {
                     <>
                       {/* Pricing */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                        <label className="text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                           <DollarSign className="w-3.5 h-3.5 text-gray-400" />
                           Price (GHS)
                         </label>
@@ -725,7 +725,7 @@ export default function ProductEditor({ productId }: { productId?: string }) {
 
                       {/* Category */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                        <label className="text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                           <Tag className="w-3.5 h-3.5 text-gray-400" />
                           Category
                         </label>
@@ -768,7 +768,7 @@ export default function ProductEditor({ productId }: { productId?: string }) {
 
                       {/* Badge */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                        <label className="text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                           <Sparkles className="w-3.5 h-3.5 text-gray-400" />
                           Product Badge
                         </label>
@@ -822,7 +822,7 @@ export default function ProductEditor({ productId }: { productId?: string }) {
                   {activeTab === "inventory" && (
                     <>
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                        <label className="text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                           <Barcode className="w-3.5 h-3.5 text-gray-400" />
                           SKU
                         </label>
@@ -836,7 +836,7 @@ export default function ProductEditor({ productId }: { productId?: string }) {
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                          <label className="text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                             <Package className="w-3.5 h-3.5 text-gray-400" />
                             Stock
                           </label>
@@ -849,7 +849,7 @@ export default function ProductEditor({ productId }: { productId?: string }) {
                           />
                         </div>
                         <div>
-                          <label className="block text-xs text-gray-500 mb-1.5 flex items-center gap-1.5">
+                          <label className="text-xs text-gray-500 mb-1.5 flex items-center gap-1.5">
                             <AlertCircle className="w-3.5 h-3.5 text-gray-400" />
                             Low Stock Alert
                           </label>
@@ -884,7 +884,7 @@ export default function ProductEditor({ productId }: { productId?: string }) {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                        <label className="text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                           <Weight className="w-3.5 h-3.5 text-gray-400" />
                           Weight (kg)
                         </label>
@@ -1084,7 +1084,7 @@ export default function ProductEditor({ productId }: { productId?: string }) {
                   {activeTab === "settings" && (
                     <>
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                        <label className="text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                           <Truck className="w-3.5 h-3.5 text-gray-400" />
                           Shipping
                         </label>

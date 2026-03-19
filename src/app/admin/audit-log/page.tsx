@@ -3,19 +3,19 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import type { PieLabelRenderProps } from "recharts";
 import {
   Shield, Search, Filter, Download, RefreshCw, Loader2,
   ChevronLeft, ChevronRight, Clock, Activity, AlertTriangle,
-  CheckCircle2, XCircle, User, Eye, FileText, Edit3, Trash2,
+  CheckCircle2, XCircle, User, FileText, Edit3, Trash2,
   Settings, Upload, LogIn, LogOut, ShoppingBag, Heart, Calendar,
-  MessageSquare, Bot, Megaphone, UserPlus, Lock, Globe, Monitor,
-  TrendingUp, ArrowUpRight, Hash, MoreHorizontal, ExternalLink,
+  MessageSquare, Bot, Megaphone, UserPlus, Lock, Globe,
+  TrendingUp, ArrowUpRight, Hash,
   ChevronDown, X,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";

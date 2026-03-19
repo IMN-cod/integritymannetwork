@@ -1,12 +1,13 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   Package, Search, Loader2, ChevronLeft, ChevronRight, RefreshCw,
-  Eye, Truck, DollarSign, Clock, CheckCircle2, XCircle, ArrowLeft,
-  ChevronDown, X, CreditCard, ShoppingBag, User, MapPin,
-  AlertCircle,
+  Truck, DollarSign, Clock, CheckCircle2, XCircle, ArrowLeft,
+  X, CreditCard, ShoppingBag, User, MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

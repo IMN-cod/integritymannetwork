@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -14,21 +16,15 @@ import {
   Edit,
   Trash2,
   FileText,
-  MoreHorizontal,
   ArrowUpDown,
   Clock,
   MessageSquare,
-  TrendingUp,
-  Filter,
-  BarChart3,
   Globe,
   Archive,
   CheckSquare,
   Square,
   ChevronDown,
-  Sparkles,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -82,8 +78,6 @@ export default function AdminBlogPage() {
   const [bulkMenuOpen, setBulkMenuOpen] = useState(false);
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
-
   const fetchPosts = useCallback(async () => {
     setLoading(true);
     try {

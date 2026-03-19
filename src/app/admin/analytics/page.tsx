@@ -8,12 +8,12 @@ import {
   ResponsiveContainer, Legend,
 } from "recharts";
 import {
-  TrendingUp, TrendingDown, Users, ShoppingBag, Heart, DollarSign,
+  TrendingUp, Users, ShoppingBag, Heart, DollarSign,
   Globe, MapPin, BarChart3, Activity, Package, FileText, Calendar,
   ArrowUpRight, ArrowDownRight, Loader2, RefreshCw, Eye, ShoppingCart,
   Clock, Zap, Target, Award, AlertTriangle, Filter,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, cn } from "@/lib/utils";
@@ -161,22 +161,6 @@ function SectionHeader({ icon: Icon, title, subtitle }: { icon: React.ElementTyp
         {subtitle && <p className="text-xs text-gray-400">{subtitle}</p>}
       </div>
     </div>
-  );
-}
-
-function MiniSparkline({ data, dataKey, color }: { data: { [key: string]: number | string }[]; dataKey: string; color: string }) {
-  return (
-    <ResponsiveContainer width="100%" height={40}>
-      <AreaChart data={data}>
-        <defs>
-          <linearGradient id={`spark-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity={0.3} />
-            <stop offset="100%" stopColor={color} stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <Area type="monotone" dataKey={dataKey} stroke={color} strokeWidth={1.5} fill={`url(#spark-${dataKey})`} />
-      </AreaChart>
-    </ResponsiveContainer>
   );
 }
 

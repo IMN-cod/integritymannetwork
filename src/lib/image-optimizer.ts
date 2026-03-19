@@ -191,7 +191,6 @@ export async function optimizeImage(
   let quality = preset.quality;
   let outputBuffer!: Buffer;
 
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     outputBuffer = await sharp(fileBuffer)
       .rotate()                                           // Step 3: auto-orient

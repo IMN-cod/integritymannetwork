@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
@@ -8,7 +8,6 @@ import {
   Save,
   Eye,
   Loader2,
-  Calendar,
   MapPin,
   Users,
   DollarSign,

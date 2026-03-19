@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
@@ -13,13 +15,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Star,
-  Filter,
   Target,
   Shield,
   Award,
   Compass,
   CheckCircle2,
-  User,
   Mail,
   Phone,
 } from "lucide-react";

@@ -2,8 +2,6 @@
 
 import { motion } from "framer-motion";
 import {
-  GraduationCap,
-  Megaphone,
   Home,
   Heart,
   BookOpen,
@@ -11,7 +9,6 @@ import {
   Users,
   Briefcase,
   CheckCircle2,
-  ChevronRight,
   ArrowRight,
   Sparkles,
   Shield,
@@ -23,7 +20,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { VideoPlayer } from "@/components/ui/video-player";
-import { CHANNELS } from "@/lib/constants";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },

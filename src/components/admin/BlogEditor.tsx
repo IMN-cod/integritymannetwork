@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
@@ -299,25 +301,13 @@ export default function BlogEditorPage({ postId }: { postId?: string }) {
     setPost((prev) => ({ ...prev, title, slug: prev.id ? prev.slug : slug }));
   };
 
-  const handleContentChange = useCallback((html: string) => {
-    setPost((prev) => {
-      const np = { ...prev, content: html };
-      if (!prev.excerpt && html.length > 50) np.excerpt = generateExcerpt(html, 160);
-      return np;
-    });
-    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-    if (post.status === "DRAFT" && post.id) {
-      autoSaveTimerRef.current = setTimeout(() => { handleSave(true); }, 8000);
-    }
-  }, [post.status, post.id]);
-
   const generateSmartExcerpt = () => { if (post.content) setPost((prev) => ({ ...prev, excerpt: generateExcerpt(post.content, 160) })); };
   const generateMetaDescription = () => { if (post.content) setPost((prev) => ({ ...prev, metaDescription: generateExcerpt(post.content, 155) })); };
   const generateSeoTitle = () => { if (post.title) setPost((prev) => ({ ...prev, seoTitle: post.title.length > 60 ? post.title.slice(0, 57) + "..." : post.title })); };
 
   // File upload
   // Save
-  const handleSave = async (isAutoSave = false) => {
+  const handleSave = useCallback(async (isAutoSave = false) => {
     if (!post.title || !post.content) { if (!isAutoSave) alert("Title and content are required"); return; }
     setSaving(true); setSaveStatus("saving");
     try {
@@ -335,7 +325,19 @@ export default function BlogEditorPage({ postId }: { postId?: string }) {
       setSaveStatus("error"); if (!isAutoSave) alert(err instanceof Error ? err.message : "Failed to save post");
       setTimeout(() => setSaveStatus("idle"), 5000);
     } finally { setSaving(false); }
-  };
+  }, [post, seoResult.score]);
+
+  const handleContentChange = useCallback((html: string) => {
+    setPost((prev) => {
+      const np = { ...prev, content: html };
+      if (!prev.excerpt && html.length > 50) np.excerpt = generateExcerpt(html, 160);
+      return np;
+    });
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    if (post.status === "DRAFT" && post.id) {
+      autoSaveTimerRef.current = setTimeout(() => { void handleSave(true); }, 8000);
+    }
+  }, [handleSave, post.status, post.id]);
 
   const handlePublish = async () => {
     setPost((prev) => ({ ...prev, status: "PUBLISHED" }));

@@ -18,8 +18,6 @@ import {
   Share2,
   Zap,
   Eye,
-  Heart,
-  Copy,
   Check,
   Loader2,
   AlertTriangle,

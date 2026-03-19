@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { use, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
@@ -20,7 +22,6 @@ import {
   Minus,
   Plus,
   Star,
-  ArrowRight,
   User,
 } from "lucide-react";
 import Link from "next/link";
@@ -30,7 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },

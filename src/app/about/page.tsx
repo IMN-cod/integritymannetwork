@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { SectionHeading } from "@/components/ui/section-heading";
 import { BackgroundVideo, VideoPlayer, ProtectedImage } from "@/components/ui/video-player";
 import { ABOUT_CONTENT, CHANNELS, SITE } from "@/lib/constants";
 

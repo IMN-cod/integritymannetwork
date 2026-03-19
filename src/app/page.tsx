@@ -20,15 +20,12 @@ import {
   Heart,
   ChevronRight,
   ChevronLeft,
-  Sparkles,
   ArrowUpRight,
   Quote,
   Users,
   BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { BackgroundVideo, VideoPlayer } from "@/components/ui/video-player";
 import { SITE, KEY_DEFINITIONS, CHANNELS, EVENTS_INFO } from "@/lib/constants";
@@ -223,7 +220,7 @@ function ChannelsPreview() {
   const doubled = [...CHANNELS, ...CHANNELS]; // duplicate for seamless loop
   const scrollRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef<number | null>(null);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isDraggingState, setIsDraggingState] = useState(false);
   const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
@@ -270,11 +267,9 @@ function ChannelsPreview() {
 
   // Pause auto-scroll and schedule resume
   const pauseAndScheduleResume = useCallback(() => {
-    setIsPaused(true);
     stopAutoScroll();
     if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
     resumeTimerRef.current = setTimeout(() => {
-      setIsPaused(false);
       startAutoScroll();
     }, RESUME_DELAY);
   }, [stopAutoScroll, startAutoScroll]);
@@ -291,6 +286,7 @@ function ChannelsPreview() {
   // Mouse drag handlers
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     isDragging.current = true;
+    setIsDraggingState(true);
     dragStartX.current = e.clientX;
     scrollStartX.current = scrollRef.current?.scrollLeft || 0;
     lastMoveX.current = e.clientX;
@@ -333,6 +329,7 @@ function ChannelsPreview() {
   const handleMouseUp = useCallback(() => {
     if (isDragging.current) {
       isDragging.current = false;
+      setIsDraggingState(false);
       applyMomentum();
     }
   }, [applyMomentum]);
@@ -340,6 +337,7 @@ function ChannelsPreview() {
   // Touch drag handlers
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     isDragging.current = true;
+    setIsDraggingState(true);
     dragStartX.current = e.touches[0].clientX;
     scrollStartX.current = scrollRef.current?.scrollLeft || 0;
     lastMoveX.current = e.touches[0].clientX;
@@ -365,6 +363,7 @@ function ChannelsPreview() {
   const handleTouchEnd = useCallback(() => {
     if (isDragging.current) {
       isDragging.current = false;
+      setIsDraggingState(false);
       applyMomentum();
     }
   }, [applyMomentum]);
@@ -426,7 +425,7 @@ function ChannelsPreview() {
           <div
             ref={scrollRef}
             className="overflow-hidden select-none"
-            style={{ cursor: isDragging.current ? "grabbing" : "grab" }}
+            style={{ cursor: isDraggingState ? "grabbing" : "grab" }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}

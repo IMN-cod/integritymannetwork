@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   User,
   ShoppingBag,
-  Heart,
   Calendar,
   MessageSquare,
   Settings,

@@ -33,10 +33,6 @@ export async function POST(
 
     // Check capacity
     if (event.capacity) {
-      const registeredCount = await prisma.eventRegistration.count({
-        where: { eventId: event.id, status: { not: "CANCELLED" } },
-      });
-
       // Sum tickets (not just counts)
       const ticketSum = await prisma.eventRegistration.aggregate({
         where: { eventId: event.id, status: { not: "CANCELLED" } },
