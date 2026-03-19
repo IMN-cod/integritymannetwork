@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
@@ -8,11 +8,6 @@ import {
   Save,
   Eye,
   Loader2,
-  ImageIcon,
-  X,
-  Upload,
-  RefreshCw,
-  Trash2,
   Calendar,
   MapPin,
   Users,
@@ -35,6 +30,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { slugify, formatCurrency } from "@/lib/utils";
+import { ImageUpload } from "@/components/ui/ImageUpload";
 
 const RichTextEditor = dynamic(() => import("@/components/admin/RichTextEditor"), { ssr: false });
 
@@ -68,8 +64,6 @@ export default function EventEditor({ eventId }: EventEditorProps) {
   const [description, setDescription] = useState("");
   const [summary, setSummary] = useState("");
   const [coverImage, setCoverImage] = useState("");
-  const [uploadingCover, setUploadingCover] = useState(false);
-  const coverInputRef = useRef<HTMLInputElement>(null);
   const [type, setType] = useState("INTEGRITY_SUMMIT");
   const [status, setStatus] = useState("UPCOMING");
   const [featured, setFeatured] = useState(false);
@@ -277,59 +271,12 @@ export default function EventEditor({ eventId }: EventEditorProps) {
           <Card variant="admin">
             <CardContent className="p-6">
               <label className="block text-sm font-medium text-gray-700 mb-3">Cover Image</label>
-              <input
-                ref={coverInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
-                onChange={async (e) => {
-                  if (!e.target.files?.length) return;
-                  setUploadingCover(true);
-                  try {
-                    const fd = new FormData();
-                    fd.append("files", e.target.files[0]);
-                    const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
-                    if (!res.ok) throw new Error();
-                    const data = await res.json();
-                    if (data.urls?.[0]) setCoverImage(data.urls[0]);
-                  } catch { alert("Image upload failed"); }
-                  finally { setUploadingCover(false); e.target.value = ""; }
-                }}
-                className="hidden"
+                <ImageUpload
+                  value={coverImage}
+                  onChange={setCoverImage}
+                  context="event-cover"
+                  aspectClass="aspect-video"
               />
-              {coverImage ? (
-                <div className="relative rounded-lg overflow-hidden group">
-                  <img src={coverImage} alt="Cover" className="w-full aspect-video object-cover" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                    <button onClick={() => coverInputRef.current?.click()} className="px-4 py-2 bg-white rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-100 flex items-center gap-2">
-                      <RefreshCw className="w-4 h-4" />Change
-                    </button>
-                    <button onClick={() => setCoverImage("")} className="px-4 py-2 bg-red-500 rounded-lg text-sm font-medium text-white hover:bg-red-600 flex items-center gap-2">
-                      <Trash2 className="w-4 h-4" />Remove
-                    </button>
-                  </div>
-                  {uploadingCover && (
-                    <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-                      <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <button
-                  onClick={() => coverInputRef.current?.click()}
-                  disabled={uploadingCover}
-                  className="w-full aspect-video border-2 border-dashed border-gray-200 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-blue-400/50 hover:bg-blue-50/30 transition-all cursor-pointer group"
-                >
-                  {uploadingCover ? (
-                    <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-                  ) : (
-                    <>
-                      <Upload className="w-8 h-8 text-gray-300 group-hover:text-blue-500 transition-colors" />
-                      <span className="text-sm text-gray-400 group-hover:text-blue-600 font-medium">Upload cover image</span>
-                      <span className="text-xs text-gray-300">JPEG, PNG, WebP, GIF, AVIF · Max 5MB</span>
-                    </>
-                  )}
-                </button>
-              )}
             </CardContent>
           </Card>
 

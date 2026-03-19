@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ImageUpload } from "@/components/ui/ImageUpload";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type SettingsMap = Record<string, string>;
@@ -428,7 +429,16 @@ export default function AdminSettingsPage() {
                 {renderTextField("metaTitle", "Default Meta Title", { placeholder: "The Integrity Man Network", description: "Shown in search results (%s — page title)" })}
                 {renderTextarea("metaDescription", "Default Meta Description", { placeholder: "A community for men of integrity and purpose...", rows: 3, description: "150-160 characters recommended" })}
                 {renderTextField("metaKeywords", "Meta Keywords", { placeholder: "integrity, men, community, faith, purpose", description: "Comma-separated keywords" })}
-                {renderTextField("ogImage", "Default OG Image", { placeholder: "https://integritymannetwork.org/images/og-image.jpg", type: "url", description: "Default image for social sharing (1200×630px)" })}
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1.5">Default OG Image</label>
+                  <ImageUpload
+                    value={settings.ogImage || ""}
+                    onChange={(url) => handleChange("ogImage", url)}
+                    context="blog-og"
+                    hint="1200×630 recommended. Auto-optimized to WebP."
+                    aspectClass="aspect-video"
+                  />
+                </div>
               </CardContent>
             </Card>
             <Card variant="admin">
@@ -476,8 +486,26 @@ export default function AdminSettingsPage() {
                 <CardTitle className="text-lg">Logo &amp; Favicon</CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
-                {renderTextField("logoUrl", "Logo URL", { placeholder: "/images/logo.png", description: "Path or URL to your site logo" })}
-                {renderTextField("faviconUrl", "Favicon URL", { placeholder: "/favicon.ico", description: "Path or URL to your favicon" })}
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1.5">Logo</label>
+                  <ImageUpload
+                    value={settings.logoUrl || ""}
+                    onChange={(url) => handleChange("logoUrl", url)}
+                    context="general"
+                    hint="Upload your site logo. Auto-optimized to WebP."
+                    aspectClass="aspect-[5/2]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1.5">Favicon</label>
+                  <ImageUpload
+                    value={settings.faviconUrl || ""}
+                    onChange={(url) => handleChange("faviconUrl", url)}
+                    context="avatar"
+                    hint="Square icon, ideally 512×512. Auto-optimized to WebP."
+                    aspectClass="aspect-square"
+                  />
+                </div>
                 <div className="flex items-center gap-4">
                   {settings.logoUrl && (
                     <div className="border border-gray-200 rounded-lg p-2 bg-gray-50">

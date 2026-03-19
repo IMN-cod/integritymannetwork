@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
@@ -17,7 +17,6 @@ import {
   Calendar,
   Star,
   Wand2,
-  Upload,
   Search as SearchIcon,
   Target,
   Shield,
@@ -37,14 +36,13 @@ import {
   CircleX,
   Twitter,
   Facebook,
-  RefreshCw,
-  Trash2,
   AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { calculateReadingTime, generateExcerpt } from "@/components/admin/RichTextEditor";
+import { ImageUpload } from "@/components/ui/ImageUpload";
 
 const RichTextEditor = dynamic(() => import("@/components/admin/RichTextEditor"), {
   ssr: false,
@@ -249,16 +247,10 @@ export default function BlogEditorPage({ postId }: { postId?: string }) {
   const [showCategoryInput, setShowCategoryInput] = useState(false);
   const [showTagInput, setShowTagInput] = useState(false);
   const [activeTab, setActiveTab] = useState<"general" | "seo" | "social" | "advanced">("general");
-  const [uploadingCover, setUploadingCover] = useState(false);
-  const [uploadingOg, setUploadingOg] = useState(false);
-  const [uploadingTwitter, setUploadingTwitter] = useState(false);
   const [serpPreview, setSerpPreview] = useState<"desktop" | "mobile">("desktop");
   const [seoExpanded, setSeoExpanded] = useState(true);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedRef = useRef<string>("");
-  const coverInputRef = useRef<HTMLInputElement>(null);
-  const ogInputRef = useRef<HTMLInputElement>(null);
-  const twitterInputRef = useRef<HTMLInputElement>(null);
 
   const seoResult = useMemo(() => calculateSeoScore(post), [post]);
 
@@ -324,20 +316,6 @@ export default function BlogEditorPage({ postId }: { postId?: string }) {
   const generateSeoTitle = () => { if (post.title) setPost((prev) => ({ ...prev, seoTitle: post.title.length > 60 ? post.title.slice(0, 57) + "..." : post.title })); };
 
   // File upload
-  const handleFileUpload = async (field: "coverImage" | "ogImage" | "twitterImage", setUploading: (v: boolean) => void, e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.length) return;
-    setUploading(true);
-    try {
-      const fd = new FormData();
-      fd.append("files", e.target.files[0]);
-      const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      if (data.urls?.[0]) setPost((prev) => ({ ...prev, [field]: data.urls[0] }));
-    } catch { alert("Image upload failed"); }
-    finally { setUploading(false); e.target.value = ""; }
-  };
-
   // Save
   const handleSave = async (isAutoSave = false) => {
     if (!post.title || !post.content) { if (!isAutoSave) alert("Title and content are required"); return; }
@@ -435,25 +413,15 @@ export default function BlogEditorPage({ postId }: { postId?: string }) {
           </div>
 
           {/* Cover Image — File Upload */}
-          <input ref={coverInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(e) => handleFileUpload("coverImage", setUploadingCover, e)} className="hidden" />
-          {post.coverImage ? (
-            <div className="relative mb-6 rounded-xl overflow-hidden group">
-              <img src={post.coverImage} alt="Cover" className="w-full h-64 object-cover" />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                <button onClick={() => coverInputRef.current?.click()} className="px-4 py-2 bg-white rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-100"><RefreshCw className="w-4 h-4 inline mr-2" />Change</button>
-                <button onClick={() => setPost((prev) => ({ ...prev, coverImage: "" }))} className="px-4 py-2 bg-red-500 rounded-lg text-sm font-medium text-white hover:bg-red-600"><Trash2 className="w-4 h-4 inline mr-2" />Remove</button>
-              </div>
-              {uploadingCover && <div className="absolute inset-0 bg-white/80 flex items-center justify-center"><Loader2 className="w-8 h-8 text-blue-600 animate-spin" /></div>}
-            </div>
-          ) : (
-            <button onClick={() => coverInputRef.current?.click()} disabled={uploadingCover} className="w-full mb-6 border-2 border-dashed border-gray-200 rounded-xl p-8 flex flex-col items-center gap-2 hover:border-blue-400/50 hover:bg-blue-50/30 transition-all cursor-pointer group">
-              {uploadingCover ? <Loader2 className="w-8 h-8 text-blue-600 animate-spin" /> : <>
-                <Upload className="w-8 h-8 text-gray-300 group-hover:text-blue-500 transition-colors" />
-                <span className="text-sm text-gray-400 group-hover:text-blue-600 font-medium">Upload cover image</span>
-                <span className="text-xs text-gray-300">JPEG, PNG, WebP, GIF, AVIF · Max 5MB</span>
-              </>}
-            </button>
-          )}
+          <div className="mb-6">
+            <ImageUpload
+              value={post.coverImage}
+              onChange={(url) => setPost((prev) => ({ ...prev, coverImage: url }))}
+              context="blog-cover"
+              aspectClass="aspect-video"
+              hint="Recommended 1200×630 · Auto-converted to WebP"
+            />
+          </div>
 
           {showPreview ? (
             <div className="border border-gray-200 rounded-xl bg-white p-8">
@@ -664,24 +632,13 @@ export default function BlogEditorPage({ postId }: { postId?: string }) {
               {/* OG Image */}
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider"><Facebook className="w-3 h-3 inline mr-1" />Open Graph Image</label>
-                <input ref={ogInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => handleFileUpload("ogImage", setUploadingOg, e)} className="hidden" />
-                {post.ogImage ? (
-                  <div className="relative rounded-lg overflow-hidden group">
-                    <img src={post.ogImage} alt="OG" className="w-full h-36 object-cover" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <button onClick={() => ogInputRef.current?.click()} className="px-3 py-1.5 bg-white rounded-md text-xs font-medium text-gray-900">Change</button>
-                      <button onClick={() => setPost((prev) => ({ ...prev, ogImage: "" }))} className="px-3 py-1.5 bg-red-500 rounded-md text-xs font-medium text-white">Remove</button>
-                    </div>
-                    {uploadingOg && <div className="absolute inset-0 bg-white/80 flex items-center justify-center"><Loader2 className="w-6 h-6 text-blue-600 animate-spin" /></div>}
-                  </div>
-                ) : (
-                  <button onClick={() => ogInputRef.current?.click()} disabled={uploadingOg} className="w-full border-2 border-dashed border-gray-200 rounded-lg p-4 flex flex-col items-center gap-1 hover:border-blue-400/50 hover:bg-blue-50/30 transition-all cursor-pointer group">
-                    {uploadingOg ? <Loader2 className="w-5 h-5 text-blue-600 animate-spin" /> : <>
-                      <Upload className="w-5 h-5 text-gray-300 group-hover:text-blue-500" />
-                      <span className="text-xs text-gray-400 group-hover:text-blue-600">Upload OG image (1200×630)</span>
-                    </>}
-                  </button>
-                )}
+                  <ImageUpload
+                    value={post.ogImage}
+                    onChange={(url) => setPost((prev) => ({ ...prev, ogImage: url }))}
+                    context="blog-og"
+                    aspectClass="aspect-video"
+                    hint="1200×630 · Falls back to cover image"
+                  />
                 <p className="text-xs text-gray-400 mt-1">Falls back to cover image. 1200×630px recommended.</p>
               </div>
               <div>
@@ -713,24 +670,13 @@ export default function BlogEditorPage({ postId }: { postId?: string }) {
               {/* Twitter Image */}
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider"><Twitter className="w-3 h-3 inline mr-1" />Twitter Card Image</label>
-                <input ref={twitterInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => handleFileUpload("twitterImage", setUploadingTwitter, e)} className="hidden" />
-                {post.twitterImage ? (
-                  <div className="relative rounded-lg overflow-hidden group">
-                    <img src={post.twitterImage} alt="Twitter" className="w-full h-36 object-cover" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <button onClick={() => twitterInputRef.current?.click()} className="px-3 py-1.5 bg-white rounded-md text-xs font-medium text-gray-900">Change</button>
-                      <button onClick={() => setPost((prev) => ({ ...prev, twitterImage: "" }))} className="px-3 py-1.5 bg-red-500 rounded-md text-xs font-medium text-white">Remove</button>
-                    </div>
-                    {uploadingTwitter && <div className="absolute inset-0 bg-white/80 flex items-center justify-center"><Loader2 className="w-6 h-6 text-blue-600 animate-spin" /></div>}
-                  </div>
-                ) : (
-                  <button onClick={() => twitterInputRef.current?.click()} disabled={uploadingTwitter} className="w-full border-2 border-dashed border-gray-200 rounded-lg p-4 flex flex-col items-center gap-1 hover:border-blue-400/50 hover:bg-blue-50/30 transition-all cursor-pointer group">
-                    {uploadingTwitter ? <Loader2 className="w-5 h-5 text-blue-600 animate-spin" /> : <>
-                      <Upload className="w-5 h-5 text-gray-300 group-hover:text-blue-500" />
-                      <span className="text-xs text-gray-400 group-hover:text-blue-600">Upload Twitter image (1200×675)</span>
-                    </>}
-                  </button>
-                )}
+                <ImageUpload
+                  value={post.twitterImage}
+                  onChange={(url) => setPost((prev) => ({ ...prev, twitterImage: url }))}
+                  context="blog-og"
+                  aspectClass="aspect-video"
+                  hint="1200×675 · Falls back to OG then cover image"
+                />
                 <p className="text-xs text-gray-400 mt-1">Falls back to OG, then cover image.</p>
               </div>
 

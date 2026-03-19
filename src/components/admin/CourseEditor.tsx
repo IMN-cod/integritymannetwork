@@ -7,10 +7,9 @@ import {
   Save,
   Loader2,
   GraduationCap,
-  Upload,
-  X,
   Eye,
 } from "lucide-react";
+import { ImageUpload } from "@/components/ui/ImageUpload";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,7 +79,6 @@ export default function CourseEditor({ courseId }: { courseId?: string }) {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(!!courseId);
   const [error, setError] = useState("");
-  const [uploading, setUploading] = useState(false);
 
   const isEdit = !!courseId;
 
@@ -118,33 +116,6 @@ export default function CourseEditor({ courseId }: { courseId?: string }) {
         .finally(() => setLoading(false));
     }
   }, [courseId]);
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("files", file);
-
-      const res = await fetch("/api/admin/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) throw new Error("Upload failed");
-
-      const data = await res.json();
-      if (data.urls?.[0]) {
-        setForm((prev) => ({ ...prev, coverImage: data.urls[0] }));
-      }
-    } catch {
-      alert("Failed to upload image");
-    } finally {
-      setUploading(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -271,31 +242,12 @@ export default function CourseEditor({ courseId }: { courseId?: string }) {
             <h2 className="text-base font-semibold text-gray-900">Cover Image</h2>
           </CardHeader>
           <CardContent>
-            {form.coverImage ? (
-              <div className="relative rounded-lg overflow-hidden border border-gray-200">
-                <img src={form.coverImage} alt="Cover" className="w-full h-48 object-cover" />
-                <button
-                  type="button"
-                  onClick={() => update("coverImage", "")}
-                  className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <label className="flex flex-col items-center justify-center w-full h-48 rounded-lg border-2 border-dashed border-gray-300 hover:border-orange-400 bg-gray-50 cursor-pointer transition-colors">
-                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
-                {uploading ? (
-                  <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
-                ) : (
-                  <>
-                    <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                    <span className="text-sm text-gray-500">Click to upload cover image</span>
-                    <span className="text-xs text-gray-400 mt-1">PNG, JPG up to 5MB</span>
-                  </>
-                )}
-              </label>
-            )}
+            <ImageUpload
+              value={form.coverImage}
+              onChange={(url) => update("coverImage", url)}
+              context="course-cover"
+              aspectClass="aspect-video"
+            />
           </CardContent>
         </Card>
 
