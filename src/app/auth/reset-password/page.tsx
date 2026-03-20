@@ -1,46 +1,66 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Mail, ArrowRight, ArrowLeft } from "lucide-react";
+import { Lock, ArrowRight, ArrowLeft, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 
-export default function ForgotPasswordPage() {
+function ResetPasswordForm() {
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
+  const email = searchParams.get("email");
+
   const [isLoading, setIsLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading(true);
     setError("");
 
     const formData = new FormData(e.currentTarget);
-    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+    const confirmPassword = formData.get("confirmPassword") as string;
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    setIsLoading(true);
 
     try {
-      const res = await fetch("/api/auth/forgot-password", {
+      const res = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ token, email, password }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.error || "Something went wrong");
       }
 
-      setSubmitted(true);
+      setSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setIsLoading(false);
     }
   };
+
+  const isInvalid = !token || !email;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-950 relative overflow-hidden py-20 px-4">
@@ -72,56 +92,87 @@ export default function ForgotPasswordPage() {
             </span>
           </Link>
           <h1 className="text-2xl font-bold text-white font-display">
-            {submitted ? "Check Your Email" : "Reset Password"}
+            {success ? "Password Reset" : "Set New Password"}
           </h1>
           <p className="text-sm text-zinc-400 mt-2">
-            {submitted
-              ? "We've sent you a password reset link"
-              : "Enter your email and we'll send you a reset link"}
+            {success
+              ? "Your password has been updated successfully"
+              : "Enter your new password below"}
           </p>
         </div>
 
         <Card className="bg-zinc-900/50 backdrop-blur-sm">
           <CardContent className="p-6 md:p-8">
-            {submitted ? (
+            {isInvalid ? (
+              <div className="text-center py-4">
+                <p className="text-sm text-red-400 mb-4">
+                  Invalid or missing reset link. Please request a new password reset.
+                </p>
+                <Link href="/auth/forgot-password">
+                  <Button variant="outline" className="w-full">
+                    Request New Reset Link
+                  </Button>
+                </Link>
+              </div>
+            ) : success ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="text-center py-4"
               >
                 <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mx-auto mb-6">
-                  <Mail className="w-7 h-7 text-orange-500" />
+                  <CheckCircle className="w-7 h-7 text-green-500" />
                 </div>
                 <p className="text-sm text-zinc-400 mb-6">
-                  If an account exists with that email address, you&apos;ll
-                  receive a password reset link shortly.
+                  You can now sign in with your new password.
                 </p>
-                <Button
-                  variant="outline"
-                  onClick={() => setSubmitted(false)}
-                  className="w-full"
-                >
-                  Try another email
-                </Button>
+                <Link href="/auth/login">
+                  <Button className="w-full">
+                    Sign In
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </Link>
               </motion.div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
                   <label
-                    htmlFor="email"
+                    htmlFor="password"
                     className="text-sm font-medium text-zinc-300"
                   >
-                    Email Address
+                    New Password
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                     <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      placeholder="you@example.com"
+                      id="password"
+                      name="password"
+                      type="password"
+                      placeholder="At least 8 characters"
                       className="pl-10"
                       required
+                      minLength={8}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor="confirmPassword"
+                    className="text-sm font-medium text-zinc-300"
+                  >
+                    Confirm Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type="password"
+                      placeholder="Repeat your password"
+                      className="pl-10"
+                      required
+                      minLength={8}
                     />
                   </div>
                 </div>
@@ -141,11 +192,11 @@ export default function ForgotPasswordPage() {
                   {isLoading ? (
                     <>
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                      Sending...
+                      Resetting...
                     </>
                   ) : (
                     <>
-                      Send Reset Link
+                      Reset Password
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -166,5 +217,19 @@ export default function ForgotPasswordPage() {
         </p>
       </motion.div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+          <span className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

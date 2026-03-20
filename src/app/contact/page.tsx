@@ -113,13 +113,43 @@ function ContactHero() {
 function ContactForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsSubmitting(false);
-    setSubmitted(true);
+    setError("");
+
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const payload = {
+      firstName: formData.get("firstName") as string,
+      lastName: formData.get("lastName") as string,
+      email: formData.get("email") as string,
+      subject: formData.get("subject") as string,
+      message: formData.get("message") as string,
+    };
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Failed to send message. Please try again.");
+        return;
+      }
+
+      setSubmitted(true);
+      form.reset();
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (submitted) {
@@ -185,6 +215,12 @@ function ContactForm() {
         </label>
         <Textarea id="message" name="message" placeholder="Tell us what's on your mind..." rows={6} required />
       </div>
+
+      {error && (
+        <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3">
+          {error}
+        </div>
+      )}
 
       <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isSubmitting}>
         {isSubmitting ? (

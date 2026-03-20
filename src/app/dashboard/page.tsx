@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import {
@@ -11,45 +13,32 @@ import {
   ChevronRight,
   Package,
   BookOpen,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 
-// 
-// PLACEHOLDER DATA
-// 
+interface Order {
+  id: string;
+  orderNumber: string;
+  createdAt: string;
+  total: number;
+  status: string;
+  items: { id: string }[];
+}
 
-const userOrders = [
-  {
-    id: "ORD-2025-0041",
-    date: "Mar 1, 2025",
-    total: 27500,
-    status: "delivered",
-    items: 2,
-  },
-  {
-    id: "ORD-2025-0039",
-    date: "Feb 20, 2025",
-    total: 15000,
-    status: "shipped",
-    items: 1,
-  },
-];
-
-const upcomingEvents = [
-  {
-    title: "Integrity Summit 2025",
-    date: "November 15, 2025",
-    status: "registered",
-  },
-  {
-    title: "Men's Retreat Q2",
-    date: "June 20, 2025",
-    status: "registered",
-  },
-];
+interface Registration {
+  id: string;
+  status: string;
+  ticketCount: number;
+  event: {
+    title: string;
+    slug: string;
+    startDate: string;
+  };
+}
 
 const quickLinks = [
   { label: "My Orders", href: "/dashboard/orders", icon: Package },
@@ -65,13 +54,47 @@ const quickLinks = [
 // 
 
 export default function DashboardPage() {
+  const { data: session } = useSession();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [ordersRes, regsRes] = await Promise.all([
+          fetch("/api/orders?limit=3"),
+          fetch("/api/user/registrations"),
+        ]);
+
+        if (ordersRes.ok) {
+          const data = await ordersRes.json();
+          setOrders(data.orders ?? []);
+        }
+
+        if (regsRes.ok) {
+          const data = await regsRes.json();
+          setRegistrations(data.registrations ?? []);
+        }
+      } catch {
+        // silently fail — dashboard still renders with empty states
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  const userName = session?.user?.name || "there";
+
   return (
     <div className="min-h-screen bg-zinc-950">
       <div className="max-w-6xl mx-auto px-6 py-12">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white font-display">
-            Welcome back
+            Welcome back{userName !== "there" ? `, ${userName}` : ""}
           </h1>
           <p className="text-zinc-500 mt-1">
             Manage your account, orders, and community involvement.
@@ -106,16 +129,21 @@ export default function DashboardPage() {
               </Link>
             </CardHeader>
             <CardContent className="space-y-3">
-              {userOrders.map((order) => (
+              {loading ? (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="w-5 h-5 text-zinc-500 animate-spin" />
+                </div>
+              ) : orders.length > 0 ? (
+                orders.map((order) => (
                 <div
                   key={order.id}
                   className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/20 border border-zinc-800/30"
                 >
                   <div>
-                    <p className="text-sm font-medium text-white">{order.id}</p>
+                    <p className="text-sm font-medium text-white">{order.orderNumber}</p>
                     <p className="text-xs text-zinc-500">
-                      {order.date}  {order.items} item
-                      {order.items > 1 ? "s" : ""}
+                      {new Date(order.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} &middot; {order.items.length} item
+                      {order.items.length !== 1 ? "s" : ""}
                     </p>
                   </div>
                   <div className="text-right">
@@ -124,17 +152,16 @@ export default function DashboardPage() {
                     </p>
                     <Badge
                       variant={
-                        order.status === "delivered" ? "success" : "warning"
+                        order.status === "DELIVERED" ? "success" : "warning"
                       }
                       className="text-[10px]"
                     >
-                      {order.status}
+                      {order.status.toLowerCase()}
                     </Badge>
                   </div>
                 </div>
-              ))}
-
-              {userOrders.length === 0 && (
+              ))
+              ) : (
                 <div className="text-center py-6">
                   <ShoppingBag className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
                   <p className="text-sm text-zinc-500">No orders yet.</p>
@@ -155,22 +182,35 @@ export default function DashboardPage() {
               </Link>
             </CardHeader>
             <CardContent className="space-y-3">
-              {upcomingEvents.map((event) => (
+              {loading ? (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="w-5 h-5 text-zinc-500 animate-spin" />
+                </div>
+              ) : registrations.length > 0 ? (
+                registrations.map((reg) => (
                 <div
-                  key={event.title}
+                  key={reg.id}
                   className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/20 border border-zinc-800/30"
                 >
                   <div>
                     <p className="text-sm font-medium text-white">
-                      {event.title}
+                      {reg.event.title}
                     </p>
-                    <p className="text-xs text-zinc-500">{event.date}</p>
+                    <p className="text-xs text-zinc-500">
+                      {new Date(reg.event.startDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                    </p>
                   </div>
                   <Badge variant="success" className="text-[10px]">
-                    {event.status}
+                    {reg.status.toLowerCase()}
                   </Badge>
                 </div>
-              ))}
+              ))
+              ) : (
+                <div className="text-center py-6">
+                  <Calendar className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
+                  <p className="text-sm text-zinc-500">No event registrations yet.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
