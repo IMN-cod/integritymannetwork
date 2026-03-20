@@ -21,6 +21,7 @@ import crypto from "crypto";
 import path from "path";
 import { writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
+import { isCloudinaryConfigured, uploadToCloudinary } from "./cloudinary";
 
 // ── Context identifiers ───────────────────────────────────────────────
 export type ImageContext =
@@ -206,8 +207,16 @@ export async function optimizeImage(
     quality = Math.max(45, quality - 8);
   }
 
-  // Write to disk
-  await writeFile(filePath, outputBuffer);
+  // Step 10 — persist: Cloudinary if configured, otherwise local disk
+  let finalUrl = publicUrl;
+  if (isCloudinaryConfigured()) {
+    finalUrl = await uploadToCloudinary(outputBuffer, {
+      folder: "imn",
+      publicId: `${shortHash}_${context}`,
+    });
+  } else {
+    await writeFile(filePath, outputBuffer);
+  }
 
   // Final metadata for response
   const outMeta = await sharp(outputBuffer).metadata();
@@ -217,7 +226,7 @@ export async function optimizeImage(
 
   const optimizedSize = outputBuffer.length;
   return {
-    url: publicUrl,
+    url: finalUrl,
     blurDataURL,
     originalSize,
     optimizedSize,

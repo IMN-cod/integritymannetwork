@@ -10,6 +10,11 @@ import {
   MAX_FILE_SIZE,
   type ImageContext,
 } from "@/lib/image-optimizer";
+import {
+  isCloudinaryConfigured,
+  deleteFromCloudinary,
+  extractPublicId,
+} from "@/lib/cloudinary";
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
 
@@ -104,7 +109,17 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "No path provided" }, { status: 400 });
     }
 
-    // Security: only allow files inside /uploads/, block path traversal
+    // Cloudinary URL — delete from cloud
+    if (filePath.startsWith("https://res.cloudinary.com/") && isCloudinaryConfigured()) {
+      const publicId = extractPublicId(filePath);
+      if (!publicId) {
+        return NextResponse.json({ error: "Could not parse Cloudinary public ID" }, { status: 400 });
+      }
+      await deleteFromCloudinary(publicId);
+      return NextResponse.json({ success: true });
+    }
+
+    // Local file — security: only allow files inside /uploads/, block path traversal
     if (!filePath.startsWith("/uploads/") || filePath.includes("..")) {
       return NextResponse.json({ error: "Invalid path" }, { status: 400 });
     }
