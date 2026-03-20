@@ -321,8 +321,22 @@ function DonationForm() {
   );
 
   const handleDonate = async () => {
-    if (!isValid || !paystackReady) return;
     setError(null);
+
+    // Validate and show specific error messages
+    if (!donorEmail || !donorEmail.includes("@")) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+    if (!currentAmount || currentAmount < 5) {
+      setError("Minimum donation amount is GH₵5.");
+      return;
+    }
+    if (!paystackReady) {
+      setError("Payment system is still loading. Please wait a moment and try again.");
+      return;
+    }
+
     setDonationState({ step: "processing" });
 
     try {
@@ -650,7 +664,7 @@ function DonationForm() {
           size="xl"
           className="w-full group relative overflow-hidden"
           onClick={handleDonate}
-          disabled={!isValid || isProcessing || !paystackReady}
+          disabled={isProcessing}
         >
           <span className="relative z-10 flex items-center gap-2">
             {isProcessing ? (
@@ -665,9 +679,9 @@ function DonationForm() {
             ) : (
               <>
                 <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
-                {isValid
-                  ? `Donate ${formatCurrency(currentAmount || 0)}`
-                  : "Enter Email & Amount"}
+                {currentAmount && currentAmount >= 5
+                  ? `Donate ${formatCurrency(currentAmount)}`
+                  : "Donate Now"}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </>
             )}
