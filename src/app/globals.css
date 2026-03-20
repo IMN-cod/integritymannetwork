@@ -309,6 +309,75 @@ img + div {
   border-radius: 20px;
 }
 
+/* ── Blog Article Reading Experience ── */
+
+.blog-article article blockquote {
+  position: relative;
+}
+
+.blog-article article blockquote::before {
+  content: "\201C";
+  position: absolute;
+  top: -0.15em;
+  left: 0.3rem;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 4rem;
+  line-height: 1;
+  color: rgba(249, 115, 22, 0.15);
+  pointer-events: none;
+}
+
+.blog-article article blockquote p {
+  position: relative;
+  z-index: 1;
+}
+
+/* Scripture reference styling — em inside blockquotes */
+.blog-article article blockquote em {
+  color: #fed7aa;
+  font-style: italic;
+}
+
+/* Subtle paragraph visual separator */
+.blog-article article > p + p {
+  margin-top: 0;
+}
+
+/* Bold headings get a left accent */
+.blog-article article h2 {
+  position: relative;
+  padding-left: 1rem;
+}
+
+.blog-article article h2::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.15em;
+  bottom: 0.15em;
+  width: 3px;
+  border-radius: 2px;
+  background: linear-gradient(to bottom, #f97316, #ea580c);
+}
+
+/* Better spacing after images */
+.blog-article article img + p,
+.blog-article article figure + p {
+  margin-top: 2rem;
+}
+
+/* Smooth scroll for TOC links */
+.blog-article article h2,
+.blog-article article h3,
+.blog-article article h4 {
+  scroll-margin-top: 6rem;
+}
+
+/* Section break effect between major sections */
+.blog-article article h2 + p::first-line {
+  color: #e4e4e7;
+}
+
 /* ── Selection ── */
 
 ::selection {

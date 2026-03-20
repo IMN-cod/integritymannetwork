@@ -189,139 +189,147 @@ export default function BlogPostClient({
       </div>
 
       {/* Hero */}
-      <section className="relative pt-32 sm:pt-40 pb-12 sm:pb-16 overflow-hidden">
+      <section className="relative pt-32 sm:pt-40 pb-16 sm:pb-24 overflow-hidden">
         <div className="absolute inset-0 bg-zinc-950" />
         <div className="absolute inset-0 bg-grid opacity-20" />
         <div className="absolute inset-0 bg-radial-dark" />
         {post.coverImage && (
-          <div className="absolute inset-0 opacity-10">
-            <img src={post.coverImage} alt="" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 opacity-8">
+            <img src={post.coverImage} alt="" className="w-full h-full object-cover blur-sm" />
           </div>
         )}
         <div className="container-wide relative z-10">
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="max-w-3xl mx-auto">
+          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="max-w-2xl mx-auto text-center">
             {/* Breadcrumb */}
-            <nav className="flex items-center gap-2 text-sm text-zinc-500 mb-6 sm:mb-8">
+            <nav className="flex items-center justify-center gap-2 text-sm text-zinc-500 mb-8 sm:mb-10">
               <Link href="/" className="hover:text-orange-500 transition-colors">Home</Link>
-              <span>/</span>
+              <ChevronRight className="w-3 h-3" />
               <Link href="/blog" className="hover:text-orange-500 transition-colors">Blog</Link>
-              <span>/</span>
-              <span className="text-zinc-400 truncate max-w-60">{post.title}</span>
+              <ChevronRight className="w-3 h-3" />
+              <span className="text-zinc-400 truncate max-w-48">{post.title}</span>
             </nav>
-            <div className="flex items-center gap-3 mb-4 sm:mb-6">
+            <div className="flex items-center justify-center gap-3 mb-6">
               {post.category && <Badge>{post.category.name}</Badge>}
               {post.featured && <Badge variant="outline">Featured</Badge>}
-              <span className="text-xs text-zinc-500">{post.readingTime} min read</span>
             </div>
-            <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-white leading-tight mb-6">
+            <h1 className="font-display text-3xl sm:text-4xl md:text-[2.75rem] lg:text-5xl font-bold tracking-tight text-white leading-[1.15] mb-8">
               {post.title}
             </h1>
-            <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-sm text-zinc-500">
-              <span className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-xs font-bold text-orange-500">
+            {post.excerpt && (
+              <p className="text-lg sm:text-xl text-zinc-400 leading-relaxed mb-8 max-w-xl mx-auto font-light">
+                {post.excerpt}
+              </p>
+            )}
+            <div className="flex flex-wrap items-center justify-center gap-5 text-sm text-zinc-500">
+              <span className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-xs font-bold text-orange-500">
                   {authorInitials}
                 </div>
-                {authorName}
+                <span className="text-zinc-300 font-medium">{authorName}</span>
               </span>
+              <span className="w-1 h-1 rounded-full bg-zinc-700 hidden sm:block" />
               {post.publishedAt && (
                 <span className="flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5" />
                   {new Date(post.publishedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                 </span>
               )}
+              <span className="w-1 h-1 rounded-full bg-zinc-700 hidden sm:block" />
               <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" />{post.readingTime} min read</span>
+              <span className="w-1 h-1 rounded-full bg-zinc-700 hidden sm:block" />
               <span className="flex items-center gap-1.5"><Eye className="w-3.5 h-3.5" />{post.viewCount.toLocaleString()} views</span>
-              {post.comments.length > 0 && (
-                <span className="flex items-center gap-1.5"><MessageSquare className="w-3.5 h-3.5" />{post.comments.length} comments</span>
-              )}
             </div>
           </motion.div>
         </div>
       </section>
 
-      <div className="divider-gradient" />
-
+      {/* Cover Image — cinematic full-bleed */}
       {post.coverImage && (
-        <section className="bg-zinc-950 -mt-1">
-          <div className="container-wide">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }} className="max-w-4xl mx-auto">
-              <img src={post.coverImage} alt={post.title} className="w-full rounded-xl shadow-2xl shadow-black/30 mb-8" />
+        <section className="bg-zinc-950 relative -mt-8 sm:-mt-12 z-10 pb-4">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6">
+            <motion.div initial={{ opacity: 0, y: 20, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.7, delay: 0.2 }}>
+              <img src={post.coverImage} alt={post.title} className="w-full rounded-2xl shadow-2xl shadow-black/50 ring-1 ring-zinc-800/50" />
             </motion.div>
           </div>
         </section>
       )}
 
       {/* Article Body with TOC */}
-      <section className="section-padding">
+      <section className="py-16 sm:py-20 lg:py-24">
         <div className="container-wide">
-          <div className="max-w-6xl mx-auto flex gap-8">
+          <div className="max-w-6xl mx-auto flex gap-12">
             {/* Table of Contents — Desktop Sidebar */}
             {toc.length > 2 && (
               <aside className="hidden xl:block w-56 shrink-0">
-                <div className="sticky top-20">
-                  <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">Contents</h4>
-                  <nav className="space-y-1">
-                    {toc.map((item) => (
-                      <a
-                        key={item.id}
-                        href={`#${item.id}`}
-                        className={`block text-sm transition-colors ${
-                          item.level === 3 ? "pl-3" : ""
-                        } ${
-                          activeTocId === item.id
-                            ? "text-orange-500 font-medium"
-                            : "text-zinc-500 hover:text-zinc-300"
-                        }`}
-                      >
-                        {item.text}
-                      </a>
-                    ))}
-                  </nav>
+                <div className="sticky top-24">
+                  <div className="border-l-2 border-orange-500/30 pl-4">
+                    <h4 className="text-[11px] font-semibold text-orange-500/80 uppercase tracking-[0.15em] mb-4">In This Article</h4>
+                    <nav className="space-y-1.5">
+                      {toc.map((item) => (
+                        <a
+                          key={item.id}
+                          href={`#${item.id}`}
+                          className={`block text-[13px] leading-snug py-1 transition-all duration-200 ${
+                            item.level === 3 ? "pl-3 border-l border-zinc-800" : ""
+                          } ${
+                            activeTocId === item.id
+                              ? "text-orange-400 font-medium translate-x-0.5"
+                              : "text-zinc-500 hover:text-zinc-300"
+                          }`}
+                        >
+                          {item.text}
+                        </a>
+                      ))}
+                    </nav>
+                  </div>
                 </div>
               </aside>
             )}
 
             {/* Main */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }} className="flex-1 min-w-0 max-w-3xl mx-auto" ref={articleRef}>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }} className="flex-1 min-w-0 max-w-170 mx-auto blog-article" ref={articleRef}>
               <article
                 className="prose prose-lg prose-zinc prose-invert prose-orange max-w-none
-                  prose-headings:font-display prose-headings:text-white prose-headings:font-bold prose-headings:scroll-mt-20
-                  prose-h1:text-3xl sm:prose-h1:text-4xl prose-h1:mt-14 prose-h1:mb-6 prose-h1:leading-tight
-                  prose-h2:text-2xl sm:prose-h2:text-[1.75rem] prose-h2:mt-12 prose-h2:mb-5 prose-h2:leading-snug prose-h2:border-b prose-h2:border-zinc-800/40 prose-h2:pb-3
-                  prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3 prose-h3:text-zinc-100
-                  prose-h4:text-lg prose-h4:mt-6 prose-h4:mb-2
-                  prose-p:text-zinc-300 prose-p:leading-[1.85] prose-p:text-[17px] prose-p:mb-6 prose-p:tracking-[0.01em]
-                  prose-a:text-orange-400 prose-a:underline prose-a:underline-offset-2 prose-a:decoration-orange-500/30 hover:prose-a:decoration-orange-500
-                  prose-strong:text-white prose-strong:font-semibold prose-em:text-zinc-200
-                  prose-blockquote:border-l-[3px] prose-blockquote:border-orange-500/60 prose-blockquote:bg-orange-500/5 prose-blockquote:rounded-r-lg prose-blockquote:pl-6 prose-blockquote:pr-4 prose-blockquote:py-4 prose-blockquote:text-zinc-200 prose-blockquote:font-medium prose-blockquote:text-lg prose-blockquote:my-8 prose-blockquote:not-italic
-                  prose-ul:text-zinc-300 prose-ul:my-6 prose-ul:space-y-2.5
-                  prose-ol:text-zinc-300 prose-ol:my-6 prose-ol:space-y-2.5
-                  prose-li:text-zinc-300 prose-li:leading-[1.8] prose-li:text-[17px] prose-li:marker:text-orange-500/70
+                  prose-headings:font-display prose-headings:text-white prose-headings:font-bold prose-headings:scroll-mt-24
+                  prose-h1:text-[2rem] sm:prose-h1:text-4xl prose-h1:mt-16 prose-h1:mb-8 prose-h1:leading-[1.2]
+                  prose-h2:text-[1.6rem] sm:prose-h2:text-[1.85rem] prose-h2:mt-20 prose-h2:mb-6 prose-h2:leading-[1.25] prose-h2:pb-0 prose-h2:border-0
+                  prose-h3:text-[1.25rem] prose-h3:mt-14 prose-h3:mb-5 prose-h3:text-zinc-100 prose-h3:font-semibold
+                  prose-h4:text-lg prose-h4:mt-10 prose-h4:mb-4 prose-h4:text-orange-400/90
+                  prose-p:text-[#c4c4cc] prose-p:leading-[2] prose-p:text-[1.125rem] prose-p:mb-7 prose-p:tracking-[0.005em]
+                  prose-a:text-orange-400 prose-a:underline prose-a:underline-offset-4 prose-a:decoration-orange-500/30 hover:prose-a:decoration-orange-500 prose-a:transition-colors
+                  prose-strong:text-white prose-strong:font-semibold
+                  prose-em:text-orange-200/80 prose-em:font-[inherit]
+                  prose-blockquote:border-l-[3px] prose-blockquote:border-orange-500/50 prose-blockquote:bg-orange-500/4 prose-blockquote:rounded-r-xl prose-blockquote:pl-7 prose-blockquote:pr-6 prose-blockquote:py-6 prose-blockquote:text-zinc-200 prose-blockquote:text-[1.15rem] prose-blockquote:leading-[1.9] prose-blockquote:my-12 prose-blockquote:italic prose-blockquote:font-display prose-blockquote:relative
+                  prose-ul:text-[#c4c4cc] prose-ul:my-8 prose-ul:space-y-3 prose-ul:pl-6
+                  prose-ol:text-[#c4c4cc] prose-ol:my-8 prose-ol:space-y-3 prose-ol:pl-6
+                  prose-li:text-[#c4c4cc] prose-li:leading-[1.9] prose-li:text-[1.1rem] prose-li:marker:text-orange-500/60
                   prose-code:bg-zinc-800/80 prose-code:rounded-md prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:text-orange-400 prose-code:border prose-code:border-zinc-700/50
                   prose-pre:bg-zinc-900 prose-pre:rounded-xl prose-pre:border prose-pre:border-zinc-800
-                  prose-img:rounded-xl prose-img:shadow-lg prose-img:my-10
-                  prose-hr:border-zinc-800/50 prose-hr:my-12
+                  prose-img:rounded-2xl prose-img:shadow-xl prose-img:shadow-black/20 prose-img:my-14
+                  prose-hr:border-zinc-800/40 prose-hr:my-16
                   prose-table:text-zinc-300 prose-th:text-white prose-th:font-semibold prose-td:py-3 prose-th:py-3
                   [&>*:first-child]:mt-0
-                  [&>p:first-of-type]:text-lg [&>p:first-of-type]:text-zinc-200 [&>p:first-of-type]:leading-[1.9] [&>p:first-of-type]:font-medium
-                  [&>p:first-of-type]:first-letter:text-5xl [&>p:first-of-type]:first-letter:font-bold [&>p:first-of-type]:first-letter:text-orange-500 [&>p:first-of-type]:first-letter:float-left [&>p:first-of-type]:first-letter:mr-3 [&>p:first-of-type]:first-letter:mt-1 [&>p:first-of-type]:first-letter:leading-none [&>p:first-of-type]:first-letter:font-display"
+                  [&>p:first-of-type]:text-[1.2rem] [&>p:first-of-type]:text-zinc-200 [&>p:first-of-type]:leading-[2.05] [&>p:first-of-type]:font-normal
+                  [&>p:first-of-type]:first-letter:text-6xl [&>p:first-of-type]:first-letter:font-bold [&>p:first-of-type]:first-letter:text-orange-500 [&>p:first-of-type]:first-letter:float-left [&>p:first-of-type]:first-letter:mr-4 [&>p:first-of-type]:first-letter:mt-1.5 [&>p:first-of-type]:first-letter:leading-[0.8] [&>p:first-of-type]:first-letter:font-display
+                  [&>h2+p]:mt-6
+                  [&>h3+p]:mt-5"
                 dangerouslySetInnerHTML={{ __html: processedContent }}
               />
 
               {post.tags.length > 0 && (
-                <div className="mt-12 pt-8 border-t border-zinc-800/50">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Tag className="w-4 h-4 text-zinc-500" />
+                <div className="mt-16 pt-10 border-t border-zinc-800/30">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Tag className="w-4 h-4 text-zinc-600" />
                     {post.tags.map(({ tag }) => (
-                      <Badge key={tag.id} variant="outline" className="text-xs">{tag.name}</Badge>
+                      <Badge key={tag.id} variant="outline" className="text-xs px-3 py-1">{tag.name}</Badge>
                     ))}
                   </div>
                 </div>
               )}
 
               {/* Share */}
-              <div className="mt-8 pt-8 border-t border-zinc-800/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="text-sm text-zinc-500">Enjoyed this article? Share it with others.</div>
+              <div className="mt-10 pt-10 border-t border-zinc-800/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="text-sm text-zinc-400 font-medium">Enjoyed this article? Share it with others.</div>
                 <div className="flex items-center gap-2">
                   <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareTitle)}&url=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors text-zinc-400 hover:text-white" title="Share on X">
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
@@ -342,23 +350,24 @@ export default function BlogPostClient({
               </div>
 
               {/* Author */}
-              <div className="mt-8 p-6 rounded-xl bg-zinc-900/50 border border-zinc-800/50">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-lg font-bold text-orange-500">
+              <div className="mt-12 p-7 sm:p-8 rounded-2xl bg-zinc-900/60 border border-zinc-800/40 backdrop-blur-sm">
+                <div className="flex items-start sm:items-center gap-5">
+                  <div className="w-16 h-16 rounded-full bg-orange-500/10 border-2 border-orange-500/20 flex items-center justify-center text-xl font-bold text-orange-500 shrink-0">
                     {authorInitials}
                   </div>
                   <div>
-                    <p className="text-white font-medium font-display">{authorName}</p>
-                    <p className="text-sm text-zinc-500 mt-0.5">{authorSubtitle}</p>
+                    <p className="text-sm text-zinc-500 uppercase tracking-wider mb-1">Written by</p>
+                    <p className="text-lg text-white font-semibold font-display">{authorName}</p>
+                    <p className="text-sm text-zinc-400 mt-1">{authorSubtitle}</p>
                   </div>
                 </div>
               </div>
 
               {/* CTA */}
-              <div className="mt-12 p-6 sm:p-8 rounded-xl bg-linear-to-br from-orange-500/10 to-orange-600/5 border border-orange-500/20">
-                <h3 className="text-lg font-bold text-white font-display mb-2">Ready to begin your journey?</h3>
-                <p className="text-sm text-zinc-400 mb-4">Join The Integrity Man Network and connect with a community of men pursuing purpose with integrity.</p>
-                <Link href="/join"><Button size="lg">Join The Network <ChevronRight className="w-4 h-4" /></Button></Link>
+              <div className="mt-14 p-8 sm:p-10 rounded-2xl bg-linear-to-br from-orange-500/10 via-orange-600/5 to-transparent border border-orange-500/20 text-center">
+                <h3 className="text-xl sm:text-2xl font-bold text-white font-display mb-3">Ready to begin your journey?</h3>
+                <p className="text-zinc-400 mb-6 max-w-md mx-auto leading-relaxed">Join The Integrity Man Network and connect with a community of men pursuing purpose with integrity.</p>
+                <Link href="/join"><Button size="lg" className="px-8">Join The Network <ChevronRight className="w-4 h-4" /></Button></Link>
               </div>
             </motion.div>
           </div>
@@ -367,15 +376,16 @@ export default function BlogPostClient({
 
       {/* Related Posts */}
       {relatedPosts.length > 0 && (
-        <section className="section-padding border-t border-zinc-800/50">
+        <section className="py-16 sm:py-20 border-t border-zinc-800/30">
           <div className="container-wide">
-            <div className="max-w-3xl mx-auto">
-              <h2 className="text-2xl font-bold text-white font-display mb-8">Related Articles</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="max-w-170 mx-auto">
+              <p className="text-[11px] font-semibold text-orange-500/80 uppercase tracking-[0.15em] mb-2">Keep Reading</p>
+              <h2 className="text-2xl font-bold text-white font-display mb-10">Related Articles</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 {relatedPosts.map((related) => (
                   <Link key={related.id} href={`/blog/${related.slug}`}>
                     <Card variant="light" className="h-full overflow-hidden group hover:border-orange-500/20 transition-all duration-300">
-                      <div className="aspect-video bg-zinc-800 flex items-center justify-center overflow-hidden">
+                      <div className="aspect-4/3 bg-zinc-800 flex items-center justify-center overflow-hidden">
                         {related.coverImage ? (
                           <img src={related.coverImage} alt={related.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                         ) : (
@@ -384,9 +394,9 @@ export default function BlogPostClient({
                       </div>
                       <CardContent className="p-4">
                         {related.category && <Badge className="text-[10px] mb-2">{related.category.name}</Badge>}
-                        <h3 className="text-sm font-bold text-zinc-900 font-display line-clamp-2 group-hover:text-orange-500 transition-colors">{related.title}</h3>
-                        <div className="flex items-center gap-2 mt-2 text-[10px] text-zinc-500">
-                          <Clock className="w-2.5 h-2.5" /> {related.readingTime} min read
+                        <h3 className="text-sm font-bold text-white font-display line-clamp-2 group-hover:text-orange-500 transition-colors">{related.title}</h3>
+                        <div className="flex items-center gap-2 mt-3 text-[11px] text-zinc-500">
+                          <Clock className="w-3 h-3" /> {related.readingTime} min read
                         </div>
                       </CardContent>
                     </Card>
