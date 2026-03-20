@@ -38,6 +38,7 @@ declare global {
         amount: number;
         currency?: string;
         ref?: string;
+        access_code?: string;
         channels?: string[];
         label?: string;
         onClose: () => void;
@@ -278,50 +279,52 @@ function DonationForm() {
   const currentAmount = customAmount ? parseInt(customAmount, 10) : selectedAmount;
   const isValid = currentAmount && currentAmount >= 5 && donorEmail.includes("@");
 
+  const verifyPayment = useCallback(async (reference: string) => {
+    setDonationState({ step: "processing" });
+    try {
+      const res = await fetch("/api/donate/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reference }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDonationState({
+          step: "success",
+          reference,
+          amount: data.amount,
+          channel: data.channel,
+        });
+      } else {
+        setDonationState({
+          step: "failed",
+          message: data.error || "Verification failed",
+        });
+      }
+    } catch {
+      setDonationState({
+        step: "failed",
+        message: "Could not verify payment. Please contact support.",
+      });
+    }
+  }, []);
+
   const openPaystackPopup = useCallback(
-    (accessCode: string, reference: string, email: string, amount: number) => {
+    (accessCode: string) => {
       if (!window.PaystackPop) return;
 
       const handler = window.PaystackPop.setup({
         key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "pk_live_806d86d3d44fee610a77a4872a921089aa091680",
-        email,
-        amount: Math.round(amount * 100),
+        email: donorEmail,
+        amount: Math.round((currentAmount || 0) * 100),
         currency: "GHS",
-        ref: reference,
+        access_code: accessCode,
         channels: ["card", "mobile_money", "bank_transfer"],
         label: donorName || undefined,
-        callback: async (response) => {
-          // Payment completed — verify server-side
-          setDonationState({ step: "processing" });
-          try {
-            const res = await fetch("/api/donate/verify", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ reference: response.reference }),
-            });
-            const data = await res.json();
-            if (data.success) {
-              setDonationState({
-                step: "success",
-                reference: response.reference,
-                amount: data.amount,
-                channel: data.channel,
-              });
-            } else {
-              setDonationState({
-                step: "failed",
-                message: data.error || "Verification failed",
-              });
-            }
-          } catch {
-            setDonationState({
-              step: "failed",
-              message: "Could not verify payment. Please contact support.",
-            });
-          }
+        callback: (response: { reference: string; status: string }) => {
+          verifyPayment(response.reference);
         },
         onClose: () => {
-          if (donationState.step === "processing") return;
           setDonationState({ step: "form" });
           setError("Payment window was closed. You can try again.");
         },
@@ -329,7 +332,7 @@ function DonationForm() {
 
       handler.openIframe();
     },
-    [donorName, donationState.step]
+    [donorName, donorEmail, currentAmount, verifyPayment]
   );
 
   const handleDonate = async () => {
@@ -371,12 +374,7 @@ function DonationForm() {
       }
 
       // Open Paystack popup with the access code
-      openPaystackPopup(
-        data.accessCode,
-        `DON-${data.donationId}`,
-        donorEmail,
-        currentAmount!
-      );
+      openPaystackPopup(data.accessCode);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setDonationState({ step: "form" });
