@@ -1,27 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180">
-  <defs>
-    <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#f97316"/>
-      <stop offset="100%" stop-color="#c2410c"/>
-    </linearGradient>
-  </defs>
-
   <!-- Black background -->
   <rect width="180" height="180" rx="36" ry="36" fill="#09090b"/>
 
-  <!-- Shield / Crest -->
+  <!-- Shield / Crest — wide flared shape, white -->
   <path d="
-    M90 24
-    C90 24 130 31 138 35
-    C146 39 148 49 148 59
-    L148 87
-    C148 112 134 129 120 140
-    C106 151 95 156 90 159
-    C85 156 74 151 60 140
-    C46 129 32 112 32 87
-    L32 59
-    C32 49 34 39 42 35
-    C50 31 90 24 90 24Z
-  " fill="url(#cg)" stroke="#fdba74" stroke-width="1"/>
+    M90 20
+    C80 20 52 27 40 32
+    C33 36 30 42 30 52
+    L30 84
+    C30 109 41 126 58 138
+    C70 148 84 155 90 158
+    C96 155 110 148 122 138
+    C139 126 150 109 150 84
+    L150 52
+    C150 42 147 36 140 32
+    C128 27 100 20 90 20Z
+  " fill="#ffffff"/>
 
 </svg>

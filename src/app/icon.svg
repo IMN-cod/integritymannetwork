@@ -1,49 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <defs>
-    <linearGradient id="crestGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#f97316"/>
-      <stop offset="100%" stop-color="#c2410c"/>
-    </linearGradient>
-    <linearGradient id="innerGlow" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#fdba74" stop-opacity="0.3"/>
-      <stop offset="100%" stop-color="#f97316" stop-opacity="0"/>
-    </linearGradient>
-  </defs>
-
   <!-- Black background with rounded corners -->
   <rect width="512" height="512" rx="96" ry="96" fill="#09090b"/>
 
-  <!-- Subtle radial glow behind crest -->
-  <circle cx="256" cy="240" r="180" fill="url(#innerGlow)"/>
-
-  <!-- Shield / Crest shape -->
+  <!-- Shield / Crest — wide flared shape, white -->
   <path d="
-    M256 68
-    C256 68 370 88 390 100
-    C410 112 420 140 420 170
-    L420 250
-    C420 320 380 370 340 400
-    C300 430 270 445 256 452
-    C242 445 212 430 172 400
-    C132 370 92 320 92 250
-    L92 170
-    C92 140 102 112 122 100
-    C142 88 256 68 256 68Z
-  " fill="url(#crestGrad)" stroke="#fdba74" stroke-width="3" stroke-linejoin="round"/>
-
-  <!-- Inner shield outline -->
-  <path d="
-    M256 96
-    C256 96 354 112 372 122
-    C390 132 396 154 396 178
-    L396 245
-    C396 306 360 350 326 376
-    C292 402 268 414 256 420
-    C244 414 220 402 186 376
-    C152 350 116 306 116 245
-    L116 178
-    C116 154 122 132 140 122
-    C158 112 256 96 256 96Z
-  " fill="none" stroke="#fdba74" stroke-width="1.5" stroke-opacity="0.4" stroke-linejoin="round"/>
+    M256 60
+    C230 60 148 78 118 92
+    C98 102 88 120 88 148
+    L88 240
+    C88 310 120 358 164 392
+    C200 420 240 440 256 448
+    C272 440 312 420 348 392
+    C392 358 424 310 424 240
+    L424 148
+    C424 120 414 102 394 92
+    C364 78 282 60 256 60Z
+  " fill="#ffffff"/>
 
 </svg>
