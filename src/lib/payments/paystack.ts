@@ -135,3 +135,120 @@ export function validatePaystackWebhook(
     .digest("hex");
   return hash === signature;
 }
+
+// ═══════════════════════════════════════════════════════
+// CHARGE API — Custom payment flow (no popup)
+// ═══════════════════════════════════════════════════════
+
+/**
+ * Charge via Mobile Money (MTN, Vodafone, AirtelTigo)
+ */
+export async function chargeMobileMoney({
+  email,
+  amount,
+  reference,
+  phone,
+  provider,
+  metadata,
+}: {
+  email: string;
+  amount: number;
+  reference: string;
+  phone: string;
+  provider: "mtn" | "vod" | "tgo";
+  metadata?: Record<string, unknown>;
+}) {
+  const response = await fetch(`${PAYSTACK_BASE_URL}/charge`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({
+      email,
+      amount: Math.round(amount * 100),
+      reference,
+      currency: "GHS",
+      mobile_money: { phone, provider },
+      metadata: metadata || {},
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!data.status) {
+    throw new Error(data.message || "Mobile money charge failed");
+  }
+
+  return data.data as {
+    reference: string;
+    status: string;
+    display_text: string;
+  };
+}
+
+/**
+ * Charge via Bank Transfer — generates a virtual account
+ */
+export async function chargeBankTransfer({
+  email,
+  amount,
+  reference,
+  metadata,
+}: {
+  email: string;
+  amount: number;
+  reference: string;
+  metadata?: Record<string, unknown>;
+}) {
+  const response = await fetch(`${PAYSTACK_BASE_URL}/charge`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({
+      email,
+      amount: Math.round(amount * 100),
+      reference,
+      currency: "GHS",
+      bank_transfer: { account_expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString() },
+      metadata: metadata || {},
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!data.status) {
+    throw new Error(data.message || "Bank transfer charge failed");
+  }
+
+  return data.data as {
+    reference: string;
+    status: string;
+    display_text: string;
+  };
+}
+
+/**
+ * Submit OTP for a pending charge
+ */
+export async function submitChargeOTP({
+  reference,
+  otp,
+}: {
+  reference: string;
+  otp: string;
+}) {
+  const response = await fetch(`${PAYSTACK_BASE_URL}/charge/submit_otp`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ reference, otp }),
+  });
+
+  const data = await response.json();
+
+  if (!data.status) {
+    throw new Error(data.message || "OTP submission failed");
+  }
+
+  return data.data as {
+    reference: string;
+    status: string;
+    display_text: string;
+  };
+}
