@@ -1040,7 +1040,7 @@ function DonationForm() {
                 setCustomAmount(e.target.value);
                 setSelectedAmount(null);
               }}
-              className="pl-9 h-12 sm:h-13 text-base bg-zinc-800/30 border-zinc-700/40 focus:border-orange-500/50 rounded-xl"
+              className="pl-14 h-12 sm:h-13 text-base bg-zinc-800/30 border-zinc-700/40 focus:border-orange-500/50 rounded-xl"
             />
           </div>
           <p className="text-[10px] text-zinc-600 mt-1.5">Minimum donation: GH₵5</p>
