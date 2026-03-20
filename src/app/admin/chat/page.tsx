@@ -9,7 +9,7 @@ import {
   Bot, MessageSquare, Send, Search, Plus, Trash2, Edit3,
   ArrowLeft, Loader2, X,
   Megaphone, MessageCircle, Activity, ToggleLeft, ToggleRight,
-  RefreshCw, Save,
+  RefreshCw, Save, Headset, UserCheck, Clock, XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +58,32 @@ interface ChatStats {
   totalUnread: number;
 }
 
+interface LiveSession {
+  id: string;
+  visitorName: string | null;
+  visitorEmail: string | null;
+  status: "BOT" | "WAITING" | "ACTIVE" | "CLOSED";
+  lastActivity: string;
+  createdAt: string;
+  assignedAdmin: { id: string; firstName: string; lastName: string; displayName: string | null } | null;
+  messages: Array<{ content: string; senderType: string; createdAt: string }>;
+  _count: { messages: number };
+}
+
+interface LiveMessage {
+  id: string;
+  content: string;
+  senderType: "VISITOR" | "ADMIN" | "BOT";
+  senderId: string | null;
+  createdAt: string;
+}
+
+interface LiveStats {
+  waiting: number;
+  active: number;
+  total: number;
+}
+
 // ═══════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════
@@ -84,7 +110,7 @@ function getInitials(name: string) {
 
 export default function AdminChatPage() {
   const { data: session } = useSession();
-  const [tab, setTab] = useState<"conversations" | "bot">("conversations");
+  const [tab, setTab] = useState<"conversations" | "bot" | "live">("live");
   const [loading, setLoading] = useState(true);
 
   // Conversations state
@@ -110,7 +136,19 @@ export default function AdminChatPage() {
   const [broadcastMsg, setBroadcastMsg] = useState("");
   const [broadcasting, setBroadcasting] = useState(false);
 
+  // Live Support state
+  const [liveSessions, setLiveSessions] = useState<LiveSession[]>([]);
+  const [liveStats, setLiveStats] = useState<LiveStats>({ waiting: 0, active: 0, total: 0 });
+  const [liveFilter, setLiveFilter] = useState<"active" | "waiting" | "mine" | "closed">("active");
+  const [liveSearch, setLiveSearch] = useState("");
+  const [activeSession, setActiveSession] = useState<string | null>(null);
+  const [liveMessages, setLiveMessages] = useState<LiveMessage[]>([]);
+  const [liveReply, setLiveReply] = useState("");
+  const [liveSending, setLiveSending] = useState(false);
+  const [liveSessionDetail, setLiveSessionDetail] = useState<LiveSession | null>(null);
+
   const msgEndRef = useRef<HTMLDivElement>(null);
+  const liveMsgEndRef = useRef<HTMLDivElement>(null);
 
   // ── Fetch data ──
   const fetchData = useCallback(async () => {
@@ -152,14 +190,56 @@ export default function AdminChatPage() {
     msgEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [convMessages]);
 
+  // ── Live Support fetch ──
+  const fetchLiveData = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/admin/chat/live?filter=${liveFilter}&search=${encodeURIComponent(liveSearch)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setLiveSessions(data.sessions);
+        setLiveStats(data.stats);
+      }
+    } catch { /* silent */ }
+  }, [liveFilter, liveSearch]);
+
+  const fetchLiveMessages = useCallback(async (sessionId: string) => {
+    try {
+      const res = await fetch("/api/admin/chat/live", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "messages", sessionId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setLiveMessages(data.session.messages);
+        setLiveSessionDetail(data.session);
+      }
+    } catch { /* silent */ }
+  }, []);
+
+  useEffect(() => { if (tab === "live") fetchLiveData(); }, [tab, fetchLiveData]);
+
+  useEffect(() => {
+    if (activeSession) fetchLiveMessages(activeSession);
+  }, [activeSession, fetchLiveMessages]);
+
+  useEffect(() => {
+    liveMsgEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [liveMessages]);
+
   // Poll for updates
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchData();
-      if (activeConv) fetchConvMessages(activeConv);
-    }, 8000);
+      if (tab === "conversations") {
+        fetchData();
+        if (activeConv) fetchConvMessages(activeConv);
+      } else if (tab === "live") {
+        fetchLiveData();
+        if (activeSession) fetchLiveMessages(activeSession);
+      }
+    }, 5000);
     return () => clearInterval(interval);
-  }, [fetchData, activeConv, fetchConvMessages]);
+  }, [tab, fetchData, activeConv, fetchConvMessages, fetchLiveData, activeSession, fetchLiveMessages]);
 
   // ── Send DM ──
   const sendReply = async () => {
@@ -246,6 +326,51 @@ export default function AdminChatPage() {
     } catch {
       // Fail silently
     }
+  };
+
+  // ── Live Support actions ──
+  const claimSession = async (sessionId: string) => {
+    try {
+      await fetch("/api/admin/chat/live", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "claim", sessionId }),
+      });
+      fetchLiveData();
+      fetchLiveMessages(sessionId);
+    } catch { /* silent */ }
+  };
+
+  const closeSession = async (sessionId: string) => {
+    try {
+      await fetch("/api/admin/chat/live", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "close", sessionId }),
+      });
+      setActiveSession(null);
+      setLiveMessages([]);
+      setLiveSessionDetail(null);
+      fetchLiveData();
+    } catch { /* silent */ }
+  };
+
+  const sendLiveReply = async () => {
+    if (!liveReply.trim() || liveSending || !activeSession) return;
+    setLiveSending(true);
+    try {
+      const res = await fetch("/api/admin/chat/live", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "message", sessionId: activeSession, content: liveReply.trim() }),
+      });
+      if (res.ok) {
+        setLiveReply("");
+        fetchLiveMessages(activeSession);
+        fetchLiveData();
+      }
+    } catch { /* silent */ }
+    setLiveSending(false);
   };
 
   // ── Broadcast ──
@@ -346,14 +471,25 @@ export default function AdminChatPage() {
       </div>
 
       {/* Tab Toggle */}
-      <div className="flex rounded-xl bg-gray-100 p-1 max-w-md">
+      <div className="flex rounded-xl bg-gray-100 p-1 max-w-xl">
+        <button
+          onClick={() => setTab("live")}
+          className={cn("flex-1 py-2 px-4 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-2",
+            tab === "live" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+          )}
+        >
+          <Headset className="w-4 h-4" /> Live Support
+          {liveStats.waiting > 0 && (
+            <Badge className="bg-red-100 text-red-600 border-red-200 text-[10px] animate-pulse">{liveStats.waiting}</Badge>
+          )}
+        </button>
         <button
           onClick={() => setTab("conversations")}
           className={cn("flex-1 py-2 px-4 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-2",
             tab === "conversations" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
           )}
         >
-          <MessageCircle className="w-4 h-4" /> Conversations
+          <MessageCircle className="w-4 h-4" /> DMs
         </button>
         <button
           onClick={() => setTab("bot")}
@@ -361,12 +497,241 @@ export default function AdminChatPage() {
             tab === "bot" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
           )}
         >
-          <Bot className="w-4 h-4" /> Bot Responses
+          <Bot className="w-4 h-4" /> Bot
           {botResponses.length > 0 && (
             <Badge className="bg-blue-100 text-blue-600 border-blue-200 text-[10px]">{botResponses.length}</Badge>
           )}
         </button>
       </div>
+
+      {/* ═══ LIVE SUPPORT TAB ═══ */}
+      {tab === "live" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Session List */}
+          <Card variant="admin" className="lg:col-span-1 p-0 overflow-hidden">
+            <div className="p-4 border-b border-gray-200">
+              <div className="relative mb-3">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  variant="admin"
+                  placeholder="Search visitors..."
+                  className="pl-10"
+                  value={liveSearch}
+                  onChange={(e) => setLiveSearch(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-1 flex-wrap">
+                {(["active", "waiting", "mine", "closed"] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setLiveFilter(f)}
+                    className={cn("text-xs px-3 py-1.5 rounded-full transition-colors capitalize",
+                      liveFilter === f ? "bg-blue-100 text-blue-600 font-medium" : "text-gray-500 hover:bg-gray-100"
+                    )}
+                  >
+                    {f}
+                    {f === "waiting" && liveStats.waiting > 0 && (
+                      <span className="ml-1 w-4 h-4 inline-flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full">{liveStats.waiting}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              {/* Quick stats */}
+              <div className="flex items-center gap-4 mt-3 text-xs text-gray-400">
+                <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-orange-500" /> {liveStats.waiting} waiting</span>
+                <span className="flex items-center gap-1"><Headset className="w-3 h-3 text-green-500" /> {liveStats.active} active</span>
+              </div>
+            </div>
+
+            <div className="max-h-150 overflow-y-auto divide-y divide-gray-100">
+              {liveSessions.length === 0 ? (
+                <div className="p-8 text-center">
+                  <Headset className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">No chat sessions found</p>
+                </div>
+              ) : (
+                liveSessions.map((s) => {
+                  const lastMsg = s.messages?.[0];
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => setActiveSession(s.id)}
+                      className={cn(
+                        "flex items-center gap-3 w-full px-4 py-3 text-left transition-colors",
+                        activeSession === s.id ? "bg-blue-50" : "hover:bg-gray-50"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 border",
+                        s.status === "WAITING" ? "bg-orange-100 border-orange-200 text-orange-600" :
+                        s.status === "ACTIVE" ? "bg-green-100 border-green-200 text-green-600" :
+                        s.status === "CLOSED" ? "bg-gray-100 border-gray-200 text-gray-400" :
+                        "bg-blue-100 border-blue-200 text-blue-600"
+                      )}>
+                        {s.visitorName ? getInitials(s.visitorName) : "?"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {s.visitorName || "Anonymous"}
+                          </p>
+                          <Badge className={cn("text-[10px] shrink-0 ml-1",
+                            s.status === "WAITING" ? "bg-orange-100 text-orange-600 border-orange-200" :
+                            s.status === "ACTIVE" ? "bg-green-100 text-green-600 border-green-200" :
+                            s.status === "CLOSED" ? "bg-gray-100 text-gray-500 border-gray-200" :
+                            "bg-blue-100 text-blue-600 border-blue-200"
+                          )}>
+                            {s.status}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-gray-500 truncate">
+                          {lastMsg?.content || "No messages"}
+                        </p>
+                        <div className="flex items-center justify-between mt-0.5">
+                          <p className="text-[10px] text-gray-400 truncate">{s.visitorEmail || "No email"}</p>
+                          <span className="text-[10px] text-gray-400 shrink-0">{formatTime(s.lastActivity)}</span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </Card>
+
+          {/* Chat Area */}
+          <Card variant="admin" className="lg:col-span-2 p-0 overflow-hidden flex flex-col">
+            {activeSession && liveSessionDetail ? (
+              <>
+                {/* Header */}
+                <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => { setActiveSession(null); setLiveSessionDetail(null); }} className="lg:hidden text-gray-400 hover:text-gray-600 mr-1">
+                      <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                        {liveSessionDetail.visitorName || "Anonymous Visitor"}
+                        <Badge className={cn("text-[10px]",
+                          liveSessionDetail.status === "WAITING" ? "bg-orange-100 text-orange-600 border-orange-200" :
+                          liveSessionDetail.status === "ACTIVE" ? "bg-green-100 text-green-600 border-green-200" :
+                          "bg-gray-100 text-gray-500 border-gray-200"
+                        )}>{liveSessionDetail.status}</Badge>
+                      </h3>
+                      <p className="text-[10px] text-gray-400">
+                        {liveSessionDetail.visitorEmail || "No email"} • Started {formatTime(liveSessionDetail.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {(liveSessionDetail.status === "WAITING" || liveSessionDetail.status === "BOT") && (
+                      <Button
+                        size="sm"
+                        onClick={() => claimSession(activeSession)}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <UserCheck className="w-4 h-4 mr-1" /> Claim
+                      </Button>
+                    )}
+                    {liveSessionDetail.status !== "CLOSED" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => { if (confirm("Close this chat session?")) closeSession(activeSession); }}
+                        className="border-red-200 text-red-600 hover:bg-red-50"
+                      >
+                        <XCircle className="w-4 h-4 mr-1" /> Close
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 max-h-112.5">
+                  {liveMessages.map((msg) => (
+                    <div key={msg.id} className={cn("flex gap-3", msg.senderType === "ADMIN" ? "justify-end" : "justify-start")}>
+                      {msg.senderType !== "ADMIN" && (
+                        <div className={cn(
+                          "w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 border",
+                          msg.senderType === "BOT" ? "bg-blue-50 border-blue-200" : "bg-gray-100 border-gray-200"
+                        )}>
+                          {msg.senderType === "BOT" ? <Bot className="w-4 h-4 text-blue-500" /> : (
+                            liveSessionDetail.visitorName ? getInitials(liveSessionDetail.visitorName) : "?"
+                          )}
+                        </div>
+                      )}
+                      <div className={cn(
+                        "max-w-[70%] rounded-2xl px-4 py-2.5",
+                        msg.senderType === "ADMIN"
+                          ? "bg-blue-600 text-white rounded-br-sm"
+                          : msg.senderType === "BOT"
+                            ? "bg-blue-50 border border-blue-200 text-gray-700 rounded-bl-sm"
+                            : "bg-gray-100 text-gray-700 rounded-bl-sm"
+                      )}>
+                        {msg.senderType === "BOT" && (
+                          <p className="text-[10px] text-blue-500 font-medium mb-0.5 flex items-center gap-1">
+                            <Bot className="w-3 h-3" /> Bot
+                          </p>
+                        )}
+                        {msg.senderType === "VISITOR" && (
+                          <p className="text-[10px] text-gray-400 font-medium mb-0.5">
+                            {liveSessionDetail.visitorName || "Visitor"}
+                          </p>
+                        )}
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                        <p className={cn("text-[10px] mt-1", msg.senderType === "ADMIN" ? "text-white/60 text-right" : "text-gray-400")}>
+                          {formatTime(msg.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={liveMsgEndRef} />
+                </div>
+
+                {/* Reply Input */}
+                {liveSessionDetail.status !== "CLOSED" && (
+                  <div className="p-4 border-t border-gray-200">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        variant="admin"
+                        value={liveReply}
+                        onChange={(e) => setLiveReply(e.target.value)}
+                        placeholder={`Reply to ${liveSessionDetail.visitorName || "visitor"}...`}
+                        className="flex-1"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            sendLiveReply();
+                          }
+                        }}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={sendLiveReply}
+                        disabled={!liveReply.trim() || liveSending}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        {liveSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center py-20">
+                <div className="text-center">
+                  <Headset className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Live Chat Support</h3>
+                  <p className="text-sm text-gray-500">Select a chat session to view the conversation and reply</p>
+                  {liveStats.waiting > 0 && (
+                    <p className="text-sm text-orange-600 mt-2 font-medium">{liveStats.waiting} visitor{liveStats.waiting !== 1 ? "s" : ""} waiting!</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
 
       {/* ═══ CONVERSATIONS TAB ═══ */}
       {tab === "conversations" && (

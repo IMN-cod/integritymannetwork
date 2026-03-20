@@ -20,7 +20,9 @@ export type AuditAction =
   | "BOT_UPDATE"
   | "BOT_DELETE"
   | "SEND_MESSAGE"
-  | "CHECKIN";
+  | "CHECKIN"
+  | "CLAIM"
+  | "CLOSE";
 
 export type AuditEntity =
   | "User"
@@ -41,7 +43,8 @@ export type AuditEntity =
   | "BotResponse"
   | "Upload"
   | "Course"
-  | "CourseEnrollment";
+  | "CourseEnrollment"
+  | "LiveChatSession";
 
 interface LogOptions {
   action: AuditAction;

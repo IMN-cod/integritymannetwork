@@ -53,6 +53,7 @@ model User {
   conversations1     Conversation[]     @relation("ConvUser1")
   conversations2     Conversation[]     @relation("ConvUser2")
   courseEnrollments  CourseEnrollment[]
+  assignedChats     LiveChatSession[]  @relation("AssignedChats")
 }
 
 enum Role {
@@ -587,6 +588,58 @@ model BotResponse {
 
   @@index([trigger])
   @@index([category])
+}
+
+// ═══════════════════════════════════════════════════════
+// LIVE CHAT SUPPORT (Visitor ↔ Admin)
+// ═══════════════════════════════════════════════════════
+
+model LiveChatSession {
+  id             String          @id @default(cuid())
+  sessionToken   String          @unique @default(cuid()) // stored in visitor's localStorage
+  visitorName    String?
+  visitorEmail   String?
+  userId         String?         // if visitor is logged in
+  status         LiveChatStatus  @default(BOT)
+  assignedAdminId String?
+  department     String?
+  lastActivity   DateTime        @default(now())
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  assignedAdmin  User?              @relation("AssignedChats", fields: [assignedAdminId], references: [id])
+  messages       LiveChatMessage[]
+
+  @@index([status])
+  @@index([sessionToken])
+  @@index([assignedAdminId])
+  @@index([lastActivity])
+}
+
+model LiveChatMessage {
+  id         String              @id @default(cuid())
+  sessionId  String
+  content    String              @db.Text
+  senderType LiveChatSenderType
+  senderId   String?             // admin user ID if ADMIN message
+  createdAt  DateTime            @default(now())
+
+  session LiveChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+}
+
+enum LiveChatStatus {
+  BOT       // Bot is collecting info
+  WAITING   // Info collected, waiting for admin
+  ACTIVE    // Admin has claimed the chat
+  CLOSED    // Chat ended
+}
+
+enum LiveChatSenderType {
+  VISITOR
+  ADMIN
+  BOT
 }
 
 // ═══════════════════════════════════════════════════════

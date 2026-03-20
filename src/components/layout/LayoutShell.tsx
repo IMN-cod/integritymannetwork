@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { CartDrawer } from "@/components/cart/CartDrawer";
+import LiveChatWidget from "@/components/chat/LiveChatWidget";
 
 export function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -20,6 +21,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
       <main className="relative">{children}</main>
       <Footer />
       <CartDrawer />
+      <LiveChatWidget />
     </>
   );
 }
