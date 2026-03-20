@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import Script from "next/script";
 import { motion, AnimatePresence } from "framer-motion";
 import { ProtectedImage } from "@/components/ui/video-player";
 import {
   Heart,
   ArrowRight,
-  Check,
   Lock,
   Shield,
   Globe,
@@ -18,6 +18,9 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
+  CreditCard,
+  Smartphone,
+  Landmark,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +28,25 @@ import { Badge } from "@/components/ui/badge";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+
+// Paystack inline type
+declare global {
+  interface Window {
+    PaystackPop: {
+      setup: (config: {
+        key: string;
+        email: string;
+        amount: number;
+        currency?: string;
+        ref?: string;
+        channels?: string[];
+        label?: string;
+        onClose: () => void;
+        callback: (response: { reference: string; status: string }) => void;
+      }) => { openIframe: () => void };
+    };
+  }
+}
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -219,50 +241,89 @@ const presetAmounts = [
   { value: 2500, label: "GH₵2,500" },
 ];
 
-type PaymentMethod = "paystack" | "stripe" | "paypal";
-
-const paymentMethods: {
-  id: PaymentMethod;
-  name: string;
-  description: string;
-  regions: string;
-}[] = [
-  {
-    id: "paystack",
-    name: "Paystack",
-    description: "Cards, Bank Transfer, USSD",
-    regions: "Ghana & Africa",
-  },
-  {
-    id: "stripe",
-    name: "Stripe",
-    description: "Cards, Apple Pay, Google Pay",
-    regions: "International",
-  },
-  {
-    id: "paypal",
-    name: "PayPal",
-    description: "PayPal Balance & Cards",
-    regions: "International",
-  },
+const paymentChannels = [
+  { icon: CreditCard, name: "Card", desc: "Visa & Mastercard" },
+  { icon: Smartphone, name: "Mobile Money", desc: "MTN, Vodafone, AirtelTigo" },
+  { icon: Landmark, name: "Bank Transfer", desc: "Direct bank payment" },
 ];
+
+type DonationState =
+  | { step: "form" }
+  | { step: "processing" }
+  | { step: "success"; reference: string; amount: number; channel: string }
+  | { step: "failed"; message: string };
 
 function DonationForm() {
   const [selectedAmount, setSelectedAmount] = useState<number | null>(200);
   const [customAmount, setCustomAmount] = useState<string>("");
   const [donationType, setDonationType] = useState<"one-time" | "monthly">("one-time");
-  const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>("paystack");
-  const [isProcessing, setIsProcessing] = useState(false);
   const [donorEmail, setDonorEmail] = useState("");
+  const [donorName, setDonorName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [donationState, setDonationState] = useState<DonationState>({ step: "form" });
+  const [paystackReady, setPaystackReady] = useState(false);
 
   const currentAmount = customAmount ? parseInt(customAmount, 10) : selectedAmount;
-  const isValid = currentAmount && currentAmount >= 5;
+  const isValid = currentAmount && currentAmount >= 5 && donorEmail.includes("@");
+
+  const openPaystackPopup = useCallback(
+    (accessCode: string, reference: string, email: string, amount: number) => {
+      if (!window.PaystackPop) return;
+
+      const handler = window.PaystackPop.setup({
+        key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "pk_live_806d86d3d44fee610a77a4872a921089aa091680",
+        email,
+        amount: Math.round(amount * 100),
+        currency: "GHS",
+        ref: reference,
+        channels: ["card", "mobile_money", "bank_transfer"],
+        label: donorName || undefined,
+        callback: async (response) => {
+          // Payment completed — verify server-side
+          setDonationState({ step: "processing" });
+          try {
+            const res = await fetch("/api/donate/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ reference: response.reference }),
+            });
+            const data = await res.json();
+            if (data.success) {
+              setDonationState({
+                step: "success",
+                reference: response.reference,
+                amount: data.amount,
+                channel: data.channel,
+              });
+            } else {
+              setDonationState({
+                step: "failed",
+                message: data.error || "Verification failed",
+              });
+            }
+          } catch {
+            setDonationState({
+              step: "failed",
+              message: "Could not verify payment. Please contact support.",
+            });
+          }
+        },
+        onClose: () => {
+          if (donationState.step === "processing") return;
+          setDonationState({ step: "form" });
+          setError("Payment window was closed. You can try again.");
+        },
+      });
+
+      handler.openIframe();
+    },
+    [donorName, donationState.step]
+  );
 
   const handleDonate = async () => {
-    if (!isValid) return;
+    if (!isValid || !paystackReady) return;
     setError(null);
-    setIsProcessing(true);
+    setDonationState({ step: "processing" });
 
     try {
       const res = await fetch("/api/donate", {
@@ -272,28 +333,123 @@ function DonationForm() {
           amount: currentAmount,
           currency: "GHS",
           isRecurring: donationType === "monthly",
-          paymentMethod: selectedPayment.toUpperCase(),
-          ...(donorEmail && { donorEmail }),
+          paymentMethod: "PAYSTACK",
+          donorEmail: donorEmail,
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to process donation");
+        throw new Error(data.error || "Failed to initiate donation");
       }
 
-      if (data.paymentUrl) {
-        window.location.href = data.paymentUrl;
-      }
+      // Open Paystack popup with the access code
+      openPaystackPopup(
+        data.accessCode,
+        `DON-${data.donationId}`,
+        donorEmail,
+        currentAmount!
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
-      setIsProcessing(false);
+      setDonationState({ step: "form" });
     }
   };
 
+  // ── Success State ──
+  if (donationState.step === "success") {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+        className="text-center py-6 sm:py-10"
+      >
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.2, type: "spring", bounce: 0.4 }}
+          className="w-20 h-20 rounded-full bg-green-500/10 border-2 border-green-500/30 flex items-center justify-center mx-auto mb-6"
+        >
+          <CheckCircle2 className="w-10 h-10 text-green-500" />
+        </motion.div>
+
+        <h3 className="text-2xl sm:text-3xl font-bold text-white font-display mb-2">
+          God Bless You!
+        </h3>
+        <p className="text-sm sm:text-base text-zinc-400 mb-6 max-w-sm mx-auto">
+          Your generous donation of{" "}
+          <span className="text-orange-500 font-bold">
+            {formatCurrency(donationState.amount)}
+          </span>{" "}
+          has been received successfully.
+        </p>
+
+        <div className="inline-flex flex-col gap-2 text-left bg-zinc-800/40 rounded-xl p-4 border border-zinc-700/40">
+          <div className="flex items-center justify-between gap-8">
+            <span className="text-xs text-zinc-500">Reference</span>
+            <span className="text-xs text-zinc-300 font-mono">{donationState.reference}</span>
+          </div>
+          <div className="flex items-center justify-between gap-8">
+            <span className="text-xs text-zinc-500">Paid via</span>
+            <span className="text-xs text-zinc-300 capitalize">{donationState.channel.replace("_", " ")}</span>
+          </div>
+          <div className="flex items-center justify-between gap-8">
+            <span className="text-xs text-zinc-500">Type</span>
+            <span className="text-xs text-zinc-300">{donationType === "monthly" ? "Monthly Recurring" : "One-Time"}</span>
+          </div>
+        </div>
+
+        <Button
+          variant="outline"
+          className="mt-8"
+          onClick={() => {
+            setDonationState({ step: "form" });
+            setDonorEmail("");
+            setDonorName("");
+            setSelectedAmount(200);
+            setCustomAmount("");
+          }}
+        >
+          Make Another Donation
+        </Button>
+      </motion.div>
+    );
+  }
+
+  // ── Failed State ──
+  if (donationState.step === "failed") {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="text-center py-6 sm:py-10"
+      >
+        <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-6">
+          <XCircle className="w-8 h-8 text-red-400" />
+        </div>
+        <h3 className="text-xl font-bold text-white font-display mb-2">
+          Payment Failed
+        </h3>
+        <p className="text-sm text-zinc-400 mb-6">{donationState.message}</p>
+        <Button onClick={() => setDonationState({ step: "form" })}>
+          Try Again
+        </Button>
+      </motion.div>
+    );
+  }
+
+  const isProcessing = donationState.step === "processing";
+
   return (
     <div className="space-y-6 sm:space-y-8">
+      {/* Paystack Inline JS */}
+      <Script
+        src="https://js.paystack.co/v1/inline.js"
+        onLoad={() => setPaystackReady(true)}
+      />
+
       {/* ── Step 1: Frequency ── */}
       <div>
         <div className="flex items-center gap-2 mb-3 sm:mb-4">
@@ -396,78 +552,53 @@ function DonationForm() {
         </div>
       </div>
 
-      {/* ── Step 3: Email (for guest donors) ── */}
+      {/* ── Step 3: Your Details ── */}
       <div>
         <div className="flex items-center gap-2 mb-3 sm:mb-4">
           <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
             <span className="text-[10px] font-bold text-white">3</span>
           </div>
-          <span className="text-xs sm:text-sm font-semibold text-white tracking-wide">Your Email</span>
+          <span className="text-xs sm:text-sm font-semibold text-white tracking-wide">Your Details</span>
         </div>
-        <Input
-          type="email"
-          placeholder="you@example.com"
-          value={donorEmail}
-          onChange={(e) => setDonorEmail(e.target.value)}
-          className="h-12 sm:h-13 text-base bg-zinc-800/30 border-zinc-700/40 focus:border-orange-500/50 rounded-xl"
-        />
-        <p className="text-[10px] text-zinc-600 mt-1.5">
-          Required for payment receipt. Logged-in users can leave this blank.
-        </p>
+        <div className="space-y-3">
+          <Input
+            type="text"
+            placeholder="Full Name (optional)"
+            value={donorName}
+            onChange={(e) => setDonorName(e.target.value)}
+            className="h-12 sm:h-13 text-base bg-zinc-800/30 border-zinc-700/40 focus:border-orange-500/50 rounded-xl"
+          />
+          <Input
+            type="email"
+            placeholder="Email address *"
+            value={donorEmail}
+            onChange={(e) => setDonorEmail(e.target.value)}
+            required
+            className="h-12 sm:h-13 text-base bg-zinc-800/30 border-zinc-700/40 focus:border-orange-500/50 rounded-xl"
+          />
+          <p className="text-[10px] text-zinc-600">
+            Email is required for your payment receipt.
+          </p>
+        </div>
       </div>
 
-      {/* ── Step 4: Payment Method ── */}
+      {/* ── Accepted Payment Methods ── */}
       <div>
-        <div className="flex items-center gap-2 mb-3 sm:mb-4">
-          <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
-            <span className="text-[10px] font-bold text-white">4</span>
-          </div>
-          <span className="text-xs sm:text-sm font-semibold text-white tracking-wide">Payment Method</span>
-        </div>
-
-        <div className="space-y-2 sm:space-y-2.5">
-          {paymentMethods.map((method) => (
-            <motion.button
-              key={method.id}
-              whileTap={{ scale: 0.99 }}
-              onClick={() => setSelectedPayment(method.id)}
-              className={cn(
-                "w-full p-3.5 sm:p-4 rounded-xl border transition-all duration-300 text-left flex items-center gap-3 sm:gap-4",
-                selectedPayment === method.id
-                  ? "border-orange-500/50 bg-orange-500/6"
-                  : "border-zinc-700/40 bg-zinc-800/20 hover:border-zinc-600/50"
-              )}
+        <p className="text-[10px] sm:text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">
+          Accepted Payment Methods
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {paymentChannels.map((ch) => (
+            <div
+              key={ch.name}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-800/40 border border-zinc-700/30"
             >
-              {/* Radio indicator */}
-              <div className={cn(
-                "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
-                selectedPayment === method.id
-                  ? "border-orange-500 bg-orange-500"
-                  : "border-zinc-600"
-              )}>
-                {selectedPayment === method.id && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", bounce: 0.3 }}
-                  >
-                    <Check className="w-3 h-3 text-white" />
-                  </motion.div>
-                )}
+              <ch.icon className="w-3.5 h-3.5 text-orange-500/70" />
+              <div>
+                <p className="text-[11px] font-semibold text-zinc-300">{ch.name}</p>
+                <p className="text-[9px] text-zinc-600">{ch.desc}</p>
               </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm sm:text-base font-bold text-white">
-                    {method.name}
-                  </p>
-                  <span className="text-[9px] sm:text-[10px] font-medium text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded-full">
-                    {method.regions}
-                  </span>
-                </div>
-                <p className="text-[10px] sm:text-xs text-zinc-500 mt-0.5">{method.description}</p>
-              </div>
-            </motion.button>
+            </div>
           ))}
         </div>
       </div>
@@ -491,17 +622,11 @@ function DonationForm() {
                     {formatCurrency(currentAmount || 0)}
                   </p>
                 </div>
-                <div className="text-right">
-                  <Badge
-                    variant="success"
-                    className="mb-1"
-                  >
-                    {donationType === "monthly" ? "Recurring" : "Single Gift"}
-                  </Badge>
-                  <p className="text-[10px] text-zinc-500">
-                    via {paymentMethods.find((m) => m.id === selectedPayment)?.name}
-                  </p>
-                </div>
+                <Badge
+                  variant="success"
+                >
+                  {donationType === "monthly" ? "Recurring" : "Single Gift"}
+                </Badge>
               </div>
             </div>
           </motion.div>
@@ -525,7 +650,7 @@ function DonationForm() {
           size="xl"
           className="w-full group relative overflow-hidden"
           onClick={handleDonate}
-          disabled={!isValid || isProcessing}
+          disabled={!isValid || isProcessing || !paystackReady}
         >
           <span className="relative z-10 flex items-center gap-2">
             {isProcessing ? (
@@ -535,14 +660,14 @@ function DonationForm() {
                   transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                   className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
                 />
-                Processing...
+                Initializing Payment...
               </>
             ) : (
               <>
                 <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
                 {isValid
                   ? `Donate ${formatCurrency(currentAmount || 0)}`
-                  : "Select an Amount"}
+                  : "Enter Email & Amount"}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </>
             )}
@@ -553,7 +678,7 @@ function DonationForm() {
         <div className="flex items-center justify-center gap-1.5 text-zinc-600">
           <Lock className="w-3 h-3" />
           <span className="text-[10px] sm:text-xs">
-            256-bit SSL encrypted &middot; Secure payment processing
+            256-bit SSL encrypted &middot; Powered by Paystack
           </span>
         </div>
       </div>

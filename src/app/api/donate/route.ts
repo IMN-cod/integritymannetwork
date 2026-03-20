@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
     });
 
     let paymentUrl: string;
+    let accessCode: string | undefined;
 
     switch (data.paymentMethod) {
       case "STRIPE": {
@@ -95,6 +96,7 @@ export async function POST(req: NextRequest) {
           },
         });
         paymentUrl = paystackResult.authorization_url;
+        accessCode = paystackResult.access_code;
         await prisma.donation.update({
           where: { id: donation.id },
           data: { paymentId: paystackResult.reference },
@@ -134,6 +136,7 @@ export async function POST(req: NextRequest) {
         message: "Donation initiated",
         donationId: donation.id,
         paymentUrl,
+        ...(accessCode && { accessCode }),
       },
       { status: 201 }
     );

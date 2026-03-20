@@ -38,6 +38,8 @@ services:
         sync: false
       - key: PAYSTACK_SECRET_KEY
         sync: false
+      - key: NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY
+        value: "pk_live_806d86d3d44fee610a77a4872a921089aa091680"
       - key: PAYPAL_CLIENT_ID
         sync: false
       - key: PAYPAL_CLIENT_SECRET
