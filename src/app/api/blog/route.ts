@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
         }),
       },
       include: {
-        author: { select: { firstName: true, lastName: true, displayName: true, avatar: true } },
+        author: { select: { firstName: true, lastName: true, displayName: true, avatar: true, role: true } },
         category: { select: { name: true, slug: true } },
       },
     });

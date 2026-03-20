@@ -163,13 +163,17 @@ export default function BlogPostClient({
     ? "Lead Steward at The Integrity Man Network"
     : "Contributing Writer";
 
-  const authorName = post.author
-    ? post.author.displayName || `${post.author.firstName || ""} ${post.author.lastName || ""}`.trim() || "TIMN Editorial"
-    : "TIMN Editorial";
+  const authorName = isAdminAuthor
+    ? "Pastor Eben Darko"
+    : post.author
+      ? post.author.displayName || `${post.author.firstName || ""} ${post.author.lastName || ""}`.trim() || "TIMN Editorial"
+      : "TIMN Editorial";
 
-  const authorInitials = post.author
-    ? `${(post.author.firstName || "T")[0]}${(post.author.lastName || "E")[0]}`
-    : "TE";
+  const authorInitials = isAdminAuthor
+    ? "ED"
+    : post.author
+      ? `${(post.author.firstName || "T")[0]}${(post.author.lastName || "E")[0]}`
+      : "TE";
 
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 

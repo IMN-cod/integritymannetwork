@@ -13,7 +13,7 @@ export async function POST(
     const session = await auth();
     const body = await req.json();
 
-    const { guestName, guestEmail, guestPhone, ticketCount = 1, ticketType, notes } = body;
+    const { guestName, guestEmail, guestPhone, ticketCount, ticketType, notes } = body;
 
     // Find the event
     const event = await prisma.event.findUnique({ where: { slug } });
@@ -29,8 +29,8 @@ export async function POST(
       return NextResponse.json({ error: "This event has already ended" }, { status: 400 });
     }
 
-    // Validate ticket count
-    const count = Math.min(Math.max(1, ticketCount), event.maxPerPerson);
+    // Validate ticket count — explicit parseInt to guarantee integer
+    const count = Math.min(Math.max(1, parseInt(String(ticketCount), 10) || 1), event.maxPerPerson);
 
     // Check capacity
     if (event.capacity) {
@@ -60,6 +60,10 @@ export async function POST(
       }, { status: 400 });
     }
 
+    // For logged-in users, populate guest fields from session so admin always sees details
+    const registrantName = guestName || session?.user?.name || null;
+    const registrantEmail = guestEmail || session?.user?.email || null;
+
     // Check for duplicate registration (same user or same email)
     if (userId) {
       const existing = await prisma.eventRegistration.findFirst({
@@ -84,8 +88,8 @@ export async function POST(
       data: {
         eventId: event.id,
         userId,
-        guestName: guestName || null,
-        guestEmail: guestEmail || null,
+        guestName: registrantName,
+        guestEmail: registrantEmail,
         guestPhone: guestPhone || null,
         ticketCount: count,
         ticketType: ticketType || "General",
@@ -96,8 +100,8 @@ export async function POST(
     });
 
     // Send confirmation email (non-blocking)
-    const recipientEmail = guestEmail || (userId ? (await prisma.user.findUnique({ where: { id: userId }, select: { email: true } }))?.email : null);
-    const attendeeName = guestName || (session?.user?.name) || "Attendee";
+    const recipientEmail = registrantEmail || (userId ? (await prisma.user.findUnique({ where: { id: userId }, select: { email: true } }))?.email : null);
+    const attendeeName = registrantName || "Attendee";
     if (recipientEmail) {
       const eventDate = event.startDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
       sendEmail({
