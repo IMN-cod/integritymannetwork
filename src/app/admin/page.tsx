@@ -317,7 +317,7 @@ export default function AdminDashboardPage() {
               </div>
               <span className="text-xs font-medium text-white/70 uppercase tracking-wider">Revenue</span>
             </div>
-            <p className="text-2xl font-bold font-display">{formatCurrency(stats.revenue.thisMonth / 100)}</p>
+            <p className="text-2xl font-bold font-display">{formatCurrency(stats.revenue.thisMonth)}</p>
             <div className="flex items-center gap-1 mt-2">
               {stats.revenue.change >= 0 ? (
                 <ArrowUpRight className="w-3.5 h-3.5 text-white/80" />
@@ -343,7 +343,7 @@ export default function AdminDashboardPage() {
               <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Donations</span>
             </div>
             <p className="text-2xl font-bold text-gray-900 font-display">
-              {formatCurrency(stats.donationSum.thisMonth / 100)}
+              {formatCurrency(stats.donationSum.thisMonth)}
             </p>
             <div className="flex items-center gap-1 mt-2">
               {stats.donationSum.change >= 0 ? (

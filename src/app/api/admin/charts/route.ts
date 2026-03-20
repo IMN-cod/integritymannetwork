@@ -146,8 +146,8 @@ export async function GET() {
     // Build response
     const revenueChart = months.map((m, i) => ({
       month: m.label,
-      revenue: Number(monthlyRevenue[i]._sum.total || 0) / 100,
-      donations: Number(monthlyDonations[i]._sum.amount || 0) / 100,
+      revenue: Number(monthlyRevenue[i]._sum.total || 0),
+      donations: Number(monthlyDonations[i]._sum.amount || 0),
     }));
 
     const growthChart = months.map((m, i) => ({
@@ -184,7 +184,7 @@ export async function GET() {
       return {
         name: user ? `${user.firstName} ${user.lastName}` : "Anonymous",
         email: user?.email || "",
-        total: Number(d._sum.amount || 0) / 100,
+        total: Number(d._sum.amount || 0),
         count: d._count,
       };
     });
@@ -192,7 +192,7 @@ export async function GET() {
     const recentOrdersData = recentOrders.map((o) => ({
       id: o.id,
       orderNumber: o.orderNumber,
-      total: Number(o.total) / 100,
+      total: Number(o.total),
       status: o.paymentStatus,
       date: o.createdAt.toISOString(),
       customer: o.user

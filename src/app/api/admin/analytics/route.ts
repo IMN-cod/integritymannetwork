@@ -427,27 +427,27 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       // ── KPI Cards ──
       kpis: {
-        totalRevenue: revThisMonth / 100,
+        totalRevenue: revThisMonth,
         revenueChange: calcChange(revThisMonth, revLastMonth),
         totalOrders: totalOrders,
         ordersThisMonth,
         totalUsers,
         usersThisMonth,
-        totalDonations: donThisMonth / 100,
+        totalDonations: donThisMonth,
         donationsCount: donationsThisMonth._count,
         totalProducts,
         totalBlogPosts,
         totalEvents,
         totalMessages,
-        avgOrderValue: revenueThisMonth._count > 0 ? (revThisMonth / 100) / revenueThisMonth._count : 0,
+        avgOrderValue: revenueThisMonth._count > 0 ? revThisMonth / revenueThisMonth._count : 0,
         conversionRate: cartItems > 0 ? Math.round((completedOrders / cartItems) * 100) : 0,
       },
 
       // ── Time Series ──
       revenueChart: months.map((m, i) => ({
         month: m.shortLabel,
-        revenue: Number(monthlyRevenue[i]._sum.total || 0) / 100,
-        donations: Number(monthlyDonations[i]._sum.amount || 0) / 100,
+        revenue: Number(monthlyRevenue[i]._sum.total || 0),
+        donations: Number(monthlyDonations[i]._sum.amount || 0),
         orders: monthlyOrders[i],
       })),
 
@@ -461,7 +461,7 @@ export async function GET(req: NextRequest) {
 
       dailyChart: days.map((d, i) => ({
         day: d.label,
-        revenue: Number(dailyRevenue[i]._sum.total || 0) / 100,
+        revenue: Number(dailyRevenue[i]._sum.total || 0),
         users: dailyUsers[i],
         orders: dailyOrders[i],
       })),
@@ -519,13 +519,13 @@ export async function GET(req: NextRequest) {
       campaigns: donationsByCampaign.map((c) => ({
         title: c.title,
         goal: c.goalAmount ? Number(c.goalAmount) : null,
-        raised: c.donations.reduce((sum, d) => sum + Number(d.amount), 0) / 100,
+        raised: c.donations.reduce((sum, d) => sum + Number(d.amount), 0),
         count: c._count.donations,
       })),
 
       donationMethods: donationsByMethod.map((d) => ({
         method: d.paymentMethod,
-        total: Number(d._sum.amount || 0) / 100,
+        total: Number(d._sum.amount || 0),
         count: d._count,
       })),
 
@@ -536,7 +536,7 @@ export async function GET(req: NextRequest) {
 
       paymentMethods: ordersByPayment.map((o) => ({
         method: o.paymentMethod,
-        total: Number(o._sum.total || 0) / 100,
+        total: Number(o._sum.total || 0),
         count: o._count,
       })),
 
@@ -563,7 +563,7 @@ export async function GET(req: NextRequest) {
         return {
           name: user ? `${user.firstName} ${user.lastName}` : "Unknown",
           email: user?.email || "",
-          total: Number(c._sum.total || 0) / 100,
+          total: Number(c._sum.total || 0),
           orders: c._count,
         };
       }),
@@ -572,7 +572,7 @@ export async function GET(req: NextRequest) {
       recentActivity: recentActivity.map((o) => ({
         id: o.id,
         orderNumber: o.orderNumber,
-        total: Number(o.total) / 100,
+        total: Number(o.total),
         paymentStatus: o.paymentStatus,
         status: o.status,
         date: o.createdAt.toISOString(),

@@ -24,6 +24,12 @@ import {
   Building2,
   ExternalLink,
   Filter,
+  Trash2,
+  AlertTriangle,
+  Download,
+  BarChart3,
+  Wallet,
+  Zap,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -75,12 +81,12 @@ interface Pagination {
 
 const STATUS_CONFIG: Record<
   string,
-  { label: string; variant: "success" | "warning" | "destructive"; icon: typeof CheckCircle2; color: string }
+  { label: string; variant: "success" | "warning" | "destructive"; icon: typeof CheckCircle2; color: string; bg: string }
 > = {
-  PAID: { label: "Paid", variant: "success", icon: CheckCircle2, color: "text-emerald-600" },
-  PENDING: { label: "Pending", variant: "warning", icon: Clock, color: "text-amber-600" },
-  FAILED: { label: "Failed", variant: "destructive", icon: XCircle, color: "text-red-600" },
-  REFUNDED: { label: "Refunded", variant: "destructive", icon: XCircle, color: "text-gray-600" },
+  PAID: { label: "Paid", variant: "success", icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50" },
+  PENDING: { label: "Pending", variant: "warning", icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
+  FAILED: { label: "Failed", variant: "destructive", icon: XCircle, color: "text-red-600", bg: "bg-red-50" },
+  REFUNDED: { label: "Refunded", variant: "destructive", icon: XCircle, color: "text-gray-600", bg: "bg-gray-50" },
 };
 
 const CHANNEL_ICONS: Record<string, typeof CreditCard> = {
@@ -104,6 +110,9 @@ export default function AdminDonationsPage() {
   const [activeTab, setActiveTab] = useState<"donations" | "paystack">("donations");
   const [paystackTxns, setPaystackTxns] = useState<Record<string, unknown>[]>([]);
   const [paystackLoading, setPaystackLoading] = useState(false);
+  const [showCleanup, setShowCleanup] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
+  const [cleanupResult, setCleanupResult] = useState<string | null>(null);
 
   const fetchDonations = useCallback(
     async (page = 1) => {
@@ -168,6 +177,24 @@ export default function AdminDonationsPage() {
     }
   };
 
+  const cleanupDonations = async (status: string) => {
+    setCleaning(true);
+    setCleanupResult(null);
+    try {
+      const res = await fetch(`/api/admin/donations/cleanup?status=${status}&olderThanHours=1`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Cleanup failed");
+      setCleanupResult(data.message);
+      await fetchDonations(pagination.page);
+    } catch (err) {
+      setCleanupResult(err instanceof Error ? err.message : "Cleanup failed");
+    } finally {
+      setCleaning(false);
+    }
+  };
+
   useEffect(() => {
     fetchDonations();
   }, [fetchDonations]);
@@ -179,15 +206,32 @@ export default function AdminDonationsPage() {
         ? 100
         : 0;
 
+  const successRate = stats && stats.count > 0
+    ? Math.round((stats.paid / stats.count) * 100)
+    : 0;
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* ═══ HEADER ═══ */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 font-display">Donations</h1>
-          <p className="text-sm text-gray-500 mt-1">Track payments, verify transactions, and manage donor records.</p>
+          <p className="text-sm text-gray-500 mt-1">
+            Track payments, verify transactions, and manage donor records.
+          </p>
         </div>
         <div className="flex items-center gap-2">
+          {stats && (stats.pending > 0 || stats.failed > 0) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCleanup(!showCleanup)}
+              className="text-amber-600 border-amber-200 hover:bg-amber-50"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Clean Up
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => fetchDonations()}>
             <RefreshCw className="w-3.5 h-3.5" />
             Refresh
@@ -195,85 +239,164 @@ export default function AdminDonationsPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* ═══ CLEANUP CONFIRMATION ═══ */}
+      {showCleanup && (
+        <Card variant="admin" className="border-amber-200 bg-amber-50/50">
+          <CardContent className="p-5">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-bold text-gray-900 mb-1">Clean Up Stale Donations</h3>
+                <p className="text-xs text-gray-600 mb-4">
+                  Remove incomplete donations older than 1 hour. This cannot be undone.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  {stats && stats.pending > 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => cleanupDonations("PENDING")}
+                      disabled={cleaning}
+                      className="text-amber-700 border-amber-300 hover:bg-amber-100"
+                    >
+                      {cleaning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock className="w-3.5 h-3.5" />}
+                      Remove {stats.pending} Pending
+                    </Button>
+                  )}
+                  {stats && stats.failed > 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => cleanupDonations("FAILED")}
+                      disabled={cleaning}
+                      className="text-red-700 border-red-300 hover:bg-red-100"
+                    >
+                      {cleaning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+                      Remove {stats.failed} Failed
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => { setShowCleanup(false); setCleanupResult(null); }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+                {cleanupResult && (
+                  <p className="text-xs text-emerald-600 font-medium mt-3 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    {cleanupResult}
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ═══ STATS CARDS ═══ */}
       {stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* Total Revenue */}
+          <Card variant="admin" className="relative overflow-hidden lg:col-span-1">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                  <Wallet className="w-4.5 h-4.5 text-white" />
+                </div>
+                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Total Revenue</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900 font-display">{formatCurrency(stats.total)}</p>
+              <p className="text-[10px] text-gray-400 mt-1.5">{stats.paid} confirmed payments</p>
+            </CardContent>
+          </Card>
+
+          {/* This Month */}
           <Card variant="admin" className="relative overflow-hidden">
             <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Revenue</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(stats.total)}</p>
-                  <p className="text-xs text-gray-400 mt-1">{stats.paid} paid donations</p>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/20">
+                  <Calendar className="w-4.5 h-4.5 text-white" />
                 </div>
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                  <TrendingUp className="w-6 h-6 text-white" />
-                </div>
+                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">This Month</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900 font-display">{formatCurrency(stats.thisMonth)}</p>
+              <div className="flex items-center gap-1 mt-1.5">
+                {monthTrend >= 0 ? (
+                  <ArrowUpRight className="w-3 h-3 text-emerald-500" />
+                ) : (
+                  <TrendingDown className="w-3 h-3 text-red-500" />
+                )}
+                <span className={`text-[10px] font-semibold ${monthTrend >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                  {monthTrend >= 0 ? "+" : ""}{monthTrend.toFixed(0)}%
+                </span>
+                <span className="text-[10px] text-gray-400">vs last month</span>
               </div>
             </CardContent>
           </Card>
 
+          {/* Recurring Donors */}
           <Card variant="admin" className="relative overflow-hidden">
             <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">This Month</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(stats.thisMonth)}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    {monthTrend >= 0 ? (
-                      <ArrowUpRight className="w-3 h-3 text-emerald-500" />
-                    ) : (
-                      <TrendingDown className="w-3 h-3 text-red-500" />
-                    )}
-                    <span className={`text-xs font-medium ${monthTrend >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                      {monthTrend >= 0 ? "+" : ""}{monthTrend.toFixed(1)}% vs last month
-                    </span>
-                  </div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+                  <Users className="w-4.5 h-4.5 text-white" />
                 </div>
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/20">
-                  <Calendar className="w-6 h-6 text-white" />
+                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Recurring</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900 font-display">{stats.recurringDonors}</p>
+              <p className="text-[10px] text-gray-400 mt-1.5">Active subscribers</p>
+            </CardContent>
+          </Card>
+
+          {/* Success Rate */}
+          <Card variant="admin" className="relative overflow-hidden">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                  <BarChart3 className="w-4.5 h-4.5 text-white" />
                 </div>
+                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Success Rate</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900 font-display">{successRate}%</p>
+              <div className="w-full h-1.5 bg-gray-100 rounded-full mt-2 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-1000"
+                  style={{ width: `${successRate}%` }}
+                />
               </div>
             </CardContent>
           </Card>
 
+          {/* Needs Attention */}
           <Card variant="admin" className="relative overflow-hidden">
             <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Recurring Donors</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{stats.recurringDonors}</p>
-                  <p className="text-xs text-gray-400 mt-1">Active subscriptions</p>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
+                  <Zap className="w-4.5 h-4.5 text-white" />
                 </div>
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
-                  <Users className="w-6 h-6 text-white" />
-                </div>
+                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Attention</span>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card variant="admin" className="relative overflow-hidden">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Needs Attention</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{stats.pending + stats.failed}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-amber-600">{stats.pending} pending</span>
-                    <span className="text-xs text-gray-300">&middot;</span>
-                    <span className="text-xs text-red-600">{stats.failed} failed</span>
-                  </div>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
-                  <Clock className="w-6 h-6 text-white" />
-                </div>
+              <p className="text-2xl font-bold text-gray-900 font-display">{stats.pending + stats.failed}</p>
+              <div className="flex items-center gap-2 mt-1.5">
+                <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 font-semibold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  {stats.pending} pending
+                </span>
+                <span className="inline-flex items-center gap-1 text-[10px] text-red-600 font-semibold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                  {stats.failed} failed
+                </span>
               </div>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Tabs */}
+      {/* ═══ TABS ═══ */}
       <div className="flex items-center gap-1 border-b border-gray-200">
         <button
           onClick={() => setActiveTab("donations")}
@@ -286,6 +409,7 @@ export default function AdminDonationsPage() {
           <div className="flex items-center gap-2">
             <Heart className="w-4 h-4" />
             All Donations
+            {stats && <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-semibold">{stats.count}</span>}
           </div>
         </button>
         <button
@@ -306,7 +430,7 @@ export default function AdminDonationsPage() {
         </button>
       </div>
 
-      {/* Donations Tab */}
+      {/* ═══ DONATIONS TAB ═══ */}
       {activeTab === "donations" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className={selectedDonation ? "lg:col-span-2" : "lg:col-span-3"}>
@@ -326,7 +450,7 @@ export default function AdminDonationsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="relative">
-                      <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                      <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
                       <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
@@ -393,7 +517,7 @@ export default function AdminDonationsPage() {
                             <tr
                               key={donation.id}
                               className={`hover:bg-orange-50/30 transition-colors cursor-pointer ${
-                                selectedDonation?.id === donation.id ? "bg-orange-50/50" : ""
+                                selectedDonation?.id === donation.id ? "bg-orange-50/50 ring-1 ring-inset ring-orange-200" : ""
                               }`}
                               onClick={() => {
                                 setSelectedDonation(donation);
@@ -402,7 +526,7 @@ export default function AdminDonationsPage() {
                             >
                               <td className="px-5 py-3.5">
                                 <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center shrink-0 ring-2 ring-white shadow-sm">
                                     <span className="text-xs font-bold text-orange-600">
                                       {donation.anonymous
                                         ? "A"
@@ -412,7 +536,7 @@ export default function AdminDonationsPage() {
                                     </span>
                                   </div>
                                   <div className="min-w-0">
-                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                    <p className="text-sm font-semibold text-gray-900 truncate">
                                       {donation.anonymous
                                         ? "Anonymous"
                                         : donation.user
@@ -420,46 +544,57 @@ export default function AdminDonationsPage() {
                                           : "Guest Donor"}
                                     </p>
                                     {!donation.anonymous && donation.user && (
-                                      <p className="text-xs text-gray-400 truncate">{donation.user.email}</p>
+                                      <p className="text-[11px] text-gray-400 truncate">{donation.user.email}</p>
                                     )}
                                   </div>
                                 </div>
                               </td>
                               <td className="px-5 py-3.5">
-                                <p className="text-sm font-bold text-gray-900">
-                                  {formatCurrency(Number(donation.amount), donation.currency)}
-                                </p>
-                                {donation.isRecurring && (
-                                  <span className="text-[10px] font-medium text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded-full">
-                                    Recurring
-                                  </span>
-                                )}
+                                <div>
+                                  <p className="text-sm font-bold text-gray-900">
+                                    {formatCurrency(Number(donation.amount), donation.currency)}
+                                  </p>
+                                  {donation.isRecurring && (
+                                    <span className="inline-flex items-center gap-1 text-[9px] font-bold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded-full mt-0.5 uppercase tracking-wider">
+                                      <RefreshCw className="w-2.5 h-2.5" />
+                                      Monthly
+                                    </span>
+                                  )}
+                                </div>
                               </td>
                               <td className="px-5 py-3.5 hidden md:table-cell">
                                 {donation.paymentId ? (
-                                  <code className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded font-mono">
-                                    {donation.paymentId.length > 16 ? `${donation.paymentId.slice(0, 16)}...` : donation.paymentId}
+                                  <code className="text-[11px] text-gray-500 bg-gray-50 px-2 py-1 rounded-md font-mono border border-gray-100">
+                                    {donation.paymentId.length > 20 ? `${donation.paymentId.slice(0, 20)}…` : donation.paymentId}
                                   </code>
                                 ) : (
-                                  <span className="text-xs text-gray-300">&mdash;</span>
+                                  <span className="text-xs text-gray-300">—</span>
                                 )}
                               </td>
                               <td className="px-5 py-3.5 hidden sm:table-cell">
-                                <Badge variant="outline" className="text-[10px] font-medium">{donation.paymentMethod}</Badge>
+                                <Badge variant="outline" className="text-[10px] font-semibold">{donation.paymentMethod}</Badge>
                               </td>
                               <td className="px-5 py-3.5">
-                                <div className="flex items-center gap-1.5">
-                                  <StatusIcon className={`w-3.5 h-3.5 ${statusInfo.color}`} />
-                                  <Badge variant={statusInfo.variant} className="text-[10px]">{statusInfo.label}</Badge>
+                                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${statusInfo.bg}`}>
+                                  <StatusIcon className={`w-3 h-3 ${statusInfo.color}`} />
+                                  <span className={`text-[10px] font-bold ${statusInfo.color}`}>{statusInfo.label}</span>
                                 </div>
                               </td>
                               <td className="px-5 py-3.5 hidden lg:table-cell">
-                                <p className="text-xs text-gray-500">{formatDate(donation.createdAt, { month: "short", day: "numeric", year: "numeric" })}</p>
+                                <div>
+                                  <p className="text-xs text-gray-700 font-medium">
+                                    {formatDate(donation.createdAt, { month: "short", day: "numeric" })}
+                                  </p>
+                                  <p className="text-[10px] text-gray-400">
+                                    {formatDate(donation.createdAt, { hour: "numeric", minute: "numeric" })}
+                                  </p>
+                                </div>
                               </td>
                               <td className="px-5 py-3.5 text-right">
                                 <Button
                                   variant="ghost"
                                   size="sm"
+                                  className="hover:bg-orange-50"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setSelectedDonation(donation);
@@ -475,17 +610,31 @@ export default function AdminDonationsPage() {
                       </tbody>
                     </table>
 
+                    {/* Pagination */}
                     {pagination.pages > 1 && (
                       <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100">
                         <p className="text-xs text-gray-500">
-                          Showing {(pagination.page - 1) * pagination.limit + 1}-{Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} donations
+                          <span className="font-semibold text-gray-700">{(pagination.page - 1) * pagination.limit + 1}–{Math.min(pagination.page * pagination.limit, pagination.total)}</span> of {pagination.total}
                         </p>
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" disabled={pagination.page <= 1} onClick={() => fetchDonations(pagination.page - 1)}>
+                        <div className="flex items-center gap-1">
+                          <Button variant="outline" size="sm" disabled={pagination.page <= 1} onClick={() => fetchDonations(pagination.page - 1)} className="h-8 w-8 p-0">
                             <ChevronLeft className="w-4 h-4" />
                           </Button>
-                          <span className="text-xs text-gray-500 font-medium">{pagination.page} / {pagination.pages}</span>
-                          <Button variant="outline" size="sm" disabled={pagination.page >= pagination.pages} onClick={() => fetchDonations(pagination.page + 1)}>
+                          {Array.from({ length: Math.min(pagination.pages, 5) }, (_, i) => {
+                            const pageNum = pagination.pages <= 5 ? i + 1 : Math.max(1, Math.min(pagination.page - 2 + i, pagination.pages));
+                            return (
+                              <Button
+                                key={pageNum}
+                                variant={pageNum === pagination.page ? "default" : "outline"}
+                                size="sm"
+                                className={`h-8 w-8 p-0 text-xs ${pageNum === pagination.page ? "bg-orange-500 hover:bg-orange-600 text-white" : ""}`}
+                                onClick={() => fetchDonations(pageNum)}
+                              >
+                                {pageNum}
+                              </Button>
+                            );
+                          })}
+                          <Button variant="outline" size="sm" disabled={pagination.page >= pagination.pages} onClick={() => fetchDonations(pagination.page + 1)} className="h-8 w-8 p-0">
                             <ChevronRight className="w-4 h-4" />
                           </Button>
                         </div>
@@ -497,84 +646,93 @@ export default function AdminDonationsPage() {
             </Card>
           </div>
 
-          {/* Detail Panel */}
+          {/* ═══ DETAIL PANEL ═══ */}
           {selectedDonation && (
             <div className="lg:col-span-1">
               <div className="sticky top-20 space-y-4">
+                {/* Donation Details */}
                 <Card variant="admin">
-                  <CardContent className="p-5">
-                    <div className="flex items-center justify-between mb-5">
-                      <h3 className="text-sm font-bold text-gray-900">Donation Details</h3>
-                      <button onClick={() => { setSelectedDonation(null); setVerifyResult(null); }} className="text-gray-400 hover:text-gray-600 transition-colors">
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    <div className="text-center py-4 mb-4 rounded-xl bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-100">
-                      <p className="text-3xl font-bold text-gray-900">
-                        {formatCurrency(Number(selectedDonation.amount), selectedDonation.currency)}
-                      </p>
-                      <div className="flex items-center justify-center gap-2 mt-2">
-                        {(() => {
-                          const info = STATUS_CONFIG[selectedDonation.status] || STATUS_CONFIG.PENDING;
-                          const Icon = info.icon;
-                          return (
-                            <Badge variant={info.variant}>
-                              <Icon className="w-3 h-3 mr-1" />
-                              {info.label}
-                            </Badge>
-                          );
-                        })()}
-                        {selectedDonation.isRecurring && (
-                          <Badge variant="default" className="bg-violet-100 text-violet-700 border-violet-200">Recurring</Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between py-2 border-b border-gray-50">
-                        <span className="text-xs text-gray-500">Donor</span>
-                        <span className="text-xs font-medium text-gray-900">
-                          {selectedDonation.anonymous ? "Anonymous" : selectedDonation.user ? `${selectedDonation.user.firstName} ${selectedDonation.user.lastName}` : "Guest"}
-                        </span>
-                      </div>
-                      {!selectedDonation.anonymous && selectedDonation.user && (
-                        <div className="flex items-center justify-between py-2 border-b border-gray-50">
-                          <span className="text-xs text-gray-500">Email</span>
-                          <span className="text-xs font-medium text-gray-900">{selectedDonation.user.email}</span>
+                  <CardContent className="p-0">
+                    {/* Header with gradient */}
+                    <div className="relative overflow-hidden rounded-t-xl bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 px-5 py-6">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+                      <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+                      <div className="relative">
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider">Donation</span>
+                          <button onClick={() => { setSelectedDonation(null); setVerifyResult(null); }} className="text-white/60 hover:text-white transition-colors">
+                            <X className="w-4 h-4" />
+                          </button>
                         </div>
-                      )}
-                      <div className="flex items-center justify-between py-2 border-b border-gray-50">
-                        <span className="text-xs text-gray-500">Payment Method</span>
-                        <Badge variant="outline" className="text-[10px]">{selectedDonation.paymentMethod}</Badge>
+                        <p className="text-3xl font-bold text-white font-display">
+                          {formatCurrency(Number(selectedDonation.amount), selectedDonation.currency)}
+                        </p>
+                        <div className="flex items-center gap-2 mt-3">
+                          {(() => {
+                            const info = STATUS_CONFIG[selectedDonation.status] || STATUS_CONFIG.PENDING;
+                            const Icon = info.icon;
+                            return (
+                              <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-white/20 text-white px-2.5 py-1 rounded-full backdrop-blur-sm">
+                                <Icon className="w-3 h-3" />
+                                {info.label}
+                              </span>
+                            );
+                          })()}
+                          {selectedDonation.isRecurring && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-white/20 text-white px-2.5 py-1 rounded-full backdrop-blur-sm">
+                              <RefreshCw className="w-3 h-3" />
+                              Monthly
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between py-2 border-b border-gray-50">
-                        <span className="text-xs text-gray-500">Reference</span>
-                        <code className="text-xs text-gray-700 bg-gray-100 px-2 py-0.5 rounded font-mono">
-                          {selectedDonation.paymentId || "\u2014"}
-                        </code>
-                      </div>
-                      <div className="flex items-center justify-between py-2 border-b border-gray-50">
-                        <span className="text-xs text-gray-500">Date</span>
-                        <span className="text-xs font-medium text-gray-900">{formatDate(selectedDonation.createdAt)}</span>
-                      </div>
+                    </div>
+
+                    {/* Details */}
+                    <div className="p-5 space-y-0">
+                      {[
+                        {
+                          label: "Donor",
+                          value: selectedDonation.anonymous ? "Anonymous" : selectedDonation.user ? `${selectedDonation.user.firstName} ${selectedDonation.user.lastName}` : "Guest",
+                        },
+                        ...(!selectedDonation.anonymous && selectedDonation.user ? [{
+                          label: "Email",
+                          value: selectedDonation.user.email,
+                        }] : []),
+                        { label: "Payment Method", value: selectedDonation.paymentMethod },
+                        { label: "Reference", value: selectedDonation.paymentId || "—", mono: true },
+                        { label: "Date", value: formatDate(selectedDonation.createdAt) },
+                      ].map((item) => (
+                        <div key={item.label} className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
+                          <span className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">{item.label}</span>
+                          <span className={`text-xs font-medium text-gray-900 text-right max-w-[200px] truncate ${(item as { mono?: boolean }).mono ? "font-mono bg-gray-50 px-2 py-0.5 rounded" : ""}`}>
+                            {item.value}
+                          </span>
+                        </div>
+                      ))}
+
                       {selectedDonation.message && (
-                        <div className="pt-2">
-                          <span className="text-xs text-gray-500 block mb-1">Message</span>
-                          <p className="text-xs text-gray-700 bg-gray-50 p-3 rounded-lg italic">
-                            &ldquo;{selectedDonation.message}&rdquo;
-                          </p>
+                        <div className="pt-3">
+                          <span className="text-[11px] text-gray-400 font-medium uppercase tracking-wider block mb-2">Message</span>
+                          <div className="bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-100 rounded-lg p-3">
+                            <p className="text-xs text-gray-700 italic leading-relaxed">
+                              &ldquo;{selectedDonation.message}&rdquo;
+                            </p>
+                          </div>
                         </div>
                       )}
                     </div>
                   </CardContent>
                 </Card>
 
+                {/* Paystack Verification */}
                 {selectedDonation.paymentMethod === "PAYSTACK" && selectedDonation.paymentId && (
                   <Card variant="admin">
                     <CardContent className="p-5">
                       <div className="flex items-center gap-2 mb-4">
-                        <ShieldCheck className="w-4 h-4 text-orange-500" />
+                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                          <ShieldCheck className="w-3.5 h-3.5 text-white" />
+                        </div>
                         <h3 className="text-sm font-bold text-gray-900">Paystack Verification</h3>
                       </div>
 
@@ -582,59 +740,55 @@ export default function AdminDonationsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full"
+                          className="w-full group"
                           onClick={() => verifyDonation(selectedDonation)}
                           disabled={verifying}
                         >
-                          {verifying ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <ShieldCheck className="w-3.5 h-3.5 mr-2" />}
+                          {verifying ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" />
+                          ) : (
+                            <ShieldCheck className="w-3.5 h-3.5 mr-2 group-hover:text-orange-500 transition-colors" />
+                          )}
                           {verifying ? "Verifying..." : "Verify with Paystack"}
                         </Button>
                       ) : (
                         <div className="space-y-3">
                           <div className={`flex items-center gap-2 p-3 rounded-lg ${
-                            verifyResult.status === "success" ? "bg-emerald-50 border border-emerald-200" : "bg-red-50 border border-red-200"
+                            verifyResult.status === "success"
+                              ? "bg-emerald-50 border border-emerald-200"
+                              : "bg-red-50 border border-red-200"
                           }`}>
                             {verifyResult.status === "success" ? (
-                              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                             ) : (
-                              <XCircle className="w-4 h-4 text-red-600" />
+                              <XCircle className="w-4 h-4 text-red-600 shrink-0" />
                             )}
-                            <span className={`text-xs font-medium ${verifyResult.status === "success" ? "text-emerald-700" : "text-red-700"}`}>
-                              {verifyResult.status === "success" ? "Payment Verified" : `Status: ${verifyResult.status}`}
+                            <span className={`text-xs font-bold ${verifyResult.status === "success" ? "text-emerald-700" : "text-red-700"}`}>
+                              {verifyResult.status === "success" ? "Payment Verified ✓" : `Status: ${verifyResult.status}`}
                             </span>
                           </div>
 
-                          <div className="space-y-2 text-xs">
-                            <div className="flex justify-between py-1.5 border-b border-gray-50">
-                              <span className="text-gray-500">Amount</span>
-                              <span className="font-medium text-gray-900">{formatCurrency(verifyResult.amount, verifyResult.currency)}</span>
-                            </div>
-                            <div className="flex justify-between py-1.5 border-b border-gray-50">
-                              <span className="text-gray-500">Channel</span>
-                              <div className="flex items-center gap-1">
-                                {(() => {
-                                  const ChannelIcon = CHANNEL_ICONS[verifyResult.channel] || CreditCard;
-                                  return <ChannelIcon className="w-3 h-3 text-gray-400" />;
-                                })()}
-                                <span className="font-medium text-gray-900 capitalize">{verifyResult.channel.replace("_", " ")}</span>
+                          <div className="space-y-0 text-xs">
+                            {[
+                              { label: "Amount", value: formatCurrency(verifyResult.amount, verifyResult.currency) },
+                              { label: "Channel", value: verifyResult.channel.replace("_", " "), icon: CHANNEL_ICONS[verifyResult.channel] || CreditCard },
+                              { label: "Reference", value: verifyResult.reference, mono: true },
+                              ...(verifyResult.paidAt ? [{ label: "Paid At", value: formatDate(verifyResult.paidAt, { month: "short", day: "numeric", hour: "numeric", minute: "numeric" }) }] : []),
+                              ...(verifyResult.customer?.email ? [{ label: "Customer", value: verifyResult.customer.email }] : []),
+                            ].map((item) => (
+                              <div key={item.label} className="flex justify-between py-2 border-b border-gray-50 last:border-0">
+                                <span className="text-gray-500">{item.label}</span>
+                                <div className="flex items-center gap-1">
+                                  {(item as { icon?: typeof CreditCard }).icon && (() => {
+                                    const Icon = (item as { icon: typeof CreditCard }).icon;
+                                    return <Icon className="w-3 h-3 text-gray-400" />;
+                                  })()}
+                                  <span className={`font-medium text-gray-900 capitalize ${(item as { mono?: boolean }).mono ? "font-mono text-[10px] bg-gray-50 px-1.5 py-0.5 rounded" : ""}`}>
+                                    {item.value}
+                                  </span>
+                                </div>
                               </div>
-                            </div>
-                            <div className="flex justify-between py-1.5 border-b border-gray-50">
-                              <span className="text-gray-500">Reference</span>
-                              <code className="font-mono text-gray-700 bg-gray-100 px-1.5 py-0.5 rounded">{verifyResult.reference}</code>
-                            </div>
-                            {verifyResult.paidAt && (
-                              <div className="flex justify-between py-1.5 border-b border-gray-50">
-                                <span className="text-gray-500">Paid At</span>
-                                <span className="font-medium text-gray-900">{formatDate(verifyResult.paidAt, { month: "short", day: "numeric", hour: "numeric", minute: "numeric" })}</span>
-                              </div>
-                            )}
-                            {verifyResult.customer?.email && (
-                              <div className="flex justify-between py-1.5">
-                                <span className="text-gray-500">Customer</span>
-                                <span className="font-medium text-gray-900">{verifyResult.customer.email}</span>
-                              </div>
-                            )}
+                            ))}
                           </div>
 
                           <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => verifyDonation(selectedDonation)} disabled={verifying}>
@@ -652,33 +806,41 @@ export default function AdminDonationsPage() {
         </div>
       )}
 
-      {/* Paystack Transactions Tab */}
+      {/* ═══ PAYSTACK TRANSACTIONS TAB ═══ */}
       {activeTab === "paystack" && (
         <Card variant="admin">
           <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                <ShieldCheck className="w-4 h-4 text-white" />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <ShieldCheck className="w-5 h-5 text-white" />
               </div>
               <div>
                 <h3 className="text-sm font-bold text-gray-900">Paystack Transactions</h3>
-                <p className="text-xs text-gray-500">Live data from your Paystack account</p>
+                <p className="text-[11px] text-gray-500">Live data synced from your Paystack account</p>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={fetchPaystackTransactions} disabled={paystackLoading}>
-              <RefreshCw className={`w-3.5 h-3.5 ${paystackLoading ? "animate-spin" : ""}`} />
-              Sync
-            </Button>
+            <div className="flex items-center gap-2">
+              {paystackTxns.length > 0 && (
+                <span className="text-[10px] text-gray-400 font-semibold">{paystackTxns.length} transactions</span>
+              )}
+              <Button variant="outline" size="sm" onClick={fetchPaystackTransactions} disabled={paystackLoading}>
+                <RefreshCw className={`w-3.5 h-3.5 ${paystackLoading ? "animate-spin" : ""}`} />
+                Sync
+              </Button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
             {paystackLoading ? (
-              <div className="flex items-center justify-center py-20">
+              <div className="flex flex-col items-center justify-center py-20 gap-3">
                 <Loader2 className="w-6 h-6 text-orange-500 animate-spin" />
+                <p className="text-xs text-gray-400">Fetching transactions from Paystack...</p>
               </div>
             ) : paystackTxns.length === 0 ? (
               <div className="text-center py-16">
-                <ShieldCheck className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
+                  <ShieldCheck className="w-7 h-7 text-blue-300" />
+                </div>
                 <p className="text-sm font-medium text-gray-900">No transactions found</p>
                 <p className="text-xs text-gray-500 mt-1">Click Sync to fetch transactions from Paystack.</p>
               </div>
@@ -704,12 +866,12 @@ export default function AdminDonationsPage() {
                     return (
                       <tr key={String(txn.id)} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-5 py-3.5">
-                          <code className="text-xs font-mono text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
-                            {String(txn.reference || "").slice(0, 20)}
+                          <code className="text-[11px] font-mono text-gray-700 bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">
+                            {String(txn.reference || "").slice(0, 24)}
                           </code>
                         </td>
                         <td className="px-5 py-3.5">
-                          <p className="text-xs font-medium text-gray-900">{customer?.email || "\u2014"}</p>
+                          <p className="text-xs font-medium text-gray-900">{customer?.email || "—"}</p>
                         </td>
                         <td className="px-5 py-3.5">
                           <p className="text-sm font-bold text-gray-900">
@@ -717,18 +879,28 @@ export default function AdminDonationsPage() {
                           </p>
                         </td>
                         <td className="px-5 py-3.5 hidden sm:table-cell">
-                          <div className="flex items-center gap-1.5">
+                          <div className="inline-flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-md">
                             <ChannelIcon className="w-3.5 h-3.5 text-gray-400" />
-                            <span className="text-xs text-gray-600 capitalize">{txnChannel.replace("_", " ") || "\u2014"}</span>
+                            <span className="text-[11px] text-gray-600 capitalize font-medium">{txnChannel.replace("_", " ") || "—"}</span>
                           </div>
                         </td>
                         <td className="px-5 py-3.5">
-                          <Badge
-                            variant={txnStatus === "success" ? "success" : txnStatus === "failed" ? "destructive" : "warning"}
-                            className="text-[10px]"
-                          >
-                            {txnStatus || "unknown"}
-                          </Badge>
+                          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${
+                            txnStatus === "success" ? "bg-emerald-50" : txnStatus === "failed" ? "bg-red-50" : "bg-amber-50"
+                          }`}>
+                            {txnStatus === "success" ? (
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            ) : txnStatus === "failed" ? (
+                              <XCircle className="w-3 h-3 text-red-600" />
+                            ) : (
+                              <Clock className="w-3 h-3 text-amber-600" />
+                            )}
+                            <span className={`text-[10px] font-bold capitalize ${
+                              txnStatus === "success" ? "text-emerald-600" : txnStatus === "failed" ? "text-red-600" : "text-amber-600"
+                            }`}>
+                              {txnStatus || "unknown"}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-5 py-3.5 hidden md:table-cell">
                           <p className="text-xs text-gray-500">
@@ -736,7 +908,7 @@ export default function AdminDonationsPage() {
                               ? formatDate(String(txn.paid_at), { month: "short", day: "numeric", hour: "numeric", minute: "numeric" })
                               : txn.created_at
                                 ? formatDate(String(txn.created_at), { month: "short", day: "numeric", hour: "numeric", minute: "numeric" })
-                                : "\u2014"}
+                                : "—"}
                           </p>
                         </td>
                         <td className="px-5 py-3.5 text-right">
@@ -744,7 +916,7 @@ export default function AdminDonationsPage() {
                             href={`https://dashboard.paystack.com/#/transactions/${txn.id}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-gray-400 hover:text-orange-500 transition-colors"
+                            className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-orange-500 hover:bg-orange-50 transition-all"
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
                           </a>
