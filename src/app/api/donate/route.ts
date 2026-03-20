@@ -16,6 +16,7 @@ const donationSchema = z.object({
   campaignId: z.string().optional(),
   message: z.string().optional(),
   donorEmail: z.string().email().optional(),
+  donorName: z.string().optional(),
   skipInit: z.boolean().default(false),
 });
 
@@ -53,6 +54,8 @@ export async function POST(req: NextRequest) {
         isRecurring: data.isRecurring,
         paymentMethod: data.paymentMethod,
         message: data.message,
+        donorName: data.donorName || null,
+        donorEmail: email,
         status: "PENDING",
         ...(session?.user?.id && {
           user: { connect: { id: session.user.id } },

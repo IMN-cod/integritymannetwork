@@ -46,6 +46,8 @@ interface Donation {
   status: string;
   isRecurring: boolean;
   anonymous: boolean;
+  donorName: string | null;
+  donorEmail: string | null;
   message: string | null;
   createdAt: string;
   user: { firstName: string; lastName: string; email: string } | null;
@@ -532,7 +534,9 @@ export default function AdminDonationsPage() {
                                         ? "A"
                                         : donation.user
                                           ? `${donation.user.firstName[0]}${donation.user.lastName[0]}`
-                                          : "G"}
+                                          : donation.donorName
+                                            ? donation.donorName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
+                                            : "G"}
                                     </span>
                                   </div>
                                   <div className="min-w-0">
@@ -541,10 +545,12 @@ export default function AdminDonationsPage() {
                                         ? "Anonymous"
                                         : donation.user
                                           ? `${donation.user.firstName} ${donation.user.lastName}`
-                                          : "Guest Donor"}
+                                          : donation.donorName || "Guest Donor"}
                                     </p>
-                                    {!donation.anonymous && donation.user && (
-                                      <p className="text-[11px] text-gray-400 truncate">{donation.user.email}</p>
+                                    {!donation.anonymous && (
+                                      <p className="text-[11px] text-gray-400 truncate">
+                                        {donation.user?.email || donation.donorEmail || ""}
+                                      </p>
                                     )}
                                   </div>
                                 </div>
@@ -693,11 +699,11 @@ export default function AdminDonationsPage() {
                       {[
                         {
                           label: "Donor",
-                          value: selectedDonation.anonymous ? "Anonymous" : selectedDonation.user ? `${selectedDonation.user.firstName} ${selectedDonation.user.lastName}` : "Guest",
+                          value: selectedDonation.anonymous ? "Anonymous" : selectedDonation.user ? `${selectedDonation.user.firstName} ${selectedDonation.user.lastName}` : selectedDonation.donorName || "Guest",
                         },
-                        ...(!selectedDonation.anonymous && selectedDonation.user ? [{
+                        ...(!selectedDonation.anonymous ? [{
                           label: "Email",
-                          value: selectedDonation.user.email,
+                          value: selectedDonation.user?.email || selectedDonation.donorEmail || "—",
                         }] : []),
                         { label: "Payment Method", value: selectedDonation.paymentMethod },
                         { label: "Reference", value: selectedDonation.paymentId || "â€”", mono: true },

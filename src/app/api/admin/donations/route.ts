@@ -25,6 +25,8 @@ export async function GET(req: NextRequest) {
     if (search) {
       where.OR = [
         { paymentId: { contains: search, mode: "insensitive" } },
+        { donorName: { contains: search, mode: "insensitive" } },
+        { donorEmail: { contains: search, mode: "insensitive" } },
         { user: { firstName: { contains: search, mode: "insensitive" } } },
         { user: { lastName: { contains: search, mode: "insensitive" } } },
         { user: { email: { contains: search, mode: "insensitive" } } },
@@ -50,6 +52,8 @@ export async function GET(req: NextRequest) {
             status: true,
             isRecurring: true,
             anonymous: true,
+            donorName: true,
+            donorEmail: true,
             message: true,
             createdAt: true,
             user: {

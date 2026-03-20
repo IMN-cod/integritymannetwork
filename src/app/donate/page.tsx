@@ -362,6 +362,7 @@ function DonationForm() {
           isRecurring: donationType === "monthly",
           paymentMethod: "PAYSTACK",
           donorEmail,
+          donorName: donorName || undefined,
           skipInit: true,
         }),
       });
@@ -457,6 +458,7 @@ function DonationForm() {
           isRecurring: donationType === "monthly",
           paymentMethod: "PAYSTACK",
           donorEmail,
+          donorName: donorName || undefined,
         }),
       });
 

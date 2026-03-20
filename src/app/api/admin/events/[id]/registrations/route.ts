@@ -70,15 +70,19 @@ export async function GET(
       }),
     ]);
 
-    // Compute stats for this event
-    const [registered, attended, cancelled, waitlisted, revenue] = await Promise.all([
-      prisma.eventRegistration.count({ where: { eventId: id, status: "REGISTERED" } }),
-      prisma.eventRegistration.count({ where: { eventId: id, status: "ATTENDED" } }),
-      prisma.eventRegistration.count({ where: { eventId: id, status: "CANCELLED" } }),
-      prisma.eventRegistration.count({ where: { eventId: id, status: "WAITLISTED" } }),
+    // Compute stats for this event — sum actual tickets not just rows
+    const [registered, attended, cancelled, waitlisted, revenue, ticketSum] = await Promise.all([
+      prisma.eventRegistration.aggregate({ where: { eventId: id, status: "REGISTERED" }, _sum: { ticketCount: true } }),
+      prisma.eventRegistration.aggregate({ where: { eventId: id, status: "ATTENDED" }, _sum: { ticketCount: true } }),
+      prisma.eventRegistration.aggregate({ where: { eventId: id, status: "CANCELLED" }, _sum: { ticketCount: true } }),
+      prisma.eventRegistration.aggregate({ where: { eventId: id, status: "WAITLISTED" }, _sum: { ticketCount: true } }),
       prisma.eventRegistration.aggregate({
         where: { eventId: id, status: { not: "CANCELLED" } },
         _sum: { paidAmount: true },
+      }),
+      prisma.eventRegistration.aggregate({
+        where: { eventId: id },
+        _sum: { ticketCount: true },
       }),
     ]);
 
@@ -87,11 +91,11 @@ export async function GET(
       event,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
       stats: {
-        total,
-        registered,
-        attended,
-        cancelled,
-        waitlisted,
+        total: ticketSum._sum?.ticketCount || 0,
+        registered: registered._sum?.ticketCount || 0,
+        attended: attended._sum?.ticketCount || 0,
+        cancelled: cancelled._sum?.ticketCount || 0,
+        waitlisted: waitlisted._sum?.ticketCount || 0,
         revenue: Number(revenue._sum?.paidAmount || 0),
       },
     });

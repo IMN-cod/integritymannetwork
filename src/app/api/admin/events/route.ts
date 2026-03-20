@@ -57,7 +57,10 @@ export async function GET(req: NextRequest) {
           status: true,
           viewCount: true,
           createdAt: true,
-          _count: { select: { registrations: true } },
+          registrations: {
+            where: { status: { not: "CANCELLED" } },
+            select: { ticketCount: true },
+          },
         },
         orderBy,
         skip: (page - 1) * limit,
@@ -69,15 +72,22 @@ export async function GET(req: NextRequest) {
       prisma.event.count({ where: { status: "COMPLETED" } }),
       prisma.event.count({ where: { status: "CANCELLED" } }),
       prisma.eventRegistration.aggregate({
-        _count: true,
-        _sum: { paidAmount: true },
+        where: { status: { not: "CANCELLED" } },
+        _sum: { paidAmount: true, ticketCount: true },
       }),
     ]);
 
     const totalAll = upcoming + ongoing + completed + cancelled;
 
+    // Map events to include total ticket count instead of just registration row count
+    const eventsWithTickets = events.map((e) => {
+      const totalTickets = e.registrations.reduce((sum, r) => sum + r.ticketCount, 0);
+      const { registrations: _, ...rest } = e;
+      return { ...rest, _count: { registrations: totalTickets } };
+    });
+
     return NextResponse.json({
-      events,
+      events: eventsWithTickets,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
       stats: {
         total: totalAll,
@@ -85,7 +95,7 @@ export async function GET(req: NextRequest) {
         ongoing,
         completed,
         cancelled,
-        totalRegistrations: allRegs._count || 0,
+        totalRegistrations: allRegs._sum?.ticketCount || 0,
         totalRevenue: Number(allRegs._sum?.paidAmount || 0),
       },
     });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { sendEmail, eventRegistrationEmail } from "@/lib/email";
 
 // POST /api/events/[slug]/register — Register for an event (guest or logged-in)
 export async function POST(
@@ -93,6 +94,42 @@ export async function POST(
         status: "REGISTERED",
       },
     });
+
+    // Send confirmation email (non-blocking)
+    const recipientEmail = guestEmail || (userId ? (await prisma.user.findUnique({ where: { id: userId }, select: { email: true } }))?.email : null);
+    const attendeeName = guestName || (session?.user?.name) || "Attendee";
+    if (recipientEmail) {
+      const eventDate = event.startDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+      sendEmail({
+        to: recipientEmail,
+        subject: `Registration Confirmed: ${event.title}`,
+        html: eventRegistrationEmail({
+          eventTitle: event.title,
+          attendeeName,
+          ticketCount: count,
+          eventDate,
+          eventLocation: event.location,
+          eventVenue: event.venue,
+        }),
+      }).catch(() => {});
+    }
+
+    // Notify admins about the registration
+    const admins = await prisma.user.findMany({
+      where: { role: { in: ["ADMIN", "SUPER_ADMIN"] }, isActive: true },
+      select: { id: true },
+    });
+    if (admins.length > 0) {
+      await prisma.notification.createMany({
+        data: admins.map((admin) => ({
+          userId: admin.id,
+          title: "New Event Registration",
+          message: `${attendeeName} registered for ${event.title} (${count} ticket${count > 1 ? "s" : ""}).`,
+          type: "EVENT_REGISTRATION",
+          link: `/admin/events/${event.id}/registrations`,
+        })),
+      });
+    }
 
     return NextResponse.json({
       registration,

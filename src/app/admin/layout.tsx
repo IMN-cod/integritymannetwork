@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
@@ -56,6 +56,58 @@ export default function AdminLayout({
   const { data: session } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState<
+    { id: string; title: string; message: string; type: string; link: string | null; isRead: boolean; createdAt: string }[]
+  >([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/notifications?limit=15");
+      if (!res.ok) return;
+      const data = await res.json();
+      setNotifications(data.notifications);
+      setUnreadCount(data.unreadCount);
+    } catch { /* ignore */ }
+  }, []);
+
+  // Poll notifications every 30 seconds
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
+
+  const markAllRead = async () => {
+    try {
+      await fetch("/api/admin/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markAllRead: true }),
+      });
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch { /* ignore */ }
+  };
+
+  const handleNotifClick = async (notif: typeof notifications[0]) => {
+    if (!notif.isRead) {
+      try {
+        await fetch("/api/admin/notifications", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ notificationId: notif.id }),
+        });
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n))
+        );
+        setUnreadCount((c) => Math.max(0, c - 1));
+      } catch { /* ignore */ }
+    }
+    setNotifOpen(false);
+    if (notif.link) router.push(notif.link);
+  };
 
   // Prevent body scroll when mobile sidebar is open
   useEffect(() => {
@@ -80,6 +132,7 @@ export default function AdminLayout({
   const closePanels = () => {
     setSidebarOpen(false);
     setProfileOpen(false);
+    setNotifOpen(false);
   };
 
   const isActive = (href: string) => {
@@ -120,10 +173,64 @@ export default function AdminLayout({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button className="p-2 text-gray-400 hover:text-gray-900 transition-colors relative">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-orange-500 rounded-full" />
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setNotifOpen(!notifOpen)}
+              className="p-2 text-gray-400 hover:text-gray-900 transition-colors relative"
+            >
+              <Bell className="w-5 h-5" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 min-w-4 h-4 px-1 bg-orange-500 rounded-full flex items-center justify-center">
+                  <span className="text-[9px] font-bold text-white">{unreadCount > 9 ? "9+" : unreadCount}</span>
+                </span>
+              )}
+            </button>
+            {notifOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
+                <div className="absolute right-0 top-full mt-1 w-80 max-h-96 rounded-xl bg-white border border-gray-200 shadow-xl shadow-gray-200/50 z-50 overflow-hidden animate-fade-in">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                    <p className="text-sm font-bold text-gray-900">Notifications</p>
+                    {unreadCount > 0 && (
+                      <button onClick={markAllRead} className="text-[10px] font-semibold text-orange-500 hover:text-orange-600">
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+                  <div className="overflow-y-auto max-h-72">
+                    {notifications.length === 0 ? (
+                      <div className="py-8 text-center">
+                        <Bell className="w-8 h-8 text-gray-200 mx-auto mb-2" />
+                        <p className="text-xs text-gray-400">No notifications yet</p>
+                      </div>
+                    ) : (
+                      notifications.map((notif) => (
+                        <button
+                          key={notif.id}
+                          onClick={() => handleNotifClick(notif)}
+                          className={cn(
+                            "w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors",
+                            !notif.isRead && "bg-orange-50/40"
+                          )}
+                        >
+                          <div className="flex items-start gap-2">
+                            {!notif.isRead && <span className="w-2 h-2 bg-orange-500 rounded-full mt-1.5 shrink-0" />}
+                            <div className={cn("flex-1 min-w-0", notif.isRead && "ml-4")}>
+                              <p className="text-xs font-semibold text-gray-900 truncate">{notif.title}</p>
+                              <p className="text-[11px] text-gray-500 truncate mt-0.5">{notif.message}</p>
+                              <p className="text-[10px] text-gray-400 mt-1">
+                                {new Date(notif.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "numeric" })}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
           <button
             onClick={handleSignOut}
             className="p-2 text-gray-400 hover:text-red-500 transition-colors"
@@ -156,10 +263,64 @@ export default function AdminLayout({
             View Site
           </Link>
           <div className="w-px h-5 bg-gray-200" />
-          <button className="p-2 text-gray-400 hover:text-gray-900 transition-colors relative">
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-orange-500 rounded-full" />
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setNotifOpen(!notifOpen)}
+              className="p-2 text-gray-400 hover:text-gray-900 transition-colors relative"
+            >
+              <Bell className="w-4 h-4" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 min-w-3.5 h-3.5 px-0.5 bg-orange-500 rounded-full flex items-center justify-center">
+                  <span className="text-[8px] font-bold text-white">{unreadCount > 9 ? "9+" : unreadCount}</span>
+                </span>
+              )}
+            </button>
+            {notifOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
+                <div className="absolute right-0 top-full mt-1 w-80 max-h-96 rounded-xl bg-white border border-gray-200 shadow-xl shadow-gray-200/50 z-50 overflow-hidden animate-fade-in">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                    <p className="text-sm font-bold text-gray-900">Notifications</p>
+                    {unreadCount > 0 && (
+                      <button onClick={markAllRead} className="text-[10px] font-semibold text-orange-500 hover:text-orange-600">
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+                  <div className="overflow-y-auto max-h-72">
+                    {notifications.length === 0 ? (
+                      <div className="py-8 text-center">
+                        <Bell className="w-8 h-8 text-gray-200 mx-auto mb-2" />
+                        <p className="text-xs text-gray-400">No notifications yet</p>
+                      </div>
+                    ) : (
+                      notifications.map((notif) => (
+                        <button
+                          key={notif.id}
+                          onClick={() => handleNotifClick(notif)}
+                          className={cn(
+                            "w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors",
+                            !notif.isRead && "bg-orange-50/40"
+                          )}
+                        >
+                          <div className="flex items-start gap-2">
+                            {!notif.isRead && <span className="w-2 h-2 bg-orange-500 rounded-full mt-1.5 shrink-0" />}
+                            <div className={cn("flex-1 min-w-0", notif.isRead && "ml-4")}>
+                              <p className="text-xs font-semibold text-gray-900 truncate">{notif.title}</p>
+                              <p className="text-[11px] text-gray-500 truncate mt-0.5">{notif.message}</p>
+                              <p className="text-[10px] text-gray-400 mt-1">
+                                {new Date(notif.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "numeric" })}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
           <div className="relative">
             <button
               onClick={() => setProfileOpen(!profileOpen)}

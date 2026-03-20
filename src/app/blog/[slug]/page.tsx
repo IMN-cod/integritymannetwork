@@ -8,7 +8,7 @@ async function getPost(slug: string) {
   const post = await prisma.blogPost.findUnique({
     where: { slug, status: "PUBLISHED" },
     include: {
-      author: { select: { firstName: true, lastName: true, displayName: true, avatar: true } },
+      author: { select: { firstName: true, lastName: true, displayName: true, avatar: true, role: true } },
       category: { select: { name: true, slug: true } },
       tags: { include: { tag: true } },
       comments: {
@@ -117,7 +117,7 @@ export default async function BlogPostPage({
       select: {
         id: true, title: true, slug: true, excerpt: true,
         coverImage: true, readingTime: true, publishedAt: true,
-        author: { select: { displayName: true, firstName: true, lastName: true, avatar: true } },
+        author: { select: { displayName: true, firstName: true, lastName: true, avatar: true, role: true } },
         category: { select: { name: true, slug: true } },
       },
       orderBy: { publishedAt: "desc" },

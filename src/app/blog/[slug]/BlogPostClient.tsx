@@ -26,6 +26,7 @@ interface Author {
   lastName: string | null;
   displayName: string | null;
   avatar: string | null;
+  role?: string;
 }
 
 interface PostTag {
@@ -157,6 +158,11 @@ export default function BlogPostClient({
   const shareUrl = typeof window !== "undefined" ? window.location.href : "";
   const shareTitle = post.title;
 
+  const isAdminAuthor = post.author?.role === "ADMIN" || post.author?.role === "SUPER_ADMIN";
+  const authorSubtitle = isAdminAuthor
+    ? "Lead Steward at The Integrity Man Network"
+    : "Contributing Writer";
+
   const authorName = post.author
     ? post.author.displayName || `${post.author.firstName || ""} ${post.author.lastName || ""}`.trim() || "TIMN Editorial"
     : "TIMN Editorial";
@@ -276,23 +282,25 @@ export default function BlogPostClient({
               <article
                 className="prose prose-lg prose-zinc prose-invert prose-orange max-w-none
                   prose-headings:font-display prose-headings:text-white prose-headings:font-bold prose-headings:scroll-mt-20
-                  prose-h1:text-3xl prose-h1:mt-14 prose-h1:mb-6
-                  prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-4
-                  prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3
+                  prose-h1:text-3xl sm:prose-h1:text-4xl prose-h1:mt-14 prose-h1:mb-6 prose-h1:leading-tight
+                  prose-h2:text-2xl sm:prose-h2:text-[1.75rem] prose-h2:mt-12 prose-h2:mb-5 prose-h2:leading-snug prose-h2:border-b prose-h2:border-zinc-800/40 prose-h2:pb-3
+                  prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3 prose-h3:text-zinc-100
                   prose-h4:text-lg prose-h4:mt-6 prose-h4:mb-2
-                  prose-p:text-zinc-300 prose-p:leading-relaxed prose-p:text-[17px] prose-p:mb-5
-                  prose-a:text-orange-500 prose-a:no-underline hover:prose-a:underline
-                  prose-strong:text-white prose-em:text-zinc-200
-                  prose-blockquote:border-l-2 prose-blockquote:border-orange-500/50 prose-blockquote:pl-6 prose-blockquote:italic prose-blockquote:text-orange-500/80 prose-blockquote:font-medium prose-blockquote:text-lg prose-blockquote:my-8
-                  prose-ul:text-zinc-300 prose-ul:my-5 prose-ul:space-y-2
-                  prose-ol:text-zinc-300 prose-ol:my-5 prose-ol:space-y-2
-                  prose-li:text-zinc-300 prose-li:leading-relaxed prose-li:text-[17px]
-                  prose-code:bg-zinc-800 prose-code:rounded prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:text-orange-400
+                  prose-p:text-zinc-300 prose-p:leading-[1.85] prose-p:text-[17px] prose-p:mb-6 prose-p:tracking-[0.01em]
+                  prose-a:text-orange-400 prose-a:underline prose-a:underline-offset-2 prose-a:decoration-orange-500/30 hover:prose-a:decoration-orange-500
+                  prose-strong:text-white prose-strong:font-semibold prose-em:text-zinc-200
+                  prose-blockquote:border-l-[3px] prose-blockquote:border-orange-500/60 prose-blockquote:bg-orange-500/5 prose-blockquote:rounded-r-lg prose-blockquote:pl-6 prose-blockquote:pr-4 prose-blockquote:py-4 prose-blockquote:text-zinc-200 prose-blockquote:font-medium prose-blockquote:text-lg prose-blockquote:my-8 prose-blockquote:not-italic
+                  prose-ul:text-zinc-300 prose-ul:my-6 prose-ul:space-y-2.5
+                  prose-ol:text-zinc-300 prose-ol:my-6 prose-ol:space-y-2.5
+                  prose-li:text-zinc-300 prose-li:leading-[1.8] prose-li:text-[17px] prose-li:marker:text-orange-500/70
+                  prose-code:bg-zinc-800/80 prose-code:rounded-md prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:text-orange-400 prose-code:border prose-code:border-zinc-700/50
                   prose-pre:bg-zinc-900 prose-pre:rounded-xl prose-pre:border prose-pre:border-zinc-800
-                  prose-img:rounded-xl prose-img:shadow-lg prose-img:my-8
-                  prose-hr:border-zinc-800 prose-hr:my-10
-                  prose-table:text-zinc-300 prose-th:text-white prose-th:font-semibold
-                  [&>*:first-child]:mt-0"
+                  prose-img:rounded-xl prose-img:shadow-lg prose-img:my-10
+                  prose-hr:border-zinc-800/50 prose-hr:my-12
+                  prose-table:text-zinc-300 prose-th:text-white prose-th:font-semibold prose-td:py-3 prose-th:py-3
+                  [&>*:first-child]:mt-0
+                  [&>p:first-of-type]:text-lg [&>p:first-of-type]:text-zinc-200 [&>p:first-of-type]:leading-[1.9] [&>p:first-of-type]:font-medium
+                  [&>p:first-of-type]:first-letter:text-5xl [&>p:first-of-type]:first-letter:font-bold [&>p:first-of-type]:first-letter:text-orange-500 [&>p:first-of-type]:first-letter:float-left [&>p:first-of-type]:first-letter:mr-3 [&>p:first-of-type]:first-letter:mt-1 [&>p:first-of-type]:first-letter:leading-none [&>p:first-of-type]:first-letter:font-display"
                 dangerouslySetInnerHTML={{ __html: processedContent }}
               />
 
@@ -337,7 +345,7 @@ export default function BlogPostClient({
                   </div>
                   <div>
                     <p className="text-white font-medium font-display">{authorName}</p>
-                    <p className="text-sm text-zinc-500 mt-0.5">Contributing writer at The Integrity Man Network</p>
+                    <p className="text-sm text-zinc-500 mt-0.5">{authorSubtitle}</p>
                   </div>
                 </div>
               </div>

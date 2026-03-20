@@ -26,10 +26,12 @@ export async function GET(
       data: { viewCount: { increment: 1 } },
     });
 
-    // Check remaining capacity
-    const registeredCount = await prisma.eventRegistration.count({
+    // Check remaining capacity — sum actual tickets, not just registration rows
+    const ticketSum = await prisma.eventRegistration.aggregate({
       where: { eventId: event.id, status: { not: "CANCELLED" } },
+      _sum: { ticketCount: true },
     });
+    const registeredCount = ticketSum._sum?.ticketCount || 0;
 
     const spotsRemaining = event.capacity ? Math.max(0, event.capacity - registeredCount) : null;
 
