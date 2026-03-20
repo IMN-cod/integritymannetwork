@@ -212,7 +212,7 @@ export default function AdminDonationsPage() {
 
   return (
     <div className="space-y-6">
-      {/* ═══ HEADER ═══ */}
+      {/* â•â•â• HEADER â•â•â• */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 font-display">Donations</h1>
@@ -239,7 +239,7 @@ export default function AdminDonationsPage() {
         </div>
       </div>
 
-      {/* ═══ CLEANUP CONFIRMATION ═══ */}
+      {/* â•â•â• CLEANUP CONFIRMATION â•â•â• */}
       {showCleanup && (
         <Card variant="admin" className="border-amber-200 bg-amber-50/50">
           <CardContent className="p-5">
@@ -297,14 +297,14 @@ export default function AdminDonationsPage() {
         </Card>
       )}
 
-      {/* ═══ STATS CARDS ═══ */}
+      {/* â•â•â• STATS CARDS â•â•â• */}
       {stats && (
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           {/* Total Revenue */}
           <Card variant="admin" className="relative overflow-hidden lg:col-span-1">
             <CardContent className="p-5">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                <div className="w-9 h-9 rounded-xl bg-linear-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
                   <Wallet className="w-4.5 h-4.5 text-white" />
                 </div>
                 <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Total Revenue</span>
@@ -318,7 +318,7 @@ export default function AdminDonationsPage() {
           <Card variant="admin" className="relative overflow-hidden">
             <CardContent className="p-5">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/20">
+                <div className="w-9 h-9 rounded-xl bg-linear-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/20">
                   <Calendar className="w-4.5 h-4.5 text-white" />
                 </div>
                 <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">This Month</span>
@@ -342,7 +342,7 @@ export default function AdminDonationsPage() {
           <Card variant="admin" className="relative overflow-hidden">
             <CardContent className="p-5">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+                <div className="w-9 h-9 rounded-xl bg-linear-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
                   <Users className="w-4.5 h-4.5 text-white" />
                 </div>
                 <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Recurring</span>
@@ -356,7 +356,7 @@ export default function AdminDonationsPage() {
           <Card variant="admin" className="relative overflow-hidden">
             <CardContent className="p-5">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <div className="w-9 h-9 rounded-xl bg-linear-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
                   <BarChart3 className="w-4.5 h-4.5 text-white" />
                 </div>
                 <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Success Rate</span>
@@ -364,7 +364,7 @@ export default function AdminDonationsPage() {
               <p className="text-2xl font-bold text-gray-900 font-display">{successRate}%</p>
               <div className="w-full h-1.5 bg-gray-100 rounded-full mt-2 overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-1000"
+                  className="h-full bg-linear-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-1000"
                   style={{ width: `${successRate}%` }}
                 />
               </div>
@@ -375,7 +375,7 @@ export default function AdminDonationsPage() {
           <Card variant="admin" className="relative overflow-hidden">
             <CardContent className="p-5">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
+                <div className="w-9 h-9 rounded-xl bg-linear-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
                   <Zap className="w-4.5 h-4.5 text-white" />
                 </div>
                 <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Attention</span>
@@ -396,7 +396,7 @@ export default function AdminDonationsPage() {
         </div>
       )}
 
-      {/* ═══ TABS ═══ */}
+      {/* â•â•â• TABS â•â•â• */}
       <div className="flex items-center gap-1 border-b border-gray-200">
         <button
           onClick={() => setActiveTab("donations")}
@@ -430,7 +430,7 @@ export default function AdminDonationsPage() {
         </button>
       </div>
 
-      {/* ═══ DONATIONS TAB ═══ */}
+      {/* â•â•â• DONATIONS TAB â•â•â• */}
       {activeTab === "donations" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className={selectedDonation ? "lg:col-span-2" : "lg:col-span-3"}>
@@ -526,7 +526,7 @@ export default function AdminDonationsPage() {
                             >
                               <td className="px-5 py-3.5">
                                 <div className="flex items-center gap-3">
-                                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center shrink-0 ring-2 ring-white shadow-sm">
+                                  <div className="w-9 h-9 rounded-full bg-linear-to-br from-orange-100 to-amber-100 flex items-center justify-center shrink-0 ring-2 ring-white shadow-sm">
                                     <span className="text-xs font-bold text-orange-600">
                                       {donation.anonymous
                                         ? "A"
@@ -565,10 +565,10 @@ export default function AdminDonationsPage() {
                               <td className="px-5 py-3.5 hidden md:table-cell">
                                 {donation.paymentId ? (
                                   <code className="text-[11px] text-gray-500 bg-gray-50 px-2 py-1 rounded-md font-mono border border-gray-100">
-                                    {donation.paymentId.length > 20 ? `${donation.paymentId.slice(0, 20)}…` : donation.paymentId}
+                                    {donation.paymentId.length > 20 ? `${donation.paymentId.slice(0, 20)}â€¦` : donation.paymentId}
                                   </code>
                                 ) : (
-                                  <span className="text-xs text-gray-300">—</span>
+                                  <span className="text-xs text-gray-300">â€”</span>
                                 )}
                               </td>
                               <td className="px-5 py-3.5 hidden sm:table-cell">
@@ -614,7 +614,7 @@ export default function AdminDonationsPage() {
                     {pagination.pages > 1 && (
                       <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100">
                         <p className="text-xs text-gray-500">
-                          <span className="font-semibold text-gray-700">{(pagination.page - 1) * pagination.limit + 1}–{Math.min(pagination.page * pagination.limit, pagination.total)}</span> of {pagination.total}
+                          <span className="font-semibold text-gray-700">{(pagination.page - 1) * pagination.limit + 1}â€“{Math.min(pagination.page * pagination.limit, pagination.total)}</span> of {pagination.total}
                         </p>
                         <div className="flex items-center gap-1">
                           <Button variant="outline" size="sm" disabled={pagination.page <= 1} onClick={() => fetchDonations(pagination.page - 1)} className="h-8 w-8 p-0">
@@ -646,7 +646,7 @@ export default function AdminDonationsPage() {
             </Card>
           </div>
 
-          {/* ═══ DETAIL PANEL ═══ */}
+          {/* â•â•â• DETAIL PANEL â•â•â• */}
           {selectedDonation && (
             <div className="lg:col-span-1">
               <div className="sticky top-20 space-y-4">
@@ -654,7 +654,7 @@ export default function AdminDonationsPage() {
                 <Card variant="admin">
                   <CardContent className="p-0">
                     {/* Header with gradient */}
-                    <div className="relative overflow-hidden rounded-t-xl bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 px-5 py-6">
+                    <div className="relative overflow-hidden rounded-t-xl bg-linear-to-br from-orange-500 via-orange-600 to-amber-600 px-5 py-6">
                       <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
                       <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
                       <div className="relative">
@@ -700,12 +700,12 @@ export default function AdminDonationsPage() {
                           value: selectedDonation.user.email,
                         }] : []),
                         { label: "Payment Method", value: selectedDonation.paymentMethod },
-                        { label: "Reference", value: selectedDonation.paymentId || "—", mono: true },
+                        { label: "Reference", value: selectedDonation.paymentId || "â€”", mono: true },
                         { label: "Date", value: formatDate(selectedDonation.createdAt) },
                       ].map((item) => (
                         <div key={item.label} className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
                           <span className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">{item.label}</span>
-                          <span className={`text-xs font-medium text-gray-900 text-right max-w-[200px] truncate ${(item as { mono?: boolean }).mono ? "font-mono bg-gray-50 px-2 py-0.5 rounded" : ""}`}>
+                          <span className={`text-xs font-medium text-gray-900 text-right max-w-50 truncate ${(item as { mono?: boolean }).mono ? "font-mono bg-gray-50 px-2 py-0.5 rounded" : ""}`}>
                             {item.value}
                           </span>
                         </div>
@@ -714,7 +714,7 @@ export default function AdminDonationsPage() {
                       {selectedDonation.message && (
                         <div className="pt-3">
                           <span className="text-[11px] text-gray-400 font-medium uppercase tracking-wider block mb-2">Message</span>
-                          <div className="bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-100 rounded-lg p-3">
+                          <div className="bg-linear-to-br from-orange-50 to-amber-50 border border-orange-100 rounded-lg p-3">
                             <p className="text-xs text-gray-700 italic leading-relaxed">
                               &ldquo;{selectedDonation.message}&rdquo;
                             </p>
@@ -730,7 +730,7 @@ export default function AdminDonationsPage() {
                   <Card variant="admin">
                     <CardContent className="p-5">
                       <div className="flex items-center gap-2 mb-4">
-                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                        <div className="w-7 h-7 rounded-lg bg-linear-to-br from-blue-500 to-blue-600 flex items-center justify-center">
                           <ShieldCheck className="w-3.5 h-3.5 text-white" />
                         </div>
                         <h3 className="text-sm font-bold text-gray-900">Paystack Verification</h3>
@@ -764,7 +764,7 @@ export default function AdminDonationsPage() {
                               <XCircle className="w-4 h-4 text-red-600 shrink-0" />
                             )}
                             <span className={`text-xs font-bold ${verifyResult.status === "success" ? "text-emerald-700" : "text-red-700"}`}>
-                              {verifyResult.status === "success" ? "Payment Verified ✓" : `Status: ${verifyResult.status}`}
+                              {verifyResult.status === "success" ? "Payment Verified âœ“" : `Status: ${verifyResult.status}`}
                             </span>
                           </div>
 
@@ -806,12 +806,12 @@ export default function AdminDonationsPage() {
         </div>
       )}
 
-      {/* ═══ PAYSTACK TRANSACTIONS TAB ═══ */}
+      {/* â•â•â• PAYSTACK TRANSACTIONS TAB â•â•â• */}
       {activeTab === "paystack" && (
         <Card variant="admin">
           <div className="p-4 border-b border-gray-100 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <div className="w-10 h-10 rounded-xl bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
                 <ShieldCheck className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -871,7 +871,7 @@ export default function AdminDonationsPage() {
                           </code>
                         </td>
                         <td className="px-5 py-3.5">
-                          <p className="text-xs font-medium text-gray-900">{customer?.email || "—"}</p>
+                          <p className="text-xs font-medium text-gray-900">{customer?.email || "â€”"}</p>
                         </td>
                         <td className="px-5 py-3.5">
                           <p className="text-sm font-bold text-gray-900">
@@ -881,7 +881,7 @@ export default function AdminDonationsPage() {
                         <td className="px-5 py-3.5 hidden sm:table-cell">
                           <div className="inline-flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-md">
                             <ChannelIcon className="w-3.5 h-3.5 text-gray-400" />
-                            <span className="text-[11px] text-gray-600 capitalize font-medium">{txnChannel.replace("_", " ") || "—"}</span>
+                            <span className="text-[11px] text-gray-600 capitalize font-medium">{txnChannel.replace("_", " ") || "â€”"}</span>
                           </div>
                         </td>
                         <td className="px-5 py-3.5">
@@ -908,7 +908,7 @@ export default function AdminDonationsPage() {
                               ? formatDate(String(txn.paid_at), { month: "short", day: "numeric", hour: "numeric", minute: "numeric" })
                               : txn.created_at
                                 ? formatDate(String(txn.created_at), { month: "short", day: "numeric", hour: "numeric", minute: "numeric" })
-                                : "—"}
+                                : "â€”"}
                           </p>
                         </td>
                         <td className="px-5 py-3.5 text-right">

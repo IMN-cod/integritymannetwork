@@ -104,7 +104,7 @@ export default async function BlogPostPage({
   let relatedPosts: Array<{
     id: string; title: string; slug: string; excerpt: string | null;
     coverImage: string | null; readingTime: number; publishedAt: Date | null;
-    author: { firstName: string | null; lastName: string | null; avatar: string | null } | null;
+    author: { displayName: string | null; firstName: string | null; lastName: string | null; avatar: string | null } | null;
     category: { name: string; slug: string } | null;
   }> = [];
   try {
@@ -117,7 +117,7 @@ export default async function BlogPostPage({
       select: {
         id: true, title: true, slug: true, excerpt: true,
         coverImage: true, readingTime: true, publishedAt: true,
-        author: { select: { firstName: true, lastName: true, avatar: true } },
+        author: { select: { displayName: true, firstName: true, lastName: true, avatar: true } },
         category: { select: { name: true, slug: true } },
       },
       orderBy: { publishedAt: "desc" },

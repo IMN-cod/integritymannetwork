@@ -171,7 +171,7 @@ export default function AdminOrdersPage() {
                 <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
                 <p className="text-xs text-gray-400 mt-1">{stats.delivered} delivered</p>
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <div className="w-12 h-12 rounded-2xl bg-linear-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
                 <Package className="w-6 h-6 text-white" />
               </div>
             </div>
@@ -186,7 +186,7 @@ export default function AdminOrdersPage() {
                 <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(stats.revenue)}</p>
                 <p className="text-xs text-gray-400 mt-1">{stats.paid} paid orders</p>
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <div className="w-12 h-12 rounded-2xl bg-linear-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
                 <DollarSign className="w-6 h-6 text-white" />
               </div>
             </div>
@@ -201,7 +201,7 @@ export default function AdminOrdersPage() {
                 <p className="text-2xl font-bold text-gray-900 mt-1">{stats.pending}</p>
                 <p className="text-xs text-gray-400 mt-1">{stats.processing} processing</p>
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
+              <div className="w-12 h-12 rounded-2xl bg-linear-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
                 <Clock className="w-6 h-6 text-white" />
               </div>
             </div>
@@ -216,7 +216,7 @@ export default function AdminOrdersPage() {
                 <p className="text-2xl font-bold text-gray-900 mt-1">{stats.shipped}</p>
                 <p className="text-xs text-gray-400 mt-1">In transit</p>
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+              <div className="w-12 h-12 rounded-2xl bg-linear-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
                 <Truck className="w-6 h-6 text-white" />
               </div>
             </div>
@@ -372,7 +372,7 @@ export default function AdminOrdersPage() {
                   </div>
 
                   {/* Amount Hero */}
-                  <div className="text-center py-3 mb-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
+                  <div className="text-center py-3 mb-4 rounded-xl bg-linear-to-br from-blue-50 to-indigo-50 border border-blue-100">
                     <p className="text-2xl font-bold text-gray-900">{formatCurrency(Number(selectedOrder.total))}</p>
                     <div className="flex items-center justify-center gap-2 mt-2">
                       <Badge variant={STATUS_COLORS[selectedOrder.status]?.variant || "secondary"} className="text-[10px]">
