@@ -16,6 +16,7 @@ const donationSchema = z.object({
   campaignId: z.string().optional(),
   message: z.string().optional(),
   donorEmail: z.string().email().optional(),
+  skipInit: z.boolean().default(false),
 });
 
 // ───────────────────────────────────────
@@ -61,6 +62,17 @@ export async function POST(req: NextRequest) {
         }),
       },
     });
+
+    // If skipInit is true, just return the donation ID (for MoMo/Bank Transfer flows)
+    if (data.skipInit) {
+      return NextResponse.json(
+        {
+          message: "Donation created",
+          donationId: donation.id,
+        },
+        { status: 201 }
+      );
+    }
 
     let paymentUrl: string;
     let accessCode: string | undefined;

@@ -360,6 +360,7 @@ function DonationForm() {
           isRecurring: donationType === "monthly",
           paymentMethod: "PAYSTACK",
           donorEmail,
+          skipInit: true,
         }),
       });
 

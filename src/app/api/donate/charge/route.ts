@@ -38,7 +38,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const reference = `DON-${donation.id}`;
+    const suffix = Date.now().toString(36);
+    const reference = `DON-${donation.id}-${suffix}`;
     const metadata = { donationId: donation.id, type: "donation" };
 
     if (channel === "mobile_money") {
