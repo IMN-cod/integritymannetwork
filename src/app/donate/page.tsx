@@ -248,7 +248,7 @@ type DonationState =
   | { step: "form" }
   | { step: "payment" }
   | { step: "processing"; message: string }
-  | { step: "awaiting_approval"; reference: string; displayText: string }
+  | { step: "awaiting_approval"; reference: string; displayText: string; requiresOtp?: boolean }
   | { step: "success"; reference: string; amount: number; channel: string }
   | { step: "failed"; message: string };
 
@@ -272,6 +272,8 @@ function DonationForm() {
   const [momoPhone, setMomoPhone] = useState("");
   const [momoProvider, setMomoProvider] = useState<MomoProvider>("mtn");
   const [donationId, setDonationId] = useState<string | null>(null);
+  const [otp, setOtp] = useState("");
+  const [otpSubmitting, setOtpSubmitting] = useState(false);
 
   // Paystack popup for card (loaded dynamically)
   const [paystackReady, setPaystackReady] = useState(false);
@@ -407,12 +409,14 @@ function DonationForm() {
       if (!res.ok) throw new Error(data.error || "Mobile money charge failed");
 
       if (data.status === "send_otp" || data.status === "pay_offline" || data.status === "pending") {
+        const needsOtp = data.status === "send_otp";
         setDonationState({
           step: "awaiting_approval",
           reference: data.reference,
-          displayText: data.displayText || "Please approve the payment on your phone.",
+          displayText: data.displayText || (needsOtp ? "Enter the OTP sent to your phone." : "Please approve the payment on your phone."),
+          requiresOtp: needsOtp,
         });
-        startPolling(data.reference);
+        if (!needsOtp) startPolling(data.reference);
       } else if (data.status === "success") {
         setDonationState({
           step: "success",
@@ -537,6 +541,54 @@ function DonationForm() {
     }
   };
 
+  // ── Submit OTP for pending charge ──
+  const handleSubmitOtp = async () => {
+    if (!otp || otp.length < 4) {
+      setError("Please enter the OTP sent to your phone.");
+      return;
+    }
+    if (donationState.step !== "awaiting_approval") return;
+
+    setOtpSubmitting(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/donate/charge/otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reference: donationState.reference,
+          otp,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "OTP verification failed");
+
+      if (data.status === "success") {
+        setDonationState({
+          step: "success",
+          reference: data.reference,
+          amount: currentAmount!,
+          channel: "mobile_money",
+        });
+      } else {
+        // After OTP submission, Paystack may need time to process — start polling
+        setDonationState({
+          step: "awaiting_approval",
+          reference: donationState.reference,
+          displayText: data.displayText || "Processing your payment...",
+          requiresOtp: false,
+        });
+        startPolling(donationState.reference);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "OTP submission failed");
+    } finally {
+      setOtpSubmitting(false);
+    }
+  };
+
   const resetForm = () => {
     setDonationState({ step: "form" });
     setDonorEmail("");
@@ -545,6 +597,7 @@ function DonationForm() {
     setCustomAmount("");
     setMomoPhone("");
     setDonationId(null);
+    setOtp("");
     setError(null);
     if (pollRef.current) clearInterval(pollRef.current);
   };
@@ -650,7 +703,7 @@ function DonationForm() {
         </motion.div>
 
         <h3 className="text-xl sm:text-2xl font-bold text-white font-display mb-2">
-          Approve on Your Phone
+          {donationState.requiresOtp ? "Enter OTP" : "Approve on Your Phone"}
         </h3>
         <p className="text-sm text-zinc-400 mb-6 max-w-sm mx-auto">
           {donationState.displayText}
@@ -667,20 +720,60 @@ function DonationForm() {
           </div>
         </div>
 
-        <div className="flex items-center justify-center gap-2 text-zinc-500 mb-6">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-            className="w-4 h-4 border-2 border-zinc-600 border-t-orange-500 rounded-full"
-          />
-          <span className="text-xs">Waiting for confirmation...</span>
-        </div>
+        {donationState.requiresOtp ? (
+          <div className="max-w-xs mx-auto mb-6">
+            {error && (
+              <div className="flex items-center gap-2 text-red-400 text-xs mb-3 justify-center">
+                <AlertCircle className="w-3.5 h-3.5" />
+                {error}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                placeholder="Enter OTP"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                className="text-center text-lg tracking-[0.3em] font-mono"
+                autoFocus
+              />
+              <Button
+                onClick={handleSubmitOtp}
+                disabled={otpSubmitting || otp.length < 4}
+                className="bg-orange-600 hover:bg-orange-700 min-w-25"
+              >
+                {otpSubmitting ? (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+                  />
+                ) : (
+                  "Confirm"
+                )}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center gap-2 text-zinc-500 mb-6">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+              className="w-4 h-4 border-2 border-zinc-600 border-t-orange-500 rounded-full"
+            />
+            <span className="text-xs">Waiting for confirmation...</span>
+          </div>
+        )}
 
         <Button
           variant="outline"
           size="sm"
           onClick={() => {
             if (pollRef.current) clearInterval(pollRef.current);
+            setOtp("");
             setDonationState({ step: "payment" });
           }}
         >
