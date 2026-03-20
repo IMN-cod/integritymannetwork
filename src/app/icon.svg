@@ -46,16 +46,4 @@
     C158 112 256 96 256 96Z
   " fill="none" stroke="#fdba74" stroke-width="1.5" stroke-opacity="0.4" stroke-linejoin="round"/>
 
-  <!-- Letter I -->
-  <text x="210" y="310" font-family="Georgia, 'Times New Roman', serif" font-size="180" font-weight="bold" fill="#09090b" text-anchor="middle" letter-spacing="-8">I</text>
-
-  <!-- Letter M -->
-  <text x="316" y="310" font-family="Georgia, 'Times New Roman', serif" font-size="180" font-weight="bold" fill="#09090b" text-anchor="middle" letter-spacing="-8">M</text>
-
-  <!-- Small cross above -->
-  <line x1="256" y1="118" x2="256" y2="148" stroke="#09090b" stroke-width="5" stroke-linecap="round"/>
-  <line x1="241" y1="130" x2="271" y2="130" stroke="#09090b" stroke-width="5" stroke-linecap="round"/>
-
-  <!-- Bottom banner ribbon -->
-  <path d="M176 390 L256 410 L336 390 L336 405 L256 425 L176 405Z" fill="#09090b" fill-opacity="0.3"/>
 </svg>

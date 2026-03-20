@@ -24,11 +24,4 @@
     C50 31 90 24 90 24Z
   " fill="url(#cg)" stroke="#fdba74" stroke-width="1"/>
 
-  <!-- I M Letters -->
-  <text x="74" y="112" font-family="Georgia, serif" font-size="64" font-weight="bold" fill="#09090b" text-anchor="middle">I</text>
-  <text x="112" y="112" font-family="Georgia, serif" font-size="64" font-weight="bold" fill="#09090b" text-anchor="middle">M</text>
-
-  <!-- Cross -->
-  <line x1="90" y1="40" x2="90" y2="51" stroke="#09090b" stroke-width="2" stroke-linecap="round"/>
-  <line x1="84.5" y1="44.5" x2="95.5" y2="44.5" stroke="#09090b" stroke-width="2" stroke-linecap="round"/>
 </svg>
