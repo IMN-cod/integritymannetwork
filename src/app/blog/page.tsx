@@ -39,7 +39,7 @@ interface BlogPost {
   viewCount: number;
   readingTime: number;
   publishedAt: string;
-  author: { firstName: string | null; lastName: string | null; avatar: string | null } | null;
+  author: { firstName: string | null; lastName: string | null; displayName: string | null; avatar: string | null } | null;
   category: { name: string; slug: string } | null;
   tags: { tag: { id: string; name: string; slug: string } }[];
   _count?: { comments: number };
@@ -82,7 +82,7 @@ function BlogHero() {
 // ─── FEATURED POST ───
 function FeaturedPost({ post }: { post: BlogPost }) {
   const authorName = post.author
-    ? `${post.author.firstName || ""} ${post.author.lastName || ""}`.trim() || "TIMN Editorial"
+    ? post.author.displayName || `${post.author.firstName || ""} ${post.author.lastName || ""}`.trim() || "TIMN Editorial"
     : "TIMN Editorial";
 
   return (
@@ -147,7 +147,7 @@ function FeaturedPost({ post }: { post: BlogPost }) {
 // ─── POST CARD ───
 function PostCard({ post }: { post: BlogPost }) {
   const authorName = post.author
-    ? `${post.author.firstName || ""} ${post.author.lastName || ""}`.trim() || "TIMN Editorial"
+    ? post.author.displayName || `${post.author.firstName || ""} ${post.author.lastName || ""}`.trim() || "TIMN Editorial"
     : "TIMN Editorial";
 
   return (

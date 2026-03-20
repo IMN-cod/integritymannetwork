@@ -60,6 +60,24 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Notify admins of new registration
+    const admins = await prisma.user.findMany({
+      where: { role: { in: ["ADMIN", "SUPER_ADMIN"] }, isActive: true },
+      select: { id: true },
+    });
+
+    if (admins.length > 0) {
+      await prisma.notification.createMany({
+        data: admins.map((admin) => ({
+          userId: admin.id,
+          title: "New Account Registration",
+          message: `${firstName} ${lastName} (${email}) created an account.`,
+          type: "USER_REGISTRATION",
+          link: "/admin/users",
+        })),
+      });
+    }
+
     return NextResponse.json(
       { message: "Account created successfully", user },
       { status: 201 }

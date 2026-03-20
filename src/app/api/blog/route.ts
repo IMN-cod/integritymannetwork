@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
         where,
         include: {
           author: {
-            select: { firstName: true, lastName: true, avatar: true },
+            select: { firstName: true, lastName: true, displayName: true, avatar: true },
           },
           category: {
             select: { name: true, slug: true },
@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
         }),
       },
       include: {
-        author: { select: { firstName: true, lastName: true, avatar: true } },
+        author: { select: { firstName: true, lastName: true, displayName: true, avatar: true } },
         category: { select: { name: true, slug: true } },
       },
     });

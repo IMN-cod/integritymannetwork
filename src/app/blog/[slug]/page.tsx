@@ -8,7 +8,7 @@ async function getPost(slug: string) {
   const post = await prisma.blogPost.findUnique({
     where: { slug, status: "PUBLISHED" },
     include: {
-      author: { select: { firstName: true, lastName: true, avatar: true } },
+      author: { select: { firstName: true, lastName: true, displayName: true, avatar: true } },
       category: { select: { name: true, slug: true } },
       tags: { include: { tag: true } },
       comments: {
@@ -53,7 +53,7 @@ export async function generateMetadata({
   };
 
   const authorName = post.author
-    ? `${post.author.firstName || ""} ${post.author.lastName || ""}`.trim() || "TIMN Editorial"
+    ? post.author.displayName || `${post.author.firstName || ""} ${post.author.lastName || ""}`.trim() || "TIMN Editorial"
     : "TIMN Editorial";
 
   return {

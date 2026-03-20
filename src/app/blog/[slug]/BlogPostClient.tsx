@@ -24,6 +24,7 @@ import { Card, CardContent } from "@/components/ui/card";
 interface Author {
   firstName: string | null;
   lastName: string | null;
+  displayName: string | null;
   avatar: string | null;
 }
 
@@ -157,7 +158,7 @@ export default function BlogPostClient({
   const shareTitle = post.title;
 
   const authorName = post.author
-    ? `${post.author.firstName || ""} ${post.author.lastName || ""}`.trim() || "TIMN Editorial"
+    ? post.author.displayName || `${post.author.firstName || ""} ${post.author.lastName || ""}`.trim() || "TIMN Editorial"
     : "TIMN Editorial";
 
   const authorInitials = post.author
@@ -273,18 +274,25 @@ export default function BlogPostClient({
             {/* Main */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }} className="flex-1 min-w-0 max-w-3xl mx-auto" ref={articleRef}>
               <article
-                className="prose prose-zinc prose-invert prose-orange max-w-none
+                className="prose prose-lg prose-zinc prose-invert prose-orange max-w-none
                   prose-headings:font-display prose-headings:text-white prose-headings:font-bold prose-headings:scroll-mt-20
+                  prose-h1:text-3xl prose-h1:mt-14 prose-h1:mb-6
                   prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-4
                   prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3
-                  prose-p:text-zinc-300 prose-p:leading-relaxed prose-p:text-[17px]
+                  prose-h4:text-lg prose-h4:mt-6 prose-h4:mb-2
+                  prose-p:text-zinc-300 prose-p:leading-relaxed prose-p:text-[17px] prose-p:mb-5
                   prose-a:text-orange-500 prose-a:no-underline hover:prose-a:underline
-                  prose-strong:text-white
-                  prose-blockquote:border-l-2 prose-blockquote:border-orange-500/50 prose-blockquote:pl-6 prose-blockquote:italic prose-blockquote:text-orange-500/80 prose-blockquote:font-medium prose-blockquote:text-lg
-                  prose-ul:text-zinc-300 prose-ol:text-zinc-300
+                  prose-strong:text-white prose-em:text-zinc-200
+                  prose-blockquote:border-l-2 prose-blockquote:border-orange-500/50 prose-blockquote:pl-6 prose-blockquote:italic prose-blockquote:text-orange-500/80 prose-blockquote:font-medium prose-blockquote:text-lg prose-blockquote:my-8
+                  prose-ul:text-zinc-300 prose-ul:my-5 prose-ul:space-y-2
+                  prose-ol:text-zinc-300 prose-ol:my-5 prose-ol:space-y-2
+                  prose-li:text-zinc-300 prose-li:leading-relaxed prose-li:text-[17px]
                   prose-code:bg-zinc-800 prose-code:rounded prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:text-orange-400
                   prose-pre:bg-zinc-900 prose-pre:rounded-xl prose-pre:border prose-pre:border-zinc-800
-                  prose-img:rounded-xl prose-img:shadow-lg"
+                  prose-img:rounded-xl prose-img:shadow-lg prose-img:my-8
+                  prose-hr:border-zinc-800 prose-hr:my-10
+                  prose-table:text-zinc-300 prose-th:text-white prose-th:font-semibold
+                  [&>*:first-child]:mt-0"
                 dangerouslySetInnerHTML={{ __html: processedContent }}
               />
 
