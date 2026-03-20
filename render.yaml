@@ -24,6 +24,8 @@ services:
         sync: false            # Set manually in Render dashboard
       - key: NEXTAUTH_URL
         sync: false
+      - key: NEXT_PUBLIC_APP_URL
+        value: "https://www.integritymannetwork.com"
       - key: NEXTAUTH_SECRET
         generateValue: true    # Auto-generate a secure secret
       - key: GOOGLE_CLIENT_ID

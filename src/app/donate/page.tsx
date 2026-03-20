@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ProtectedImage } from "@/components/ui/video-player";
 import {
@@ -14,6 +15,9 @@ import {
   Users,
   Zap,
   Sparkles,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -249,15 +253,43 @@ function DonationForm() {
   const [donationType, setDonationType] = useState<"one-time" | "monthly">("one-time");
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>("paystack");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [donorEmail, setDonorEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const currentAmount = customAmount ? parseInt(customAmount, 10) : selectedAmount;
   const isValid = currentAmount && currentAmount >= 5;
 
   const handleDonate = async () => {
     if (!isValid) return;
+    setError(null);
     setIsProcessing(true);
-    // Payment processing will be handled by the API routes
-    setTimeout(() => setIsProcessing(false), 2000);
+
+    try {
+      const res = await fetch("/api/donate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: currentAmount,
+          currency: "GHS",
+          isRecurring: donationType === "monthly",
+          paymentMethod: selectedPayment.toUpperCase(),
+          ...(donorEmail && { donorEmail }),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to process donation");
+      }
+
+      if (data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -364,11 +396,31 @@ function DonationForm() {
         </div>
       </div>
 
-      {/* ── Step 3: Payment Method ── */}
+      {/* ── Step 3: Email (for guest donors) ── */}
       <div>
         <div className="flex items-center gap-2 mb-3 sm:mb-4">
           <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
             <span className="text-[10px] font-bold text-white">3</span>
+          </div>
+          <span className="text-xs sm:text-sm font-semibold text-white tracking-wide">Your Email</span>
+        </div>
+        <Input
+          type="email"
+          placeholder="you@example.com"
+          value={donorEmail}
+          onChange={(e) => setDonorEmail(e.target.value)}
+          className="h-12 sm:h-13 text-base bg-zinc-800/30 border-zinc-700/40 focus:border-orange-500/50 rounded-xl"
+        />
+        <p className="text-[10px] text-zinc-600 mt-1.5">
+          Required for payment receipt. Logged-in users can leave this blank.
+        </p>
+      </div>
+
+      {/* ── Step 4: Payment Method ── */}
+      <div>
+        <div className="flex items-center gap-2 mb-3 sm:mb-4">
+          <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
+            <span className="text-[10px] font-bold text-white">4</span>
           </div>
           <span className="text-xs sm:text-sm font-semibold text-white tracking-wide">Payment Method</span>
         </div>
@@ -456,6 +508,18 @@ function DonationForm() {
         )}
       </AnimatePresence>
 
+      {/* ── Error Message ── */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-xl bg-red-500/10 border border-red-500/20 p-3 sm:p-4 flex items-start gap-3"
+        >
+          <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+          <p className="text-xs sm:text-sm text-red-400">{error}</p>
+        </motion.div>
+      )}
+
       <div className="space-y-3">
         <Button
           size="xl"
@@ -534,10 +598,80 @@ function ScriptureBanner() {
 }
 
 // ──────────────────────────────────────────
+// RETURN STATUS — After payment redirect
+// ──────────────────────────────────────────
+
+function DonationStatus() {
+  const searchParams = useSearchParams();
+  const status = searchParams.get("status");
+  const ref = searchParams.get("ref");
+
+  if (!status) return null;
+
+  return (
+    <section className="section-padding relative">
+      <div className="container-wide max-w-2xl mx-auto text-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 backdrop-blur-sm p-8 sm:p-12"
+        >
+          {status === "success" ? (
+            <>
+              <div className="w-16 h-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 className="w-8 h-8 text-green-500" />
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-white font-display mb-3">
+                Thank You!
+              </h2>
+              <p className="text-sm sm:text-base text-zinc-400 leading-relaxed mb-2">
+                Your donation has been received. God bless your generosity.
+              </p>
+              {ref && (
+                <p className="text-xs text-zinc-600">Reference: {ref}</p>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="w-16 h-16 rounded-full bg-zinc-700/30 border border-zinc-700/40 flex items-center justify-center mx-auto mb-6">
+                <XCircle className="w-8 h-8 text-zinc-500" />
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-white font-display mb-3">
+                Donation Cancelled
+              </h2>
+              <p className="text-sm sm:text-base text-zinc-400 leading-relaxed">
+                No worries — your payment was not processed. You can try again anytime.
+              </p>
+            </>
+          )}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// ──────────────────────────────────────────
 // PAGE COMPOSITION
 // ──────────────────────────────────────────
 
-export default function DonatePage() {
+function DonatePageContent() {
+  const searchParams = useSearchParams();
+  const status = searchParams.get("status");
+
+  // If returning from payment, show status instead of hero + form
+  if (status) {
+    return (
+      <>
+        <DonateHero />
+        <div className="divider-gradient" />
+        <DonationStatus />
+        <div className="divider-gradient" />
+        <ScriptureBanner />
+      </>
+    );
+  }
+
   return (
     <>
       <DonateHero />
@@ -652,5 +786,13 @@ export default function DonatePage() {
       <div className="divider-gradient" />
       <ScriptureBanner />
     </>
+  );
+}
+
+export default function DonatePage() {
+  return (
+    <Suspense>
+      <DonatePageContent />
+    </Suspense>
   );
 }
