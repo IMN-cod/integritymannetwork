@@ -229,9 +229,10 @@ function FeaturedCourseBanner({ course }: { course: CourseCard }) {
                 {course.title}
               </h2>
               {course.summary && (
-                <p className="text-zinc-400 text-sm sm:text-base mb-4 line-clamp-3">
-                  {course.summary}
-                </p>
+                <ExpandableSummary
+                  summary={course.summary}
+                  textClassName="text-zinc-400 text-sm sm:text-base"
+                />
               )}
               <div className="flex flex-wrap gap-4 text-sm text-zinc-500">
                 {course.instructor && (
@@ -268,6 +269,35 @@ function FeaturedCourseBanner({ course }: { course: CourseCard }) {
         </CardContent>
       </Card>
     </motion.div>
+  );
+}
+
+function ExpandableSummary({
+  summary,
+  textClassName,
+}: {
+  summary: string;
+  textClassName: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const showToggle = summary.length > 180;
+
+  return (
+    <div className="mb-4">
+      <p className={`${textClassName} leading-relaxed ${expanded ? "" : "line-clamp-3"}`}>
+        {summary}
+      </p>
+      {showToggle && (
+        <button
+          type="button"
+          onClick={() => setExpanded((prev) => !prev)}
+          className="mt-2 text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors"
+          aria-expanded={expanded}
+        >
+          {expanded ? "Show less" : "Read more"}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -316,9 +346,10 @@ function CourseCardItem({ course }: { course: CourseCard }) {
             {course.title}
           </h3>
           {course.summary && (
-            <p className="text-xs sm:text-sm text-zinc-400 line-clamp-3 mb-4 leading-relaxed">
-              {course.summary}
-            </p>
+            <ExpandableSummary
+              summary={course.summary}
+              textClassName="text-xs sm:text-sm text-zinc-400"
+            />
           )}
 
           <div className="mt-auto space-y-3">

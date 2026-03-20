@@ -696,7 +696,7 @@ export default function CommunityPage() {
                             </div>
                           )}
 
-                          <p className="text-sm text-zinc-300 leading-relaxed break-words">{msg.content}</p>
+                          <p className="text-sm text-zinc-300 leading-relaxed wrap-break-word">{msg.content}</p>
 
                           {msg.isEdited && <span className="text-[10px] text-zinc-600 ml-1">(edited)</span>}
                         </div>
@@ -951,7 +951,7 @@ export default function CommunityPage() {
                                 <Bot className="w-3 h-3" /> TIMN Bot
                               </p>
                             )}
-                            <p className="text-sm leading-relaxed break-words">{msg.content}</p>
+                            <p className="text-sm leading-relaxed wrap-break-word">{msg.content}</p>
                             <div className={cn("flex items-center gap-1.5 mt-1", msg.isMine ? "justify-end" : "")}>
                               <span className={cn("text-[10px]", msg.isMine ? "text-white/60" : "text-zinc-600")}>
                                 {formatMessageTime(msg.createdAt)}
