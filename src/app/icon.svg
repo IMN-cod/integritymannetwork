@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="crestGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#c2410c"/>
+    </linearGradient>
+    <linearGradient id="innerGlow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fdba74" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#f97316" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Black background with rounded corners -->
+  <rect width="512" height="512" rx="96" ry="96" fill="#09090b"/>
+
+  <!-- Subtle radial glow behind crest -->
+  <circle cx="256" cy="240" r="180" fill="url(#innerGlow)"/>
+
+  <!-- Shield / Crest shape -->
+  <path d="
+    M256 68
+    C256 68 370 88 390 100
+    C410 112 420 140 420 170
+    L420 250
+    C420 320 380 370 340 400
+    C300 430 270 445 256 452
+    C242 445 212 430 172 400
+    C132 370 92 320 92 250
+    L92 170
+    C92 140 102 112 122 100
+    C142 88 256 68 256 68Z
+  " fill="url(#crestGrad)" stroke="#fdba74" stroke-width="3" stroke-linejoin="round"/>
+
+  <!-- Inner shield outline -->
+  <path d="
+    M256 96
+    C256 96 354 112 372 122
+    C390 132 396 154 396 178
+    L396 245
+    C396 306 360 350 326 376
+    C292 402 268 414 256 420
+    C244 414 220 402 186 376
+    C152 350 116 306 116 245
+    L116 178
+    C116 154 122 132 140 122
+    C158 112 256 96 256 96Z
+  " fill="none" stroke="#fdba74" stroke-width="1.5" stroke-opacity="0.4" stroke-linejoin="round"/>
+
+  <!-- Letter I -->
+  <text x="210" y="310" font-family="Georgia, 'Times New Roman', serif" font-size="180" font-weight="bold" fill="#09090b" text-anchor="middle" letter-spacing="-8">I</text>
+
+  <!-- Letter M -->
+  <text x="316" y="310" font-family="Georgia, 'Times New Roman', serif" font-size="180" font-weight="bold" fill="#09090b" text-anchor="middle" letter-spacing="-8">M</text>
+
+  <!-- Small cross above -->
+  <line x1="256" y1="118" x2="256" y2="148" stroke="#09090b" stroke-width="5" stroke-linecap="round"/>
+  <line x1="241" y1="130" x2="271" y2="130" stroke="#09090b" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Bottom banner ribbon -->
+  <path d="M176 390 L256 410 L336 390 L336 405 L256 425 L176 405Z" fill="#09090b" fill-opacity="0.3"/>
+</svg>
