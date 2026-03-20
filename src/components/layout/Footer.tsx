@@ -1,12 +1,19 @@
 import Link from "next/link";
 import Image from "next/image";
 import {
-  Facebook,
   Instagram,
-  Twitter,
   Youtube,
+  Linkedin,
   ArrowUpRight,
 } from "lucide-react";
+
+function XIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
 import { SITE } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,10 +43,10 @@ const FOOTER_LINKS = {
 };
 
 const SOCIALS = [
-  { icon: Facebook, href: "#", label: "Facebook" },
-  { icon: Instagram, href: "#", label: "Instagram" },
-  { icon: Twitter, href: "#", label: "Twitter" },
-  { icon: Youtube, href: "#", label: "YouTube" },
+  { icon: XIcon, href: "https://x.com/intmannetwork", label: "X" },
+  { icon: Instagram, href: "https://www.instagram.com/the_integrityman_network", label: "Instagram" },
+  { icon: Youtube, href: "https://youtube.com/@theintegritymannetwork", label: "YouTube" },
+  { icon: Linkedin, href: "https://www.linkedin.com/company/theintegrityman-network/", label: "LinkedIn" },
 ];
 
 export function Footer() {
@@ -102,6 +109,8 @@ export function Footer() {
                 <a
                   key={label}
                   href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="w-9 h-9 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-orange-500 hover:border-orange-500/30 transition-all duration-200"
                   aria-label={label}
                 >
