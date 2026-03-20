@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useCallback, Suspense } from "react";
+import { useState, useCallback, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import Script from "next/script";
 import { motion, AnimatePresence } from "framer-motion";
 import { ProtectedImage } from "@/components/ui/video-player";
 import {
@@ -262,6 +261,19 @@ function DonationForm() {
   const [error, setError] = useState<string | null>(null);
   const [donationState, setDonationState] = useState<DonationState>({ step: "form" });
   const [paystackReady, setPaystackReady] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // Load Paystack inline JS inside the form (Paystack requires script parent to be a form)
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://js.paystack.co/v1/inline.js";
+    script.async = true;
+    script.onload = () => setPaystackReady(true);
+    if (formRef.current) {
+      formRef.current.appendChild(script);
+    }
+    return () => { script.remove(); };
+  }, []);
 
   const currentAmount = customAmount ? parseInt(customAmount, 10) : selectedAmount;
   const isValid = currentAmount && currentAmount >= 5 && donorEmail.includes("@");
@@ -457,12 +469,14 @@ function DonationForm() {
   const isProcessing = donationState.step === "processing";
 
   return (
-    <div className="space-y-6 sm:space-y-8">
-      {/* Paystack Inline JS */}
-      <Script
-        src="https://js.paystack.co/v1/inline.js"
-        onLoad={() => setPaystackReady(true)}
-      />
+    <form
+      ref={formRef}
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleDonate();
+      }}
+      className="space-y-6 sm:space-y-8"
+    >
 
       {/* ── Step 1: Frequency ── */}
       <div>
@@ -661,9 +675,9 @@ function DonationForm() {
 
       <div className="space-y-3">
         <Button
+          type="submit"
           size="xl"
           className="w-full group relative overflow-hidden"
-          onClick={handleDonate}
           disabled={isProcessing}
         >
           <span className="relative z-10 flex items-center gap-2">
@@ -696,7 +710,7 @@ function DonationForm() {
           </span>
         </div>
       </div>
-    </div>
+    </form>
   );
 }
 
