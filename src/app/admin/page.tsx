@@ -622,7 +622,7 @@ export default function AdminDashboardPage() {
               <p className="text-xs text-gray-400 mt-0.5">{stats.orders.thisMonth} this month</p>
             </div>
             <Link
-              href="/admin/products"
+              href="/admin/orders"
               className="text-xs text-orange-500 hover:text-orange-600 font-medium flex items-center gap-1"
             >
               View all <ExternalLink className="w-3 h-3" />

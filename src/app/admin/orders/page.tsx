@@ -3,11 +3,10 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
 import {
   Package, Search, Loader2, ChevronLeft, ChevronRight, RefreshCw,
-  Truck, DollarSign, Clock, CheckCircle2, XCircle, ArrowLeft,
-  X, CreditCard, ShoppingBag, User, MapPin,
+  Truck, DollarSign, Clock, CheckCircle2, XCircle,
+  X, CreditCard, ShoppingBag, User, MapPin, ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +29,7 @@ interface Order {
   status: string;
   paymentMethod: string;
   paymentStatus: string;
+  paymentId?: string | null;
   subtotal: number;
   tax: number;
   shippingCost: number;
@@ -55,14 +55,14 @@ interface Stats {
   revenue: number;
 }
 
-const STATUS_COLORS: Record<string, { variant: "success" | "warning" | "destructive" | "secondary" | "default"; icon: typeof CheckCircle2 }> = {
-  PENDING: { variant: "warning", icon: Clock },
-  CONFIRMED: { variant: "default", icon: CheckCircle2 },
-  PROCESSING: { variant: "default", icon: Package },
-  SHIPPED: { variant: "success", icon: Truck },
-  DELIVERED: { variant: "success", icon: CheckCircle2 },
-  CANCELLED: { variant: "destructive", icon: XCircle },
-  REFUNDED: { variant: "secondary", icon: DollarSign },
+const STATUS_COLORS: Record<string, { variant: "success" | "warning" | "destructive" | "secondary" | "default"; icon: typeof CheckCircle2; color: string }> = {
+  PENDING: { variant: "warning", icon: Clock, color: "text-amber-500" },
+  CONFIRMED: { variant: "default", icon: CheckCircle2, color: "text-blue-500" },
+  PROCESSING: { variant: "default", icon: Package, color: "text-blue-500" },
+  SHIPPED: { variant: "success", icon: Truck, color: "text-emerald-500" },
+  DELIVERED: { variant: "success", icon: CheckCircle2, color: "text-emerald-500" },
+  CANCELLED: { variant: "destructive", icon: XCircle, color: "text-red-500" },
+  REFUNDED: { variant: "secondary", icon: DollarSign, color: "text-gray-500" },
 };
 
 const PAYMENT_STATUS_COLORS: Record<string, "success" | "warning" | "destructive"> = {
@@ -151,14 +151,9 @@ export default function AdminOrdersPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link href="/admin/products">
-            <Button variant="ghost" size="sm"><ArrowLeft className="w-4 h-4" /></Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 font-display">Orders</h1>
-            <p className="text-sm text-gray-500 mt-1">Track and manage customer orders.</p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 font-display">Orders</h1>
+          <p className="text-sm text-gray-500 mt-1">Track and manage customer orders and payments.</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => fetchOrders()}>
           <RefreshCw className="w-3.5 h-3.5" />
@@ -166,33 +161,72 @@ export default function AdminOrdersPage() {
         </Button>
       </div>
 
-      {/* Stats */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Total Orders", value: stats.total, icon: Package, color: "text-blue-500", bg: "bg-blue-50" },
-          { label: "Pending", value: stats.pending, icon: Clock, color: "text-amber-500", bg: "bg-amber-50" },
-          { label: "Shipped", value: stats.shipped, icon: Truck, color: "text-emerald-500", bg: "bg-emerald-50" },
-          { label: "Revenue", value: formatCurrency(stats.revenue), icon: DollarSign, color: "text-orange-500", bg: "bg-orange-50" },
-        ].map((stat) => (
-          <Card key={stat.label} variant="admin">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-gray-500">{stat.label}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
-                </div>
-                <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center`}>
-                  <stat.icon className={`w-5 h-5 ${stat.color}`} />
-                </div>
+        <Card variant="admin" className="relative overflow-hidden">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Orders</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
+                <p className="text-xs text-gray-400 mt-1">{stats.delivered} delivered</p>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <Package className="w-6 h-6 text-white" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card variant="admin" className="relative overflow-hidden">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(stats.revenue)}</p>
+                <p className="text-xs text-gray-400 mt-1">{stats.paid} paid orders</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                <DollarSign className="w-6 h-6 text-white" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card variant="admin" className="relative overflow-hidden">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Pending</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.pending}</p>
+                <p className="text-xs text-gray-400 mt-1">{stats.processing} processing</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
+                <Clock className="w-6 h-6 text-white" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card variant="admin" className="relative overflow-hidden">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Shipped</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.shipped}</p>
+                <p className="text-xs text-gray-400 mt-1">In transit</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+                <Truck className="w-6 h-6 text-white" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Orders List */}
-        <div className="lg:col-span-2">
+        <div className={selectedOrder ? "lg:col-span-2" : "lg:col-span-3"}>
           <Card variant="admin">
             <CardHeader className="pb-0">
               {/* Status tabs */}
@@ -203,19 +237,25 @@ export default function AdminOrdersPage() {
                     !statusFilter ? "border-orange-500 text-orange-600" : "border-transparent text-gray-400 hover:text-gray-600"
                   }`}
                 >
-                  All
+                  All ({stats.total})
                 </button>
-                {ORDER_STATUSES.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setStatusFilter(s)}
-                    className={`px-3 py-2.5 text-xs font-medium border-b-2 transition-all whitespace-nowrap ${
-                      statusFilter === s ? "border-orange-500 text-orange-600" : "border-transparent text-gray-400 hover:text-gray-600"
-                    }`}
-                  >
-                    {s.charAt(0) + s.slice(1).toLowerCase()}
-                  </button>
-                ))}
+                {ORDER_STATUSES.map((s) => {
+                  const count = s === "PENDING" ? stats.pending : s === "PROCESSING" ? stats.processing : s === "SHIPPED" ? stats.shipped : s === "DELIVERED" ? stats.delivered : undefined;
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => setStatusFilter(s)}
+                      className={`px-3 py-2.5 text-xs font-medium border-b-2 transition-all whitespace-nowrap ${
+                        statusFilter === s ? "border-orange-500 text-orange-600" : "border-transparent text-gray-400 hover:text-gray-600"
+                      }`}
+                    >
+                      {s.charAt(0) + s.slice(1).toLowerCase()}
+                      {count !== undefined && count > 0 && (
+                        <span className="ml-1.5 text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">{count}</span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="flex items-center gap-3">
@@ -223,7 +263,7 @@ export default function AdminOrdersPage() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
                     variant="admin"
-                    placeholder="Search by order #, customer..."
+                    placeholder="Search by order #, customer name or email..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -239,54 +279,55 @@ export default function AdminOrdersPage() {
                 </div>
               ) : orders.length === 0 ? (
                 <div className="text-center py-16">
-                  <Package className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                  <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                    <Package className="w-7 h-7 text-gray-300" />
+                  </div>
                   <p className="text-sm font-medium text-gray-900">No orders found</p>
-                  <p className="text-xs text-gray-500 mt-1">Orders will appear here when customers make purchases.</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {searchQuery || statusFilter ? "Try adjusting your filters." : "Orders will appear here when customers make purchases."}
+                  </p>
                 </div>
               ) : (
                 <>
                   <div className="divide-y divide-gray-50">
                     {orders.map((order) => {
-                      const statusInfo = STATUS_COLORS[order.status] || { variant: "secondary" as const, icon: Package };
+                      const statusInfo = STATUS_COLORS[order.status] || { variant: "secondary" as const, icon: Package, color: "text-gray-400" };
                       const StatusIcon = statusInfo.icon;
                       return (
                         <button
                           key={order.id}
                           onClick={() => setSelectedOrder(order)}
-                          className={`w-full text-left px-6 py-4 hover:bg-gray-50/50 transition-colors ${
-                            selectedOrder?.id === order.id ? "bg-orange-50/40 border-l-2 border-l-orange-500" : ""
+                          className={`w-full text-left px-6 py-4 hover:bg-orange-50/30 transition-colors ${
+                            selectedOrder?.id === order.id ? "bg-orange-50/50 border-l-2 border-l-orange-500" : ""
                           }`}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3 min-w-0">
-                              <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-                                <StatusIcon className={`w-4 h-4 ${
-                                  statusInfo.variant === "success" ? "text-emerald-500" :
-                                  statusInfo.variant === "warning" ? "text-amber-500" :
-                                  statusInfo.variant === "destructive" ? "text-red-500" :
-                                  "text-gray-400"
-                                }`} />
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                                statusInfo.variant === "success" ? "bg-emerald-50" :
+                                statusInfo.variant === "warning" ? "bg-amber-50" :
+                                statusInfo.variant === "destructive" ? "bg-red-50" :
+                                "bg-gray-100"
+                              }`}>
+                                <StatusIcon className={`w-5 h-5 ${statusInfo.color}`} />
                               </div>
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2">
-                                  <p className="text-sm font-semibold text-gray-900 font-mono">
-                                    {order.orderNumber}
-                                  </p>
-                                  <Badge variant={statusInfo.variant} className="text-[9px] px-1.5 py-0">
-                                    {order.status}
+                                  <p className="text-sm font-bold text-gray-900 font-mono">{order.orderNumber}</p>
+                                  <Badge variant={statusInfo.variant} className="text-[9px] px-1.5 py-0">{order.status}</Badge>
+                                  <Badge variant={PAYMENT_STATUS_COLORS[order.paymentStatus] || "warning"} className="text-[9px] px-1.5 py-0">
+                                    {order.paymentStatus}
                                   </Badge>
                                 </div>
                                 <p className="text-xs text-gray-500 mt-0.5">
-                                  {order.user.firstName} {order.user.lastName} · {formatDate(order.createdAt)}
+                                  {order.user.firstName} {order.user.lastName} &middot; {formatDate(order.createdAt, { month: "short", day: "numeric" })}
                                 </p>
                               </div>
                             </div>
-                            <div className="text-right shrink-0">
-                              <p className="text-sm font-bold text-gray-900">
-                                {formatCurrency(Number(order.total))}
-                              </p>
-                              <p className="text-[10px] text-gray-400">
-                                {order.items.length} item{order.items.length !== 1 ? "s" : ""}
+                            <div className="text-right shrink-0 ml-3">
+                              <p className="text-sm font-bold text-gray-900">{formatCurrency(Number(order.total))}</p>
+                              <p className="text-[10px] text-gray-400 mt-0.5">
+                                {order.items.length} item{order.items.length !== 1 ? "s" : ""} &middot; {order.paymentMethod}
                               </p>
                             </div>
                           </div>
@@ -298,12 +339,13 @@ export default function AdminOrdersPage() {
                   {pagination.pages > 1 && (
                     <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
                       <p className="text-xs text-gray-500">
-                        Page {pagination.page} of {pagination.pages}
+                        Showing {(pagination.page - 1) * pagination.limit + 1}-{Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}
                       </p>
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" disabled={pagination.page <= 1} onClick={() => fetchOrders(pagination.page - 1)}>
                           <ChevronLeft className="w-4 h-4" />
                         </Button>
+                        <span className="text-xs text-gray-500 font-medium">{pagination.page} / {pagination.pages}</span>
                         <Button variant="outline" size="sm" disabled={pagination.page >= pagination.pages} onClick={() => fetchOrders(pagination.page + 1)}>
                           <ChevronRight className="w-4 h-4" />
                         </Button>
@@ -317,16 +359,29 @@ export default function AdminOrdersPage() {
         </div>
 
         {/* Order Detail Panel */}
-        <div>
-          {selectedOrder ? (
-            <div className="space-y-4 sticky top-24">
+        {selectedOrder ? (
+          <div className="lg:col-span-1">
+            <div className="space-y-4 sticky top-20">
               <Card variant="admin">
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-bold text-gray-900 font-mono">{selectedOrder.orderNumber}</h3>
-                    <button onClick={() => setSelectedOrder(null)} className="text-gray-400 hover:text-gray-600">
+                    <button onClick={() => setSelectedOrder(null)} className="text-gray-400 hover:text-gray-600 transition-colors">
                       <X className="w-4 h-4" />
                     </button>
+                  </div>
+
+                  {/* Amount Hero */}
+                  <div className="text-center py-3 mb-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
+                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(Number(selectedOrder.total))}</p>
+                    <div className="flex items-center justify-center gap-2 mt-2">
+                      <Badge variant={STATUS_COLORS[selectedOrder.status]?.variant || "secondary"} className="text-[10px]">
+                        {selectedOrder.status}
+                      </Badge>
+                      <Badge variant={PAYMENT_STATUS_COLORS[selectedOrder.paymentStatus] || "warning"} className="text-[10px]">
+                        {selectedOrder.paymentStatus}
+                      </Badge>
+                    </div>
                   </div>
 
                   {/* Status management */}
@@ -360,37 +415,47 @@ export default function AdminOrdersPage() {
                   </div>
 
                   {/* Customer */}
-                  <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 mb-4">
+                  <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 mb-3">
                     <div className="flex items-center gap-2 mb-2">
                       <User className="w-3.5 h-3.5 text-gray-400" />
-                      <span className="text-xs font-medium text-gray-700">Customer</span>
+                      <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Customer</span>
                     </div>
-                    <p className="text-sm text-gray-900">
-                      {selectedOrder.user.firstName} {selectedOrder.user.lastName}
-                    </p>
+                    <p className="text-sm font-medium text-gray-900">{selectedOrder.user.firstName} {selectedOrder.user.lastName}</p>
                     <p className="text-xs text-gray-500">{selectedOrder.user.email}</p>
                   </div>
 
                   {/* Payment */}
-                  <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 mb-4">
+                  <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 mb-3">
                     <div className="flex items-center gap-2 mb-2">
                       <CreditCard className="w-3.5 h-3.5 text-gray-400" />
-                      <span className="text-xs font-medium text-gray-700">Payment</span>
+                      <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Payment</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500">{selectedOrder.paymentMethod}</span>
-                      <Badge variant={PAYMENT_STATUS_COLORS[selectedOrder.paymentStatus] || "warning"} className="text-[9px]">
-                        {selectedOrder.paymentStatus}
-                      </Badge>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500">Method</span>
+                        <Badge variant="outline" className="text-[10px]">{selectedOrder.paymentMethod}</Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500">Status</span>
+                        <Badge variant={PAYMENT_STATUS_COLORS[selectedOrder.paymentStatus] || "warning"} className="text-[10px]">
+                          {selectedOrder.paymentStatus}
+                        </Badge>
+                      </div>
+                      {selectedOrder.paymentMethod === "PAYSTACK" && (
+                        <div className="flex items-center gap-1.5 pt-1 text-xs text-orange-600">
+                          <ShieldCheck className="w-3 h-3" />
+                          <span className="font-medium">Paystack Payment</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* Shipping address */}
                   {selectedOrder.shippingAddress && (
-                    <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 mb-4">
+                    <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 mb-3">
                       <div className="flex items-center gap-2 mb-2">
                         <MapPin className="w-3.5 h-3.5 text-gray-400" />
-                        <span className="text-xs font-medium text-gray-700">Shipping Address</span>
+                        <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Shipping Address</span>
                       </div>
                       <p className="text-xs text-gray-600 leading-relaxed">
                         {selectedOrder.shippingAddress.address}<br />
@@ -402,17 +467,17 @@ export default function AdminOrdersPage() {
 
                   {/* Items */}
                   <div className="mt-4">
-                    <h4 className="text-xs font-medium text-gray-500 mb-3">
+                    <h4 className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">
                       Items ({selectedOrder.items.length})
                     </h4>
                     <div className="space-y-2">
                       {selectedOrder.items.map((item) => (
-                        <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg bg-gray-50">
-                          <div className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center shrink-0 overflow-hidden">
+                        <div key={item.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50 border border-gray-100">
+                          <div className="w-11 h-11 rounded-lg bg-white border border-gray-200 flex items-center justify-center shrink-0 overflow-hidden">
                             {item.product?.images?.[0] ? (
                               <img src={item.product.images[0]} alt="" className="w-full h-full object-cover" />
                             ) : (
-                              <ShoppingBag className="w-3.5 h-3.5 text-gray-300" />
+                              <ShoppingBag className="w-4 h-4 text-gray-300" />
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -421,10 +486,10 @@ export default function AdminOrdersPage() {
                               <p className="text-[10px] text-gray-400">{item.variantInfo}</p>
                             )}
                             <p className="text-[10px] text-gray-500">
-                              {formatCurrency(Number(item.price))} × {item.quantity}
+                              {formatCurrency(Number(item.price))} &times; {item.quantity}
                             </p>
                           </div>
-                          <p className="text-xs font-semibold text-gray-900">
+                          <p className="text-xs font-bold text-gray-900">
                             {formatCurrency(Number(item.price) * item.quantity)}
                           </p>
                         </div>
@@ -454,15 +519,20 @@ export default function AdminOrdersPage() {
                 </CardContent>
               </Card>
             </div>
-          ) : (
+          </div>
+        ) : !loading && orders.length > 0 && (
+          <div className="lg:col-span-1 hidden lg:block">
             <Card variant="admin">
               <CardContent className="p-8 text-center">
-                <Package className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-                <p className="text-sm text-gray-500">Select an order to view details</p>
+                <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                  <Package className="w-7 h-7 text-gray-300" />
+                </div>
+                <p className="text-sm font-medium text-gray-900">Select an order</p>
+                <p className="text-xs text-gray-500 mt-1">Click on an order to view its details</p>
               </CardContent>
             </Card>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
