@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -17,6 +18,18 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, cn } from "@/lib/utils";
+
+const GhanaHeatMap = dynamic(() => import("@/components/admin/GhanaHeatMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center" style={{ height: "480px" }}>
+      <div className="flex flex-col items-center gap-2">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
+        <span className="text-xs text-slate-400">Loading map...</span>
+      </div>
+    </div>
+  ),
+});
 
 // ═══════════════════════════════════════════
 // TYPES
@@ -181,80 +194,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
   );
 }
 
-// Ghana Region Map (SVG-based visualization)
-function GhanaRegionMap({ regions }: { regions: { name: string; lat: number; lng: number; count: number }[] }) {
-  const maxCount = Math.max(...regions.map((r) => r.count), 1);
-
-  // Normalize coordinates to SVG viewport
-  const minLat = 4.5, maxLat = 11.2;
-  const minLng = -3.3, maxLng = 1.2;
-  const svgWidth = 300, svgHeight = 380;
-
-  const toSvg = (lat: number, lng: number) => ({
-    x: ((lng - minLng) / (maxLng - minLng)) * (svgWidth - 40) + 20,
-    y: svgHeight - ((lat - minLat) / (maxLat - minLat)) * (svgHeight - 40) - 20,
-  });
-
-  return (
-    <div className="relative">
-      <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto">
-        {/* Background */}
-        <rect x="0" y="0" width={svgWidth} height={svgHeight} fill="#f8fafc" rx="12" />
-
-        {/* Ghana outline (simplified) */}
-        <path
-          d="M100,340 Q60,300 50,250 Q40,200 55,160 Q65,130 80,100 Q100,70 130,50 Q160,35 190,40 Q220,45 240,60 Q255,75 260,100 Q265,130 260,160 Q250,200 245,230 Q240,260 230,290 Q215,320 190,340 Q160,355 130,350 Z"
-          fill="#e2e8f0"
-          stroke="#cbd5e1"
-          strokeWidth="1.5"
-        />
-
-        {/* Region bubbles */}
-        {regions.map((region) => {
-          const { x, y } = toSvg(region.lat, region.lng);
-          const radius = region.count > 0
-            ? Math.max(8, Math.min(30, (region.count / maxCount) * 30))
-            : 4;
-          const opacity = region.count > 0 ? 0.7 : 0.15;
-
-          return (
-            <g key={region.name}>
-              {/* Glow */}
-              {region.count > 0 && (
-                <circle cx={x} cy={y} r={radius + 4} fill="#3b82f6" opacity={0.15} />
-              )}
-              {/* Main bubble */}
-              <circle
-                cx={x}
-                cy={y}
-                r={radius}
-                fill="#3b82f6"
-                opacity={opacity}
-                stroke="#2563eb"
-                strokeWidth={region.count > 0 ? 1.5 : 0.5}
-              />
-              {/* Count label */}
-              {region.count > 0 && radius > 10 && (
-                <text x={x} y={y + 3} textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">
-                  {region.count}
-                </text>
-              )}
-              {/* Region name */}
-              <text x={x} y={y + radius + 12} textAnchor="middle" fill="#64748b" fontSize="6.5" fontWeight="500">
-                {region.name}
-              </text>
-            </g>
-          );
-        })}
-
-        {/* Title */}
-        <text x="150" y="20" textAnchor="middle" fill="#1e293b" fontSize="11" fontWeight="bold">
-          Ghana — Regional Distribution
-        </text>
-      </svg>
-    </div>
-  );
-}
+// GhanaHeatMap is dynamically imported at the top of the file (SSR disabled for Leaflet)
 
 // Activity Heatmap
 function ActivityHeatmap({ data }: { data: { day: string; hour: number; value: number }[] }) {
@@ -899,10 +839,10 @@ export default function AdvancedAnalyticsPage() {
             {/* Ghana Region Map */}
             <Card variant="admin" className="lg:col-span-2">
               <CardHeader>
-                <SectionHeader icon={MapPin} title="Ghana Regional Map" subtitle="User & order distribution by region" />
+                <SectionHeader icon={MapPin} title="Engagement Hotspots" subtitle="Live heatmap of user & order activity by region" />
               </CardHeader>
               <CardContent>
-                <GhanaRegionMap regions={data.geo.regions} />
+                <GhanaHeatMap regions={data.geo.regions} />
               </CardContent>
             </Card>
 
