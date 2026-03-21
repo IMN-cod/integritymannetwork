@@ -303,7 +303,7 @@ function DonationForm() {
     let attempts = 0;
     pollRef.current = setInterval(async () => {
       attempts++;
-      if (attempts > 60) {
+      if (attempts > 40) {
         if (pollRef.current) clearInterval(pollRef.current);
         setDonationState({
           step: "failed",
@@ -334,7 +334,7 @@ function DonationForm() {
       } catch {
         // Continue polling on network errors
       }
-    }, 5000);
+    }, 3000);
   }, []);
 
   // ── Step 1: Create donation record ──
@@ -394,13 +394,18 @@ function DonationForm() {
     setDonationState({ step: "processing", message: "Initiating mobile money payment..." });
 
     try {
+      // Normalize phone: strip spaces/dashes, ensure starts with 0
+      let phone = momoPhone.replace(/[\s\-()]/g, "");
+      if (phone.startsWith("+233")) phone = "0" + phone.slice(4);
+      else if (phone.startsWith("233")) phone = "0" + phone.slice(3);
+
       const res = await fetch("/api/donate/charge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           donationId,
           channel: "mobile_money",
-          phone: momoPhone,
+          phone,
           provider: momoProvider,
           email: donorEmail,
         }),
@@ -448,22 +453,15 @@ function DonationForm() {
     setDonationState({ step: "processing", message: "Opening secure card form..." });
 
     try {
-      // Initialize a Paystack transaction for card only
-      const res = await fetch("/api/donate", {
+      // Initialize Paystack transaction using the existing donation record
+      const res = await fetch("/api/donate/init-card", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: currentAmount,
-          currency: "GHS",
-          isRecurring: donationType === "monthly",
-          paymentMethod: "PAYSTACK",
-          donorEmail,
-          donorName: donorName || undefined,
-        }),
+        body: JSON.stringify({ donationId }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to initialize");
+      if (!res.ok) throw new Error(data.error || "Failed to initialize card payment");
 
       const handler = window.PaystackPop.setup({
         key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "",
@@ -1290,11 +1288,14 @@ function DonationStatus() {
                 <XCircle className="w-8 h-8 text-zinc-500" />
               </div>
               <h2 className="text-2xl sm:text-3xl font-bold text-white font-display mb-3">
-                Donation Cancelled
+                Payment Not Completed
               </h2>
-              <p className="text-sm sm:text-base text-zinc-400 leading-relaxed">
+              <p className="text-sm sm:text-base text-zinc-400 leading-relaxed mb-6">
                 No worries — your payment was not processed. You can try again anytime.
               </p>
+              <a href="/donate" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-semibold transition-colors">
+                Try Again
+              </a>
             </>
           )}
         </motion.div>
