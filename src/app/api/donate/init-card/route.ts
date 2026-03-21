@@ -38,10 +38,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!donation.donorEmail) {
+      return NextResponse.json(
+        { error: "Donation has no associated email" },
+        { status: 400 }
+      );
+    }
+
+    // Unique suffix so retries don't collide with previous Paystack references
+    const suffix = Date.now().toString(36);
+
     const paystackResult = await initializePaystackTransaction({
-      email: donation.donorEmail!,
-      amount: donation.amount,
-      reference: `DON-${donation.id}`,
+      email: donation.donorEmail,
+      amount: Number(donation.amount),
+      reference: `DON-${donation.id}-${suffix}`,
       callbackUrl: `${BASE_URL}/donate?status=success&ref=${donation.id}`,
       metadata: {
         donationId: donation.id,

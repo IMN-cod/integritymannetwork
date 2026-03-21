@@ -382,8 +382,8 @@ function DonationForm() {
   const handleMomoPayment = async () => {
     setError(null);
 
-    if (!momoPhone || momoPhone.length < 10) {
-      setError("Please enter a valid mobile money number.");
+    if (!momoPhone || momoPhone.replace(/[^0-9]/g, "").length < 10) {
+      setError("Please enter a valid mobile money number (e.g. 024XXXXXXX).");
       return;
     }
     if (!donationId) {
@@ -911,8 +911,8 @@ function DonationForm() {
                   type="tel"
                   placeholder="0XX XXX XXXX"
                   value={momoPhone}
-                  onChange={(e) => setMomoPhone(e.target.value.replace(/[^0-9]/g, ""))}
-                  maxLength={10}
+                  onChange={(e) => setMomoPhone(e.target.value.replace(/[^0-9+]/g, ""))}
+                  maxLength={13}
                   className="h-13 text-lg font-mono bg-zinc-800/30 border-zinc-700/40 focus:border-orange-500/50 rounded-xl tracking-wider"
                 />
               </div>
@@ -922,7 +922,7 @@ function DonationForm() {
                 size="xl"
                 className="w-full"
                 onClick={handleMomoPayment}
-                disabled={!momoPhone || momoPhone.length < 10}
+                disabled={!momoPhone || momoPhone.replace(/[^0-9]/g, "").length < 10}
               >
                 <span className="flex items-center gap-2">
                   <Smartphone className="w-4 h-4" />
@@ -1255,8 +1255,51 @@ function DonationStatus() {
   const searchParams = useSearchParams();
   const status = searchParams.get("status");
   const ref = searchParams.get("ref");
+  // Paystack appends trxref on redirect (3DS / mobile redirect flow)
+  const trxref = searchParams.get("trxref") || searchParams.get("reference");
+
+  const [verified, setVerified] = useState<boolean | null>(null);
+  const [verifying, setVerifying] = useState(false);
+
+  useEffect(() => {
+    // When arriving from Paystack 3DS redirect, verify the transaction server-side
+    if (status === "success" && trxref && verified === null && !verifying) {
+      setVerifying(true);
+      fetch("/api/donate/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reference: trxref }),
+      })
+        .then((r) => r.json())
+        .then((d) => setVerified(d.success === true))
+        .catch(() => setVerified(true)) // Fallback: trust webhook
+        .finally(() => setVerifying(false));
+    }
+  }, [status, trxref, verified, verifying]);
 
   if (!status) return null;
+
+  // Show spinner while verifying a redirect-based payment
+  if (status === "success" && trxref && verifying) {
+    return (
+      <section className="section-padding relative">
+        <div className="container-wide max-w-2xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 backdrop-blur-sm p-8 sm:p-12"
+          >
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
+              className="w-14 h-14 border-3 border-zinc-700 border-t-orange-500 rounded-full mx-auto mb-6"
+            />
+            <p className="text-sm text-zinc-400">Verifying your payment...</p>
+          </motion.div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="section-padding relative">

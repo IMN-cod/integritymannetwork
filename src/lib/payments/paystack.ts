@@ -25,7 +25,7 @@ export async function initializePaystackTransaction({
   metadata,
 }: {
   email: string;
-  amount: number; // In Naira — will be converted to Kobo
+  amount: number; // In GHS — will be converted to Pesewas
   reference: string;
   callbackUrl: string;
   metadata?: Record<string, unknown>;

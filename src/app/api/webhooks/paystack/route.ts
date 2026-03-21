@@ -49,10 +49,27 @@ export async function POST(request: Request) {
 
       case "transfer.failed":
       case "charge.failed": {
+        const failData = event.data;
         console.error(
           `[PAYSTACK_WEBHOOK] ${event.event}:`,
-          event.data.reference
+          failData.reference
         );
+
+        // Mark donation as FAILED in database
+        if (failData.metadata?.donationId) {
+          await prisma.donation.update({
+            where: { id: failData.metadata.donationId },
+            data: { status: "FAILED" },
+          });
+        }
+
+        // Mark order as FAILED if applicable
+        if (failData.metadata?.orderId) {
+          await prisma.order.update({
+            where: { id: failData.metadata.orderId },
+            data: { paymentStatus: "FAILED" },
+          });
+        }
         break;
       }
 
