@@ -19,7 +19,6 @@ import {
   AlertCircle,
   CreditCard,
   Smartphone,
-  Landmark,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -240,7 +239,7 @@ const presetAmounts = [
   { value: 2500, label: "GH₵2,500" },
 ];
 
-type PaymentChannel = "mobile_money" | "card" | "bank_transfer";
+type PaymentChannel = "mobile_money" | "card";
 
 type MomoProvider = "mtn" | "vod" | "tgo";
 
@@ -503,38 +502,6 @@ function DonationForm() {
       });
 
       handler.openIframe();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-      setDonationState({ step: "payment" });
-    }
-  };
-
-  // ── Step 2c: Bank Transfer ──
-  const handleBankTransfer = async () => {
-    if (!donationId) return;
-
-    setDonationState({ step: "processing", message: "Generating bank transfer details..." });
-
-    try {
-      const res = await fetch("/api/donate/charge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          donationId,
-          channel: "bank_transfer",
-          email: donorEmail,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Bank transfer charge failed");
-
-      setDonationState({
-        step: "awaiting_approval",
-        reference: data.reference,
-        displayText: data.displayText || "Transfer to the account details provided and we'll confirm your payment.",
-      });
-      startPolling(data.reference);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setDonationState({ step: "payment" });
@@ -843,11 +810,10 @@ function DonationForm() {
           <p className="text-xs sm:text-sm font-semibold text-white tracking-wide mb-3">
             Choose Payment Method
           </p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {([
               { id: "mobile_money" as PaymentChannel, icon: Smartphone, label: "Mobile Money" },
               { id: "card" as PaymentChannel, icon: CreditCard, label: "Card" },
-              { id: "bank_transfer" as PaymentChannel, icon: Landmark, label: "Bank Transfer" },
             ]).map((method) => (
               <button
                 key={method.id}
@@ -965,38 +931,6 @@ function DonationForm() {
             </motion.div>
           )}
 
-          {/* ── Bank Transfer Form ── */}
-          {paymentChannel === "bank_transfer" && (
-            <motion.div
-              key="bank"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="space-y-4"
-            >
-              <div className="rounded-xl bg-zinc-800/40 border border-zinc-700/30 p-4 sm:p-5">
-                <div className="flex items-center gap-3 mb-3">
-                  <Landmark className="w-4 h-4 text-orange-500" />
-                  <span className="text-xs text-zinc-400">Direct bank transfer</span>
-                </div>
-                <p className="text-[10px] text-zinc-600 leading-relaxed">
-                  We&apos;ll generate a unique account number for your transfer. The payment will be confirmed automatically once we receive it.
-                </p>
-              </div>
-
-              <Button
-                type="button"
-                size="xl"
-                className="w-full"
-                onClick={handleBankTransfer}
-              >
-                <span className="flex items-center gap-2">
-                  <Landmark className="w-4 h-4" />
-                  Generate Transfer Details
-                </span>
-              </Button>
-            </motion.div>
-          )}
         </AnimatePresence>
 
         {/* Error */}
