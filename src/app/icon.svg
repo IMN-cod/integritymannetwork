@@ -2,7 +2,7 @@
   <!-- Black background with rounded corners -->
   <rect width="512" height="512" rx="96" ry="96" fill="#09090b"/>
 
-  <!-- Shield / Crest — wide flared shape, white, smaller -->
+  <!-- Shield / Crest — wide flared shape, white -->
   <path d="
     M256 100
     C236 100 172 114 148 125
@@ -16,5 +16,43 @@
     C388 147 380 133 364 125
     C340 114 276 100 256 100Z
   " fill="#ffffff"/>
+
+  <!-- Torch handle — black -->
+  <rect x="247" y="250" width="18" height="100" rx="5" fill="#09090b"/>
+  <!-- Handle grip lines -->
+  <rect x="243" y="310" width="26" height="4" rx="2" fill="#09090b"/>
+  <rect x="243" y="322" width="26" height="4" rx="2" fill="#09090b"/>
+  <!-- Handle base/pommel -->
+  <ellipse cx="256" cy="354" rx="14" ry="6" fill="#09090b"/>
+
+  <!-- Torch cup/bowl -->
+  <path d="M238 254 L242 240 L270 240 L274 254 Z" fill="#09090b"/>
+
+  <!-- Flame — outer glow (deeper orange) -->
+  <path d="
+    M256 155
+    C248 170 228 195 230 215
+    C232 232 244 242 256 242
+    C268 242 280 232 282 215
+    C284 195 264 170 256 155Z
+  " fill="#ea580c"/>
+
+  <!-- Flame — inner bright (bright orange) -->
+  <path d="
+    M256 175
+    C251 185 240 200 241 213
+    C242 226 249 235 256 235
+    C263 235 270 226 271 213
+    C272 200 261 185 256 175Z
+  " fill="#f97316"/>
+
+  <!-- Flame — core (yellow-orange) -->
+  <path d="
+    M256 195
+    C253 202 247 210 248 218
+    C249 225 252 230 256 230
+    C260 230 263 225 264 218
+    C265 210 259 202 256 195Z
+  " fill="#fdba74"/>
 
 </svg>
