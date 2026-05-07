@@ -28,8 +28,8 @@ const FOOTER_LINKS = {
   ],
   community: [
     { label: "Join The Network", href: "/join" },
-    { label: "Networking", href: "/community/houses" },
-    { label: "Community Chat", href: "/community/chat" },
+    { label: "Networking", href: "/channels#houses" },
+    { label: "Community", href: "/community" },
     { label: "Partner With Us", href: "/join" },
     { label: "Donate", href: "/donate" },
   ],
