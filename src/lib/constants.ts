@@ -187,3 +187,39 @@ export const ABOUT_CONTENT = {
     ],
   },
 } as const;
+
+export const FOUNDER_BIO = {
+  name: "Pastor Eben Darko",
+  title: "Founder, Convener & Lead Steward",
+  org: "The Integrity Man Network",
+  image: "/images/pastor-eben-darko.webp",
+  intro:
+    "An Apostolic leader, entrepreneur, and teacher with a deep passion for raising men who live in alignment with God's eternal purpose through righteousness, integrity, spiritual discipline, and purposeful work.",
+  paragraphs: [
+    "As the Founder, Convener, and Lead Steward of The Integrity Man Network, his mandate is centered on calling men back to their God-ordained position of spiritual authority, responsibility, and righteous leadership within the family, society, and every sphere of influence. He strongly believes that men are central to God's agenda on the earth and that lasting transformation in families and nations begins with the spiritual restoration of men.",
+    "At the core of his teachings is the conviction that true success for men is rooted in the divine blueprint revealed in Matthew 6:33 — seeking first the Kingdom of God and His righteousness. He teaches that men must discover God's eternal purpose, understand their personal assignment, embrace it as life's work, and pursue it under the influence of the power of God.",
+    "Pastor Eben strongly emphasizes righteousness as a gift received from God and believes that through spiritual discipline, obedience, and alignment with God's will, men can become effective vessels for divine purpose and transgenerational impact.",
+    "Beyond ministry, he is a passionate advocate for entrepreneurship and purposeful work, believing that business and wealth creation should serve as instruments for advancing the work of God and supporting kingdom initiatives.",
+    "At 40 years old, Pastor Eben Darko is married and blessed with three daughters. His life and ministry are devoted to raising a generation of men who seek righteousness, live with integrity, and faithfully work to fulfill God's eternal purpose on the earth.",
+  ],
+  founderOf: [
+    "Altar of Righteousness Prayer Network",
+    "School of Integrity",
+    "Integrity Youth Church",
+    "Man Foundation",
+  ],
+  prayerPlatforms: [
+    {
+      name: "The Morning Encounter",
+      description: "Daily weekday prayer gatherings",
+    },
+    {
+      name: "The Midnight Dew",
+      description: "Weekly Tuesday midnight prayers",
+    },
+    {
+      name: "The 6-Hour Prayer Challenge",
+      description: "Monthly extended prayer sessions held on the last Friday of every month",
+    },
+  ],
+} as const;

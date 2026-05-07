@@ -12,11 +12,14 @@ import {
   Eye,
   Flame,
   Map,
+  User,
+  Sparkles,
+  Sunrise,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { BackgroundVideo, VideoPlayer, ProtectedImage } from "@/components/ui/video-player";
-import { ABOUT_CONTENT, CHANNELS, SITE } from "@/lib/constants";
+import { ABOUT_CONTENT, CHANNELS, FOUNDER_BIO, SITE } from "@/lib/constants";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -178,6 +181,98 @@ function MethodSection() {
   );
 }
 
+//  FOUNDER BIO 
+function BioSection() {
+  return (
+    <section id="bio" className="section-padding relative bg-zinc-900/30">
+      <div className="absolute inset-0 bg-radial-dark pointer-events-none" />
+      <div className="container-wide relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-12 items-start">
+          {/* Image + identity card */}
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            className="lg:col-span-5 lg:sticky lg:top-24"
+          >
+            <div className="relative aspect-4/5 rounded-xl sm:rounded-2xl overflow-hidden border border-zinc-800/50 group">
+              <ProtectedImage
+                src={FOUNDER_BIO.image}
+                alt={FOUNDER_BIO.name}
+                fill
+                className="object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-linear-to-t from-zinc-950 via-zinc-950/30 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-7">
+                <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-orange-400 font-semibold mb-2">Founder &amp; Lead Steward</p>
+                <h3 className="font-display text-2xl sm:text-3xl font-bold text-white leading-tight">{FOUNDER_BIO.name}</h3>
+                <p className="text-sm sm:text-base text-zinc-300 mt-1">{FOUNDER_BIO.org}</p>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Bio content */}
+          <div className="lg:col-span-7">
+            <motion.div {...fadeInUp} className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-white flex items-center justify-center">
+                <User className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />
+              </div>
+              <div>
+                <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-orange-400 font-semibold">Bio</p>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white font-display leading-tight">The Man Behind the Vision</h2>
+              </div>
+            </motion.div>
+
+            <motion.p {...fadeInUp} className="text-base sm:text-lg md:text-xl text-zinc-300 leading-relaxed mb-6 sm:mb-8 font-light italic border-l-2 border-orange-500/60 pl-4 sm:pl-5">
+              {FOUNDER_BIO.intro}
+            </motion.p>
+
+            <div className="space-y-4 sm:space-y-6">
+              {FOUNDER_BIO.paragraphs.map((p, i) => (
+                <motion.p key={i} {...fadeInUp} className="text-sm sm:text-base md:text-lg text-zinc-400 leading-relaxed">
+                  {p}
+                </motion.p>
+              ))}
+            </div>
+
+            {/* Founder of */}
+            <motion.div {...fadeInUp} className="mt-10 sm:mt-12">
+              <div className="flex items-center gap-2 mb-4 sm:mb-5">
+                <Sparkles className="w-4 h-4 text-orange-500" />
+                <h3 className="text-xs sm:text-sm uppercase tracking-[0.2em] text-orange-400 font-semibold">Founder Of</h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                {FOUNDER_BIO.founderOf.map((item) => (
+                  <Card key={item} variant="light" className="p-4 sm:p-5 hover:border-orange-500/30 transition-all duration-500">
+                    <p className="text-sm sm:text-base font-semibold text-zinc-900">{item}</p>
+                  </Card>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Prayer platforms */}
+            <motion.div {...fadeInUp} className="mt-10 sm:mt-12">
+              <div className="flex items-center gap-2 mb-4 sm:mb-5">
+                <Sunrise className="w-4 h-4 text-orange-500" />
+                <h3 className="text-xs sm:text-sm uppercase tracking-[0.2em] text-orange-400 font-semibold">Altar of Righteousness — Prayer Platforms</h3>
+              </div>
+              <div className="space-y-3 sm:space-y-4">
+                {FOUNDER_BIO.prayerPlatforms.map((p) => (
+                  <div key={p.name} className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 border-l-2 border-zinc-800 hover:border-orange-500/60 pl-4 sm:pl-5 py-2 transition-colors">
+                    <p className="text-base sm:text-lg font-semibold text-white">{p.name}</p>
+                    <p className="text-xs sm:text-sm text-zinc-500">{p.description}</p>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function AboutPage() {
   return (
     <>
@@ -188,6 +283,8 @@ export default function AboutPage() {
       <ContentSection section={ABOUT_CONTENT.burden} icon={SECTION_ICONS.burden} accent image="/images/god-work.jpg" imageAlt="God Work Integrity" reverse />
       <div className="divider-gradient" />
       <ContentSection section={ABOUT_CONTENT.mandate} icon={SECTION_ICONS.mandate} image="/images/man-5.jpg" imageAlt="The Mandate" />
+      <div className="divider-gradient" />
+      <BioSection />
       <div className="divider-gradient" />
       <MethodSection />
     </>
