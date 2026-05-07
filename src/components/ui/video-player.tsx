@@ -59,6 +59,16 @@ function useAutoPlayOnView(videoRef: React.RefObject<HTMLVideoElement | null>) {
 // Saves bandwidth for off-screen videos
 // ═══════════════════════════════════════════════════════
 
+// Derive a poster path from a video src if none was passed.
+// Convention: /videos/foo.mp4 → /videos/posters/foo.webp
+function derivePoster(src: string, explicit?: string): string | undefined {
+  if (explicit) return explicit;
+  const m = src.match(/^(.*\/)?([^/]+)\.(mp4|webm|mov)$/i);
+  if (!m) return undefined;
+  const dir = m[1] || "";
+  return `${dir}posters/${m[2]}.webp`;
+}
+
 function useLazyVideoSrc(src: string) {
   const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -102,15 +112,26 @@ export function BackgroundVideo({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   useAutoPlayOnView(videoRef);
+  const resolvedPoster = derivePoster(src, poster);
 
   return (
     <div
       className={`absolute inset-0 overflow-hidden select-none ${className}`}
       {...PROTECTED_WRAPPER}
     >
+      {resolvedPoster && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={resolvedPoster}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        />
+      )}
       <video
         ref={videoRef}
-        poster={poster}
+        poster={resolvedPoster}
         autoPlay
         loop
         muted
@@ -164,6 +185,7 @@ export function VideoPlayer({
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { loadedSrc, sentinelRef } = useLazyVideoSrc(src);
+  const resolvedPoster = derivePoster(src, poster);
 
   // Auto-play on scroll into view
   useAutoPlayOnView(videoRef);
@@ -176,11 +198,22 @@ export function VideoPlayer({
       className={`${aspect} relative overflow-hidden ${roundedClass} bg-zinc-900 border border-zinc-800/50 select-none ${className}`}
       {...PROTECTED_WRAPPER}
     >
+      {/* Poster — always rendered as background so users see media even before video loads */}
+      {resolvedPoster && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={resolvedPoster}
+          alt={title || ""}
+          aria-hidden={!title}
+          draggable={false}
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        />
+      )}
       {/* Video — lazy loaded, no controls, pointer-events disabled */}
       {loadedSrc && (
         <video
           ref={videoRef}
-          poster={poster}
+          poster={resolvedPoster}
           muted
           playsInline
           autoPlay
