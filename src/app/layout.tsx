@@ -1,10 +1,16 @@
 /* eslint-disable @next/next/google-font-preconnect */
 
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Inter, Playfair_Display } from "next/font/google";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { LayoutShell } from "@/components/layout/LayoutShell";
 import "./globals.css";
+
+const SITE_URL =
+  process.env.NEXT_PUBLIC_APP_URL || "https://www.integritymannetwork.com";
+const PLAUSIBLE_DOMAIN = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN; // e.g. "www.integritymannetwork.com"
+const PLAUSIBLE_SRC = process.env.NEXT_PUBLIC_PLAUSIBLE_SRC; // e.g. "https://analytics.integritymannetwork.com/js/script.js"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -48,7 +54,7 @@ export const metadata: Metadata = {
     "Men of integrity",
   ],
   authors: [{ name: "The Integrity Man Network" }],
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://integrityman.network"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://www.integritymannetwork.com"),
   openGraph: {
     title: "The Integrity Man Network",
     description:
@@ -89,6 +95,28 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const orgJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "The Integrity Man Network",
+    alternateName: ["Integrity Man Network", "TIMN"],
+    url: SITE_URL,
+    logo: `${SITE_URL}/images/Integrity Man Official Logo.png`,
+    description:
+      "A global, non-denominational community of men committed to achieving true success by living lives of Integrity while working to advance the eternal purpose of God.",
+    sameAs: [],
+  };
+  const websiteJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "The Integrity Man Network",
+    url: SITE_URL,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: `${SITE_URL}/blog?q={search_term_string}`,
+      "query-input": "required name=search_term_string",
+    },
+  };
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
       <head>
@@ -99,8 +127,27 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Structured data */}
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+        />
       </head>
       <body className="min-h-screen bg-zinc-950 text-zinc-50 antialiased">
+        {PLAUSIBLE_DOMAIN && PLAUSIBLE_SRC && (
+          <Script
+            defer
+            data-domain={PLAUSIBLE_DOMAIN}
+            src={PLAUSIBLE_SRC}
+            strategy="afterInteractive"
+          />
+        )}
         <SessionProvider>
           <LayoutShell>{children}</LayoutShell>
         </SessionProvider>

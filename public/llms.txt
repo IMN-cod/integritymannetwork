@@ -1,0 +1,27 @@
+# The Integrity Man Network
+
+> A global, non-denominational community of men committed to achieving true success by living lives of integrity while working to advance the eternal purpose of God.
+
+## About
+The Integrity Man Network (TIMN) gathers men who pursue God, work, and integrity. The site offers articles, courses, events, a store, donations, and a member community.
+
+## Key URLs
+- [Homepage](https://www.integritymannetwork.com/)
+- [About](https://www.integritymannetwork.com/about)
+- [Blog](https://www.integritymannetwork.com/blog)
+- [Store](https://www.integritymannetwork.com/store)
+- [Events](https://www.integritymannetwork.com/events)
+- [School](https://www.integritymannetwork.com/school)
+- [Community](https://www.integritymannetwork.com/community)
+- [Donate](https://www.integritymannetwork.com/donate)
+- [Join](https://www.integritymannetwork.com/join)
+- [Contact](https://www.integritymannetwork.com/contact)
+- [Privacy Policy](https://www.integritymannetwork.com/privacy)
+- [Terms of Service](https://www.integritymannetwork.com/terms)
+
+## Indexable feeds
+- Sitemap: https://www.integritymannetwork.com/sitemap.xml
+- Robots: https://www.integritymannetwork.com/robots.txt
+
+## Content licensing
+Original articles and teachings on the blog are © The Integrity Man Network. Contact integrity@integritymannetwork.com for reuse.
