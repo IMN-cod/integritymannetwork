@@ -254,14 +254,14 @@ const contactDetails = [
   {
     icon: Phone,
     title: "Call Us",
-    value: "+234 800 000 0000",
-    href: "tel:+2348000000000",
+    value: "+233 246 985 664",
+    href: "tel:+233246985664",
     color: "from-orange-500 to-red-500",
   },
   {
     icon: MapPin,
     title: "Visit Us",
-    value: "Accra, Ghana",
+    value: "Takoradi, Ghana",
     href: null,
     color: "from-orange-500 to-yellow-500",
   },
@@ -381,7 +381,7 @@ const faqs = [
   {
     question: "Where is The Integrity Man Network located?",
     answer:
-      "We are currently based in Accra, Ghana, but our vision is global. Through our online platforms, events, and expanding chapters, we are reaching men across nations.",
+      "Our headquarters is in Takoradi, Ghana, but our vision is global. Through our online platforms, events, and expanding chapters, we are reaching men across nations.",
   },
 ];
 

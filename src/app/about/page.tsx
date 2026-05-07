@@ -205,9 +205,8 @@ function BioSection() {
               />
               <div className="absolute inset-0 bg-linear-to-t from-zinc-950 via-zinc-950/30 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-7">
-                <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-orange-400 font-semibold mb-2">Founder &amp; Lead Steward</p>
                 <h3 className="font-display text-2xl sm:text-3xl font-bold text-white leading-tight">{FOUNDER_BIO.name}</h3>
-                <p className="text-sm sm:text-base text-zinc-300 mt-1">{FOUNDER_BIO.org}</p>
+                <p className="text-sm sm:text-base text-white mt-1">Founder &amp; Lead Steward</p>
               </div>
             </div>
           </motion.div>
@@ -278,13 +277,13 @@ export default function AboutPage() {
     <>
       <AboutHero />
       <div className="divider-gradient" />
+      <BioSection />
+      <div className="divider-gradient" />
       <ContentSection section={ABOUT_CONTENT.whoWeAre} icon={SECTION_ICONS.whoWeAre} image="/images/man-integrity.jpg" imageAlt="Men of Integrity" />
       <div className="divider-gradient" />
       <ContentSection section={ABOUT_CONTENT.burden} icon={SECTION_ICONS.burden} accent image="/images/god-work.jpg" imageAlt="God Work Integrity" reverse />
       <div className="divider-gradient" />
       <ContentSection section={ABOUT_CONTENT.mandate} icon={SECTION_ICONS.mandate} image="/images/man-5.jpg" imageAlt="The Mandate" />
-      <div className="divider-gradient" />
-      <BioSection />
       <div className="divider-gradient" />
       <MethodSection />
     </>

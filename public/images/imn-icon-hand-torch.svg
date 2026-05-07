@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="flame" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE082"/>
+      <stop offset="0.35" stop-color="#FF9800"/>
+      <stop offset="1" stop-color="#E65100"/>
+    </linearGradient>
+    <linearGradient id="flameInner" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="0.5" stop-color="#FFD54F"/>
+      <stop offset="1" stop-color="#FF6F00"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FAFAFA"/>
+      <stop offset="1" stop-color="#9E9E9E"/>
+    </linearGradient>
+    <linearGradient id="cuff" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#757575"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.45" r="0.5">
+      <stop offset="0" stop-color="#FF9800" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#FF9800" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect x="0" y="0" width="1024" height="1024" rx="180" ry="180" fill="#0A0A0A"/>
+  <circle cx="512" cy="240" r="320" fill="url(#glow)"/>
+
+  <!-- FLAME -->
+  <g transform="translate(512,200)">
+    <path d="M 0,-160 C 60,-115 100,-60 100,-5 C 100,55 60,100 0,120 C -60,100 -100,55 -100,-5 C -100,-60 -60,-115 0,-160 Z" fill="url(#flame)"/>
+    <path d="M 0,-115 C 38,-80 60,-40 60,-5 C 60,38 35,70 0,85 C -35,70 -60,38 -60,-5 C -60,-40 -38,-80 0,-115 Z" fill="url(#flameInner)"/>
+    <ellipse cx="0" cy="15" rx="18" ry="48" fill="#FFFFFF" opacity="0.85"/>
+  </g>
+
+  <!-- TORCH CUP -->
+  <path d="M 432,330 L 592,330 L 568,396 L 456,396 Z" fill="#E0E0E0" stroke="#212121" stroke-width="4"/>
+  <rect x="426" y="324" width="172" height="20" rx="6" fill="#FFFFFF" stroke="#212121" stroke-width="4"/>
+  <rect x="450" y="392" width="124" height="14" rx="4" fill="#9E9E9E" stroke="#212121" stroke-width="3"/>
+
+  <!-- HANDLE visible above fist -->
+  <rect x="486" y="406" width="52" height="58" fill="#5D4037" stroke="#212121" stroke-width="3"/>
+  <rect x="478" y="402" width="68" height="12" rx="3" fill="#FFC107" stroke="#212121" stroke-width="3"/>
+
+  <!-- KNUCKLE BUMPS -->
+  <g stroke="#1A1A1A" stroke-width="5">
+    <ellipse cx="412" cy="475" rx="38" ry="28" fill="url(#skin)"/>
+    <ellipse cx="478" cy="468" rx="40" ry="32" fill="url(#skin)"/>
+    <ellipse cx="544" cy="468" rx="40" ry="32" fill="url(#skin)"/>
+    <ellipse cx="610" cy="475" rx="38" ry="28" fill="url(#skin)"/>
+  </g>
+
+  <!-- FIST MASS -->
+  <path d="M 374,490 Q 374,478 386,476 L 638,476 Q 650,478 650,490 L 650,640 Q 650,680 610,684 L 412,684 Q 374,680 374,640 Z" fill="url(#skin)" stroke="#1A1A1A" stroke-width="6"/>
+
+  <!-- finger curl lines -->
+  <g stroke="#1A1A1A" stroke-width="4" stroke-linecap="round" opacity="0.55" fill="none">
+    <path d="M 412,510 Q 410,600 422,680"/>
+    <path d="M 478,506 Q 478,600 478,680"/>
+    <path d="M 544,506 Q 544,600 544,680"/>
+    <path d="M 610,510 Q 612,600 600,680"/>
+  </g>
+
+  <!-- THUMB wrapping in front -->
+  <path d="M 470,460 Q 472,420 510,418 Q 552,420 564,452 Q 568,484 552,500 Q 530,514 502,508 Q 478,500 470,478 Z" fill="url(#skin)" stroke="#1A1A1A" stroke-width="5"/>
+  <path d="M 502,442 q 18,-6 32,4" fill="none" stroke="#1A1A1A" stroke-width="3" stroke-linecap="round" opacity="0.55"/>
+  <path d="M 488,492 q 30,12 60,-4" fill="none" stroke="#1A1A1A" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- highlight -->
+  <path d="M 396,520 Q 396,510 410,512 L 580,512 Q 590,514 590,524 Q 590,540 580,544 L 410,544 Q 396,544 396,520 Z" fill="#FFFFFF" opacity="0.18"/>
+
+  <!-- CUFF -->
+  <rect x="396" y="684" width="232" height="50" rx="8" fill="url(#cuff)" stroke="#1A1A1A" stroke-width="6"/>
+  <line x1="396" y1="700" x2="628" y2="700" stroke="#424242" stroke-width="3" opacity="0.55"/>
+  <circle cx="608" cy="709" r="6" fill="#1A1A1A"/>
+  <rect x="424" y="734" width="176" height="34" fill="url(#skin)" stroke="#1A1A1A" stroke-width="5"/>
+
+  <!-- TEXT -->
+  <g font-family="Georgia, 'Times New Roman', serif" fill="#FFFFFF" text-anchor="middle">
+    <text x="512" y="858" font-size="86" font-weight="700" letter-spacing="3">INTEGRITY MAN</text>
+    <text x="512" y="938" font-size="56" font-weight="500" letter-spacing="14" opacity="0.92">N E T W O R K</text>
+  </g>
+</svg>
