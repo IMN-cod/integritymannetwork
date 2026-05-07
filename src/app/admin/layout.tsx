@@ -72,12 +72,14 @@ export default function AdminLayout({
     } catch { /* ignore */ }
   }, []);
 
-  // Poll notifications every 30 seconds
+  // Poll notifications every 30 seconds (only when admin session is loaded)
   useEffect(() => {
+    const role = session?.user?.role;
+    if (role !== "ADMIN" && role !== "SUPER_ADMIN") return;
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
-  }, [fetchNotifications]);
+  }, [fetchNotifications, session?.user?.role]);
 
   const markAllRead = async () => {
     try {
