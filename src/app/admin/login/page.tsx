@@ -47,19 +47,26 @@ export default function AdminLoginPage() {
     setIsLoading(true);
     setError("");
 
+    // Safety net: never let the button spin forever (mobile browsers can
+    // stall fetch/signIn silently — e.g. backgrounded tabs, captive portals).
+    const stallTimer = setTimeout(() => {
+      setIsLoading(false);
+      setError("Taking longer than expected. Please try again.");
+    }, 20000);
+
     try {
       // First validate admin access via our API
       const res = await fetch("/api/admin/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
+        credentials: "same-origin",
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
         setError(data.error || "Authentication failed");
-        setIsLoading(false);
         if (res.status === 403) {
           // Not an admin — reset to email step
           setStep("email");
@@ -75,14 +82,23 @@ export default function AdminLoginPage() {
         redirect: false,
       });
 
-      if (result?.error) {
+      if (!result) {
         setError("Session creation failed. Try again.");
-        setIsLoading(false);
-      } else {
-        router.push("/admin");
+        return;
       }
-    } catch {
+
+      if (result.error) {
+        setError("Session creation failed. Try again.");
+        return;
+      }
+
+      // Use replace to prevent back-button returning to login while authed
+      router.replace("/admin");
+    } catch (err) {
+      console.error("[admin-login] failed", err);
       setError("Connection error. Please try again.");
+    } finally {
+      clearTimeout(stallTimer);
       setIsLoading(false);
     }
   };

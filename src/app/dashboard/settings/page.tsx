@@ -223,16 +223,20 @@ export default function DashboardSettingsPage() {
     setProfileError(null);
     try {
       const formData = new FormData();
-      formData.append("files", file);
-      formData.append("folder", "avatars");
+      formData.append("file", file);
 
-      const res = await fetch("/api/admin/upload", { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok || !data.urls?.length) throw new Error("Upload failed");
-
-      setAvatar(data.urls[0]);
-    } catch {
-      setProfileError("Failed to upload avatar. Please try again.");
+      const res = await fetch("/api/user/avatar", { method: "POST", body: formData });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) {
+        throw new Error(data.error || "Upload failed");
+      }
+      setAvatar(data.url);
+    } catch (err) {
+      setProfileError(
+        err instanceof Error && err.message
+          ? err.message
+          : "Failed to upload avatar. Please try again."
+      );
     } finally {
       setUploadingAvatar(false);
     }

@@ -20,6 +20,9 @@ import {
   RotateCcw,
   Download,
   Upload,
+  Send,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -132,6 +135,9 @@ export default function AdminSettingsPage() {
   const [hasChanges, setHasChanges] = useState(false);
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
+  const [testEmailTo, setTestEmailTo] = useState("");
+  const [testingEmail, setTestingEmail] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   // Track unsaved changes
   useEffect(() => {
@@ -236,6 +242,54 @@ export default function AdminSettingsPage() {
 
   const toggleSecret = (key: string) => {
     setShowSecrets((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const applyGoogleWorkspacePreset = () => {
+    setSettings((prev) => ({
+      ...prev,
+      smtpHost: "smtp.gmail.com",
+      smtpPort: "587",
+    }));
+    setError(null);
+  };
+
+  const handleTestEmail = async () => {
+    if (!testEmailTo || !/^\S+@\S+\.\S+$/.test(testEmailTo)) {
+      setTestEmailResult({ ok: false, message: "Enter a valid email address" });
+      return;
+    }
+    setTestingEmail(true);
+    setTestEmailResult(null);
+    try {
+      // Send the current (possibly unsaved) credentials so admins can test before saving
+      const payload = {
+        to: testEmailTo,
+        smtpHost: settings.smtpHost,
+        smtpPort: parseInt(settings.smtpPort || "587"),
+        smtpUser: settings.smtpUser,
+        smtpPassword: settings.smtpPassword,
+        emailFromName: settings.emailFromName,
+        emailFromAddress: settings.emailFromAddress,
+      };
+      const res = await fetch("/api/admin/settings/test-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setTestEmailResult({ ok: false, message: data.error || "Failed to send test email" });
+      } else {
+        setTestEmailResult({ ok: true, message: data.message || `Test email sent to ${testEmailTo}` });
+      }
+    } catch (err) {
+      setTestEmailResult({
+        ok: false,
+        message: err instanceof Error ? err.message : "Network error",
+      });
+    } finally {
+      setTestingEmail(false);
+    }
   };
 
   // ─── Field Renderers ────────────────────────────────────────────────────────
@@ -656,16 +710,80 @@ export default function AdminSettingsPage() {
                 {renderTextField("emailFromName", "From Name", { placeholder: "Integrity Man Network" })}
                 {renderTextField("emailFromAddress", "From Email", { placeholder: "noreply@integritymannetwork.org", type: "email" })}
                 <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-medium text-gray-600 mb-3">SMTP Settings</p>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-medium text-gray-600">SMTP Settings</p>
+                    <button
+                      type="button"
+                      onClick={applyGoogleWorkspacePreset}
+                      className="text-xs text-blue-600 hover:text-blue-700 font-medium hover:underline"
+                    >
+                      Use Google Workspace preset
+                    </button>
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>{renderTextField("smtpHost", "Host", { placeholder: "smtp.gmail.com" })}</div>
                     <div>{renderNumberField("smtpPort", "Port", { min: 1, max: 65535 })}</div>
                   </div>
                   <div className="space-y-4 mt-4">
-                    {renderTextField("smtpUser", "Username", { placeholder: "your@email.com" })}
-                    {renderSecretField("smtpPassword", "Password", { placeholder: "••••••••" })}
+                    {renderTextField("smtpUser", "Username", { placeholder: "you@yourdomain.com", description: "Your full Google Workspace email address" })}
+                    {renderSecretField("smtpPassword", "Password", { placeholder: "••••••••", description: "App Password (16 chars). Generate at myaccount.google.com → Security → App passwords." })}
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card variant="admin">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Send className="w-4 h-4" />
+                  Send Test Email
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-gray-500">
+                  Verify your SMTP setup by sending a test message. Uses the credentials currently shown above (saved or unsaved).
+                </p>
+                <div className="flex gap-2 max-w-lg">
+                  <Input
+                    variant="admin"
+                    type="email"
+                    value={testEmailTo}
+                    onChange={(e) => setTestEmailTo(e.target.value)}
+                    placeholder="recipient@example.com"
+                    className="flex-1"
+                  />
+                  <Button
+                    onClick={handleTestEmail}
+                    disabled={testingEmail || !testEmailTo}
+                    className="shrink-0"
+                  >
+                    {testingEmail ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> Sending…
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-1.5" /> Send test
+                      </>
+                    )}
+                  </Button>
+                </div>
+                {testEmailResult && (
+                  <div
+                    className={`flex items-start gap-2 text-sm rounded-lg px-3 py-2 max-w-lg ${
+                      testEmailResult.ok
+                        ? "bg-green-50 text-green-800 border border-green-200"
+                        : "bg-red-50 text-red-800 border border-red-200"
+                    }`}
+                  >
+                    {testEmailResult.ok ? (
+                      <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+                    ) : (
+                      <XCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    )}
+                    <span>{testEmailResult.message}</span>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

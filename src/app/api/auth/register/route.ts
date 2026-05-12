@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { sendEmail, notifyAdmins, welcomeMemberEmail, brandedEmail, getEmailSettings } from "@/lib/email";
 import { z } from "zod";
 
 const registerSchema = z.object({
@@ -77,6 +78,37 @@ export async function POST(req: NextRequest) {
         })),
       });
     }
+
+    // Send welcome email to user + notify admins (non-blocking)
+    (async () => {
+      try {
+        const settings = await getEmailSettings();
+        await sendEmail({
+          to: email,
+          subject: `Welcome to ${settings.siteName || "The Integrity Man Network"} 🎉`,
+          html: welcomeMemberEmail(firstName, settings.siteUrl),
+        });
+      } catch (err) {
+        console.error("[REGISTER_WELCOME_EMAIL]", err);
+      }
+    })();
+
+    notifyAdmins({
+      event: "newMember",
+      subject: `New account: ${firstName} ${lastName}`,
+      html: brandedEmail({
+        preheader: "A new user just signed up",
+        heading: "New Account Registration",
+        intro: `<strong>${firstName} ${lastName}</strong> created an account.`,
+        rows: [
+          { label: "Name", value: `${firstName} ${lastName}` },
+          { label: "Email", value: email },
+          { label: "Signed up", value: new Date().toLocaleString() },
+        ],
+        ctaLabel: "View in admin",
+        ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || ""}/admin/users`,
+      }),
+    }).catch((err) => console.error("[REGISTER_NOTIFY]", err));
 
     return NextResponse.json(
       { message: "Account created successfully", user },

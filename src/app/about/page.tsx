@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -15,6 +16,8 @@ import {
   User,
   Sparkles,
   Sunrise,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -183,6 +186,7 @@ function MethodSection() {
 
 //  FOUNDER BIO 
 function BioSection() {
+  const [bioExpanded, setBioExpanded] = useState(false);
   return (
     <section id="bio" className="section-padding relative bg-zinc-900/30">
       <div className="absolute inset-0 bg-radial-dark pointer-events-none" />
@@ -228,11 +232,53 @@ function BioSection() {
             </motion.p>
 
             <div className="space-y-4 sm:space-y-6">
-              {FOUNDER_BIO.paragraphs.map((p, i) => (
+              {/* First paragraph always visible as a preview */}
+              {FOUNDER_BIO.paragraphs.slice(0, 1).map((p, i) => (
                 <motion.p key={i} {...fadeInUp} className="text-sm sm:text-base md:text-lg text-zinc-400 leading-relaxed">
                   {p}
                 </motion.p>
               ))}
+
+              {/* Remaining paragraphs collapse behind Read more */}
+              <AnimatePresence initial={false}>
+                {bioExpanded && (
+                  <motion.div
+                    key="bio-rest"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <div className="space-y-4 sm:space-y-6 pt-4 sm:pt-6">
+                      {FOUNDER_BIO.paragraphs.slice(1).map((p, i) => (
+                        <p key={i} className="text-sm sm:text-base md:text-lg text-zinc-400 leading-relaxed">
+                          {p}
+                        </p>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {FOUNDER_BIO.paragraphs.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setBioExpanded((v) => !v)}
+                  aria-expanded={bioExpanded}
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-orange-400 hover:text-orange-300 transition-colors"
+                >
+                  {bioExpanded ? (
+                    <>
+                      Show less <ChevronUp className="w-4 h-4" />
+                    </>
+                  ) : (
+                    <>
+                      Read more <ChevronDown className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              )}
             </div>
 
             {/* Founder of */}

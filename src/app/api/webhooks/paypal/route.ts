@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyPayPalWebhook, capturePayPalOrder } from "@/lib/payments/paypal";
+import { sendOrderPaidNotifications, sendDonationPaidNotifications } from "@/lib/email";
 
 const PAYPAL_WEBHOOK_ID = process.env.PAYPAL_WEBHOOK_ID || "";
 
@@ -61,6 +62,9 @@ export async function POST(request: Request) {
                   paymentId: referenceId || paypalOrderId,
                 },
               });
+              sendOrderPaidNotifications(internalId).catch((err) =>
+                console.error("[PAYPAL_WEBHOOK_NOTIFY]", err)
+              );
             } else {
               // Check if it's a donation
               const donation = await prisma.donation.findUnique({
@@ -75,6 +79,9 @@ export async function POST(request: Request) {
                     paymentId: referenceId || paypalOrderId,
                   },
                 });
+                sendDonationPaidNotifications(internalId).catch((err) =>
+                  console.error("[PAYPAL_WEBHOOK_NOTIFY]", err)
+                );
               }
             }
           }

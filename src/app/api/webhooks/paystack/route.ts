@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validatePaystackWebhook } from "@/lib/payments/paystack";
+import { sendOrderPaidNotifications, sendDonationPaidNotifications } from "@/lib/email";
 
 export async function POST(request: Request) {
   try {
@@ -33,6 +34,9 @@ export async function POST(request: Request) {
               paymentId: reference,
             },
           });
+          sendOrderPaidNotifications(metadata.orderId).catch((err) =>
+            console.error("[PAYSTACK_WEBHOOK_NOTIFY]", err)
+          );
         }
 
         if (metadata?.donationId) {
@@ -43,6 +47,9 @@ export async function POST(request: Request) {
               paymentId: reference,
             },
           });
+          sendDonationPaidNotifications(metadata.donationId).catch((err) =>
+            console.error("[PAYSTACK_WEBHOOK_NOTIFY]", err)
+          );
         }
         break;
       }

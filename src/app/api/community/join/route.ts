@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { notifyAdmins, brandedEmail } from "@/lib/email";
 import { z } from "zod";
 
 const joinSchema = z.object({
@@ -64,6 +65,30 @@ export async function POST(req: NextRequest) {
         })),
       });
     }
+
+    // Email admins (non-blocking, respects toggle)
+    notifyAdmins({
+      event: "newMember",
+      subject: `New community member: ${firstName} ${lastName}`,
+      replyTo: email,
+      html: brandedEmail({
+        preheader: `${firstName} ${lastName} wants to join`,
+        heading: "New Member Registration",
+        intro: `<strong>${firstName} ${lastName}</strong> has applied to join the network.`,
+        rows: [
+          { label: "Name", value: `${firstName} ${lastName}` },
+          { label: "Email", value: email },
+          { label: "Phone", value: phone || "—" },
+          { label: "Location", value: `${city}, ${country}` },
+          { label: "Occupation", value: occupation || "—" },
+        ],
+        body: reason
+          ? `<p style="margin:0 0 8px;color:#6b7280;font-size:13px;">Reason for joining:</p><div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;white-space:pre-wrap;color:#111827;font-size:14px;">${reason.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!))}</div>`
+          : undefined,
+        ctaLabel: "View in admin",
+        ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || ""}/admin/messages`,
+      }),
+    }).catch((err) => console.error("[JOIN_NOTIFY]", err));
 
     return NextResponse.json(
       { message: "Registration submitted successfully", id: message.id },

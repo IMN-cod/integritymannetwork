@@ -164,11 +164,18 @@ export default function CommunityPage() {
         const data = await res.json();
         setChannels(data.channels);
         if (!activeChannel && data.channels.length > 0) {
-          setActiveChannel(data.channels[0].slug);
+          const first = data.channels[0];
+          setActiveChannel(first.slug);
+          // Seed channelInfo from the list so the header never shows "Welcome to #"
+          setChannelInfo({
+            name: first.name,
+            description: first.description ?? null,
+            memberCount: first.memberCount ?? 0,
+          });
         }
       }
-    } catch {
-      // If no channels exist yet, use defaults
+    } catch (err) {
+      console.error("[community] fetchChannels failed", err);
     } finally {
       setLoading(false);
     }
@@ -270,9 +277,11 @@ export default function CommunityPage() {
   }, [view, activeChannel, activeDm, fetchMessages, fetchDmMessages, fetchDmConversations]);
 
   // ── Send channel message ──
+  const [sendError, setSendError] = useState<string | null>(null);
   const sendChannelMessage = async () => {
     if (!messageInput.trim() || !activeChannel || sendingMessage) return;
     setSendingMessage(true);
+    setSendError(null);
     try {
       const res = await fetch(`/api/community/channels/${activeChannel}/messages`, {
         method: "POST",
@@ -282,15 +291,19 @@ export default function CommunityPage() {
           parentId: replyTo?.id || null,
         }),
       });
-      if (res.ok) {
-        const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.message) {
         setMessages((prev) => [...prev, data.message]);
         setMessageInput("");
         setReplyTo(null);
         setShowEmoji(false);
+      } else {
+        setSendError(data.error || "Could not send message. Please try again.");
+        console.error("[community] send failed", res.status, data);
       }
-    } catch {
-      // Fail silently
+    } catch (err) {
+      setSendError("Network error. Please check your connection.");
+      console.error("[community] send error", err);
     } finally {
       setSendingMessage(false);
     }
@@ -730,7 +743,7 @@ export default function CommunityPage() {
                 {onlineUsers.length > 0 && (
                   <>
                     <p className="text-[10px] px-2 py-1.5 text-zinc-600 uppercase tracking-wider font-semibold flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-green-400" />
+                      <span className="w-2 h-2 rounded-full bg-green-400 inline-block" />
                       Online — {onlineUsers.length}
                     </p>
                     <div className="space-y-0.5 mb-4">
@@ -848,16 +861,22 @@ export default function CommunityPage() {
                   />
                   <button
                     onClick={sendChannelMessage}
-                    disabled={!messageInput.trim() || sendingMessage}
+                    disabled={!messageInput.trim() || !activeChannel || sendingMessage}
+                    aria-label="Send message"
                     className={cn(
                       "absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-md flex items-center justify-center transition-all",
-                      messageInput.trim() ? "bg-orange-500 text-white hover:bg-orange-600" : "bg-zinc-700/50 text-zinc-500"
+                      messageInput.trim() && activeChannel
+                        ? "bg-orange-500 text-white hover:bg-orange-600"
+                        : "bg-zinc-700/50 text-zinc-500 cursor-not-allowed"
                     )}
                   >
                     {sendingMessage ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               </div>
+              {sendError && (
+                <p className="mt-2 text-xs text-red-400" role="alert">{sendError}</p>
+              )}
             </div>
           </>
         )}

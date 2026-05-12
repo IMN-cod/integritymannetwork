@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyStripeWebhook } from "@/lib/payments/stripe";
+import { sendOrderPaidNotifications, sendDonationPaidNotifications } from "@/lib/email";
 
 export async function POST(request: Request) {
   try {
@@ -25,7 +26,6 @@ export async function POST(request: Request) {
         const donationId = session.metadata?.donationId;
 
         if (orderId) {
-          // Update order payment status
           await prisma.order.update({
             where: { id: orderId },
             data: {
@@ -34,10 +34,12 @@ export async function POST(request: Request) {
               paymentId: session.payment_intent as string,
             },
           });
+          sendOrderPaidNotifications(orderId).catch((err) =>
+            console.error("[STRIPE_WEBHOOK_NOTIFY]", err)
+          );
         }
 
         if (donationId) {
-          // Update donation status
           await prisma.donation.update({
             where: { id: donationId },
             data: {
@@ -45,6 +47,9 @@ export async function POST(request: Request) {
               paymentId: session.payment_intent as string,
             },
           });
+          sendDonationPaidNotifications(donationId).catch((err) =>
+            console.error("[STRIPE_WEBHOOK_NOTIFY]", err)
+          );
         }
         break;
       }

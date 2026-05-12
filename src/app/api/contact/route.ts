@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { notifyAdmins, brandedEmail } from "@/lib/email";
 import { z } from "zod";
 
 const contactSchema = z.object({
@@ -34,7 +35,25 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // TODO: Send notification email to admin via Resend
+    // Notify admins by email (non-blocking)
+    notifyAdmins({
+      event: "message",
+      subject: `New contact message: ${subject}`,
+      replyTo: email,
+      html: brandedEmail({
+        preheader: `Contact message from ${firstName} ${lastName}`,
+        heading: "New Contact Message",
+        intro: `<strong>${firstName} ${lastName}</strong> sent a message via the contact form.`,
+        rows: [
+          { label: "Name", value: `${firstName} ${lastName}` },
+          { label: "Email", value: email },
+          { label: "Subject", value: subject },
+        ],
+        body: `<p style="margin:0 0 8px;color:#6b7280;font-size:13px;">Message:</p><div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;white-space:pre-wrap;color:#111827;font-size:14px;">${message.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!))}</div>`,
+        ctaLabel: "View in admin",
+        ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || ""}/admin/messages`,
+      }),
+    }).catch((err) => console.error("[CONTACT_NOTIFY]", err));
 
     return NextResponse.json(
       { message: "Message sent successfully", id: contactMessage.id },
