@@ -845,3 +845,18 @@ enum EnrollmentStatus {
   COMPLETED
   DROPPED
 }
+
+// ═══════════════════════════════════════════════════════
+// NEWSLETTER SUBSCRIBERS
+// ═══════════════════════════════════════════════════════
+
+model NewsletterSubscriber {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  subscribedAt DateTime @default(now())
+  isActive     Boolean  @default(true)
+
+  @@index([email])
+  @@index([subscribedAt])
+}

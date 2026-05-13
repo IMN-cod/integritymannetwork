@@ -4,7 +4,6 @@ import {
   Instagram,
   Youtube,
   Linkedin,
-  ArrowUpRight,
 } from "lucide-react";
 
 function XIcon({ className }: { className?: string }) {
@@ -23,8 +22,6 @@ function FacebookIcon({ className }: { className?: string }) {
   );
 }
 import { SITE } from "@/lib/constants";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 const FOOTER_LINKS = {
   ministry: [
@@ -65,30 +62,6 @@ export function Footer() {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2/3 h-px bg-linear-to-r from-transparent via-orange-500/30 to-transparent" />
 
       <div className="container-wide">
-        {/* Newsletter Section */}
-        <div className="py-10 sm:py-16 border-b border-zinc-800/50">
-          <div className="max-w-2xl mx-auto text-center">
-            <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-2 sm:mb-3 font-display">
-              Stay Connected
-            </h3>
-            <p className="text-sm sm:text-base text-zinc-400 mb-6 sm:mb-8">
-              Join our mailing list for updates on events, resources, and the
-              movement of men walking in integrity.
-            </p>
-            <form className="flex flex-col sm:flex-row gap-2 sm:gap-3 max-w-md mx-auto">
-              <Input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1"
-              />
-              <Button type="submit" className="w-full sm:w-auto">
-                Subscribe
-                <ArrowUpRight className="w-4 h-4" />
-              </Button>
-            </form>
-          </div>
-        </div>
-
         {/* Links Grid */}
         <div className="py-10 sm:py-16 grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-10 lg:gap-16">
           {/* Brand Column */}

@@ -16,6 +16,7 @@ import {
   Sparkles,
   Clock,
   Globe,
+  Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -485,6 +486,93 @@ function FAQSection() {
 }
 
 // ─────────────────────────────────────────────────
+// NEWSLETTER
+// ─────────────────────────────────────────────────
+
+function NewsletterSection() {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus("loading");
+    setErrorMsg("");
+    try {
+      const res = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.error || "Something went wrong.");
+        setStatus("error");
+      } else {
+        setStatus("success");
+        setEmail("");
+      }
+    } catch {
+      setErrorMsg("Something went wrong. Please try again.");
+      setStatus("error");
+    }
+  };
+
+  return (
+    <section className="section-padding relative bg-zinc-900/30">
+      <div className="absolute inset-0 bg-radial-dark pointer-events-none" />
+      <div className="container-wide relative z-10">
+        <motion.div
+          {...fadeInUp}
+          className="max-w-2xl mx-auto text-center"
+        >
+          <div className="w-12 h-12 rounded-xl bg-linear-to-br from-orange-500 to-amber-500 flex items-center justify-center mx-auto mb-5">
+            <Bell className="w-5 h-5 text-white" />
+          </div>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white font-display mb-3">
+            Stay Connected
+          </h2>
+          <p className="text-sm sm:text-base text-zinc-400 mb-8 leading-relaxed">
+            Join our mailing list for updates on events, resources, and the
+            movement of men walking in integrity.
+          </p>
+
+          {status === "success" ? (
+            <div className="rounded-xl border border-orange-500/20 bg-orange-500/10 px-6 py-5">
+              <p className="text-orange-400 font-semibold">You&apos;re subscribed!</p>
+              <p className="text-zinc-400 text-sm mt-1">Thank you — we&apos;ll keep you updated on everything happening at IMN.</p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+              <Input
+                type="email"
+                placeholder="Enter your email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={status === "loading"}
+                className="flex-1"
+              />
+              <Button type="submit" disabled={status === "loading"} className="w-full sm:w-auto">
+                {status === "loading" ? (
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>Subscribe <ArrowRight className="w-4 h-4" /></>
+                )}
+              </Button>
+            </form>
+          )}
+
+          {status === "error" && (
+            <p className="text-red-400 text-sm mt-3">{errorMsg}</p>
+          )}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// ─────────────────────────────────────────────────
 // PAGE
 // ─────────────────────────────────────────────────
 
@@ -539,6 +627,8 @@ export default function ContactPage() {
 
       <div className="divider-gradient" />
       <FAQSection />
+      <div className="divider-gradient" />
+      <NewsletterSection />
     </>
   );
 }
