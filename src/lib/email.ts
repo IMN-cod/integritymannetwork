@@ -70,17 +70,30 @@ export async function sendEmail(
       fromAddress = override.fromAddress || override.user;
     } else {
       const config = await getEmailSettings();
-      if (!config.smtpHost || !config.smtpUser || !config.smtpPassword) {
+
+      // DB settings take priority; fall back to env vars so SMTP works
+      // before (or instead of) configuring via the admin panel.
+      const resolvedHost     = config.smtpHost     || process.env.SMTP_HOST;
+      const resolvedUser     = config.smtpUser     || process.env.SMTP_USER;
+      const resolvedPass     = config.smtpPassword || process.env.SMTP_PASS;
+      const resolvedPort     = config.smtpPort     || process.env.SMTP_PORT || "587";
+      const resolvedFromName = config.emailFromName || config.siteName
+                               || process.env.SMTP_FROM_NAME
+                               || "The Integrity Man Network";
+      const resolvedFrom     = config.emailFromAddress || resolvedUser;
+
+      if (!resolvedHost || !resolvedUser || !resolvedPass) {
         const msg = "SMTP not configured";
         console.warn("[EMAIL]", msg, "— skipping email to", to);
         return { ok: false, error: msg };
       }
-      host = config.smtpHost;
-      port = parseInt(config.smtpPort || "587");
-      user = config.smtpUser;
-      pass = config.smtpPassword;
-      fromName = config.emailFromName || config.siteName || "The Integrity Man Network";
-      fromAddress = config.emailFromAddress || config.smtpUser;
+
+      host        = resolvedHost;
+      port        = parseInt(resolvedPort);
+      user        = resolvedUser;
+      pass        = resolvedPass;
+      fromName    = resolvedFromName;
+      fromAddress = resolvedFrom!;
     }
 
     const transporter = nodemailer.createTransport({
