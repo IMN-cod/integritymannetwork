@@ -48,15 +48,18 @@ export async function POST(req: NextRequest) {
     const errors: string[] = [];
 
     for (const file of files) {
+      // Sanitize filename for safe inclusion in error messages / logs
+      const safeName = (file.name || "file").replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
+
       // Validate MIME type
       if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-        errors.push(`${file.name}: unsupported type "${file.type}"`);
+        errors.push(`${safeName}: unsupported type "${file.type}"`);
         continue;
       }
 
       // Validate raw size before buffering
       if (file.size > MAX_FILE_SIZE) {
-        errors.push(`${file.name}: too large (${(file.size / 1024 / 1024).toFixed(1)} MB — max 20 MB)`);
+        errors.push(`${safeName}: too large (${(file.size / 1024 / 1024).toFixed(1)} MB — max 20 MB)`);
         continue;
       }
 
@@ -65,7 +68,7 @@ export async function POST(req: NextRequest) {
         const result = await optimizeImage(buffer, context, UPLOAD_DIR);
         results.push(result);
       } catch (err) {
-        errors.push(`${file.name}: ${err instanceof Error ? err.message : "processing failed"}`);
+        errors.push(`${safeName}: ${err instanceof Error ? err.message : "processing failed"}`);
       }
     }
 

@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { sendEmail, eventRegistrationEmail } from "@/lib/email";
+import { z } from "zod";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
+
+const registerBodySchema = z.object({
+  guestName: z.string().min(2).max(200).optional(),
+  guestEmail: z.string().email().max(254).optional(),
+  guestPhone: z.string().max(30).optional(),
+  ticketCount: z.union([z.number(), z.string()]).optional(),
+  ticketType: z.string().max(50).optional(),
+  notes: z.string().max(1000).optional(),
+});
 
 // POST /api/events/[slug]/register — Register for an event (guest or logged-in)
 export async function POST(
@@ -9,11 +20,17 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const rl = rateLimit(req, { key: "events:register", limit: 10, windowMs: 60 * 60 * 1000 });
+    if (!rl.ok) return rateLimitResponse(rl);
+
     const { slug } = await params;
     const session = await auth();
-    const body = await req.json();
-
-    const { guestName, guestEmail, guestPhone, ticketCount, ticketType, notes } = body;
+    const raw = await req.json();
+    const parsed = registerBodySchema.safeParse(raw);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+    const { guestName, guestEmail, guestPhone, ticketCount, ticketType, notes } = parsed.data;
 
     // Find the event
     const event = await prisma.event.findUnique({ where: { slug } });

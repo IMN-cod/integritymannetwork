@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // POST /api/auth/reset-password — Reset password using token
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimit(req, { key: "auth:reset-password", limit: 5, windowMs: 15 * 60 * 1000 });
+    if (!rl.ok) return rateLimitResponse(rl, "Too many reset attempts. Please try again later.");
+
     const { token, email, password } = await req.json();
 
     if (!token || !email || !password) {

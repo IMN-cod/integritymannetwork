@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import crypto from "crypto";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // POST /api/auth/forgot-password — Request password reset
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimit(req, { key: "auth:forgot-password", limit: 5, windowMs: 15 * 60 * 1000 });
+    if (!rl.ok) return rateLimitResponse(rl, "Too many password reset requests. Please try again later.");
+
     const { email } = await req.json();
 
     if (!email || typeof email !== "string") {

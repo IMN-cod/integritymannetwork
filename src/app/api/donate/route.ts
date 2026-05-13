@@ -5,18 +5,19 @@ import { z } from "zod";
 import { createStripeDonationSession } from "@/lib/payments/stripe";
 import { initializePaystackTransaction } from "@/lib/payments/paystack";
 import { createPayPalOrder } from "@/lib/payments/paypal";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 const donationSchema = z.object({
-  amount: z.number().positive("Amount must be greater than 0"),
+  amount: z.number().positive("Amount must be greater than 0").max(1_000_000, "Amount exceeds maximum allowed"),
   currency: z.string().default("GHS"),
   isRecurring: z.boolean().default(false),
   paymentMethod: z.enum(["PAYSTACK", "STRIPE", "PAYPAL"]),
   campaignId: z.string().optional(),
-  message: z.string().optional(),
+  message: z.string().max(1000).optional(),
   donorEmail: z.string().email().optional(),
-  donorName: z.string().optional(),
+  donorName: z.string().max(200).optional(),
   skipInit: z.boolean().default(false),
 });
 
@@ -26,6 +27,9 @@ const donationSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimit(req, { key: "donate", limit: 20, windowMs: 60 * 1000 });
+    if (!rl.ok) return rateLimitResponse(rl);
+
     const body = await req.json();
     const validation = donationSchema.safeParse(body);
 

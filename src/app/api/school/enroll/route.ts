@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // POST /api/school/enroll — Public enrollment
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimit(req, { key: "school:enroll", limit: 10, windowMs: 60 * 60 * 1000 });
+    if (!rl.ok) return rateLimitResponse(rl);
+
     const body = await req.json();
     const { courseId, firstName, lastName, email, phone, notes } = body;
 
@@ -14,6 +18,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (typeof firstName !== "string" || typeof lastName !== "string" || typeof email !== "string") {
+      return NextResponse.json({ error: "Invalid input types" }, { status: 400 });
+    }
+    if (firstName.length > 100 || lastName.length > 100 || email.length > 254) {
+      return NextResponse.json({ error: "Input exceeds maximum length" }, { status: 400 });
+    }
+
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -21,6 +32,18 @@ export async function POST(req: NextRequest) {
         { error: "Please enter a valid email address" },
         { status: 400 }
       );
+    }
+
+    // Validate phone format if provided
+    if (phone !== undefined && phone !== null && phone !== "") {
+      if (typeof phone !== "string" || phone.length > 30 || !/^[\d+\-().\s]{6,30}$/.test(phone)) {
+        return NextResponse.json({ error: "Invalid phone format" }, { status: 400 });
+      }
+    }
+
+    // Validate notes length if provided
+    if (notes !== undefined && notes !== null && (typeof notes !== "string" || notes.length > 2000)) {
+      return NextResponse.json({ error: "Notes too long" }, { status: 400 });
     }
 
     // Verify course exists and is published

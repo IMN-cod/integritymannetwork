@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // ───────────────────────────────────────
 // POST /api/blog/[slug]/view — Track view
@@ -10,7 +11,14 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const rl = rateLimit(req, { key: "blog:view", limit: 120, windowMs: 60 * 1000 });
+    if (!rl.ok) return rateLimitResponse(rl);
+
     const { slug } = await params;
+
+    if (!slug || typeof slug !== "string" || slug.length > 255) {
+      return NextResponse.json({ error: "Invalid slug" }, { status: 400 });
+    }
 
     const post = await prisma.blogPost.findUnique({
       where: { slug },

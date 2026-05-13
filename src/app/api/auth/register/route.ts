@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { sendEmail, notifyAdmins, welcomeMemberEmail, brandedEmail, getEmailSettings } from "@/lib/email";
 import { z } from "zod";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 const registerSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters"),
@@ -17,6 +18,9 @@ const registerSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimit(req, { key: "auth:register", limit: 5, windowMs: 15 * 60 * 1000 });
+    if (!rl.ok) return rateLimitResponse(rl, "Too many registration attempts. Please try again in a few minutes.");
+
     const body = await req.json();
     const validation = registerSchema.safeParse(body);
 

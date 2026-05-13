@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { chargeMobileMoney, chargeBankTransfer } from "@/lib/payments/paystack";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // ───────────────────────────────────────
 // POST /api/donate/charge — Charge via Mobile Money or Bank Transfer
@@ -8,6 +9,9 @@ import { chargeMobileMoney, chargeBankTransfer } from "@/lib/payments/paystack";
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimit(req, { key: "donate:charge", limit: 20, windowMs: 60 * 1000 });
+    if (!rl.ok) return rateLimitResponse(rl);
+
     const body = await req.json();
     const { donationId, channel, phone, provider } = body;
 

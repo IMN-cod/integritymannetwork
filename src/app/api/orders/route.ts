@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createStripeCheckoutSession } from "@/lib/payments/stripe";
 import { initializePaystackTransaction } from "@/lib/payments/paystack";
 import { createPayPalOrder } from "@/lib/payments/paypal";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -39,6 +40,9 @@ const orderSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    const rl = rateLimit(request, { key: "orders", limit: 20, windowMs: 60 * 1000 });
+    if (!rl.ok) return rateLimitResponse(rl);
+
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

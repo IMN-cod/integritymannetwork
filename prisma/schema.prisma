@@ -860,3 +860,18 @@ model NewsletterSubscriber {
   @@index([email])
   @@index([subscribedAt])
 }
+
+// ════════════════════════════════════════════════════════
+// WEBHOOK EVENT IDEMPOTENCY LOG
+// ════════════════════════════════════════════════════════
+
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  provider    String   // "stripe" | "paypal" | "paystack"
+  eventId     String   // The provider's unique event id
+  eventType   String?
+  receivedAt  DateTime @default(now())
+
+  @@unique([provider, eventId])
+  @@index([provider, receivedAt])
+}

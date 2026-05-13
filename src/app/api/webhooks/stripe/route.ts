@@ -19,6 +19,17 @@ export async function POST(request: Request) {
       );
     }
 
+    // Idempotency: ignore events we have already processed.
+    try {
+      await prisma.webhookEvent.create({
+        data: { provider: "stripe", eventId: event.id, eventType: event.type },
+      });
+    } catch {
+      // Unique constraint violation → duplicate delivery; ack and exit.
+      console.log("[STRIPE_WEBHOOK] Duplicate event ignored:", event.id);
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object;

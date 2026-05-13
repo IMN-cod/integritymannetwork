@@ -3,17 +3,21 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { notifyAdmins, brandedEmail } from "@/lib/email";
 import { z } from "zod";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 const contactSchema = z.object({
-  firstName: z.string().min(2),
-  lastName: z.string().min(2),
-  email: z.string().email(),
-  subject: z.string().min(3),
-  message: z.string().min(10),
+  firstName: z.string().min(2).max(100),
+  lastName: z.string().min(2).max(100),
+  email: z.string().email().max(254),
+  subject: z.string().min(3).max(200),
+  message: z.string().min(10).max(5000),
 });
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimit(req, { key: "contact", limit: 5, windowMs: 60 * 60 * 1000 });
+    if (!rl.ok) return rateLimitResponse(rl, "You've sent too many messages. Please try again in an hour.");
+
     const body = await req.json();
     const validation = contactSchema.safeParse(body);
 

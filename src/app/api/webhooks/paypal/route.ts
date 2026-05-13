@@ -34,6 +34,18 @@ export async function POST(request: Request) {
 
     const event = JSON.parse(body);
 
+    // Idempotency: skip if already processed.
+    if (event.id) {
+      try {
+        await prisma.webhookEvent.create({
+          data: { provider: "paypal", eventId: event.id, eventType: event.event_type },
+        });
+      } catch {
+        console.log("[PAYPAL_WEBHOOK] Duplicate event ignored:", event.id);
+        return NextResponse.json({ received: true, duplicate: true });
+      }
+    }
+
     switch (event.event_type) {
       case "CHECKOUT.ORDER.APPROVED": {
         // Capture the payment when user approves

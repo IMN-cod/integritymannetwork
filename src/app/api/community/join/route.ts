@@ -2,20 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { notifyAdmins, brandedEmail } from "@/lib/email";
 import { z } from "zod";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 const joinSchema = z.object({
-  firstName: z.string().min(2, "First name is required"),
-  lastName: z.string().min(2, "Last name is required"),
-  email: z.string().email("Valid email is required"),
-  phone: z.string().optional(),
-  city: z.string().min(2, "City is required"),
-  country: z.string().min(2, "Country is required"),
-  occupation: z.string().optional(),
-  reason: z.string().optional(),
+  firstName: z.string().min(2, "First name is required").max(100),
+  lastName: z.string().min(2, "Last name is required").max(100),
+  email: z.string().email("Valid email is required").max(254),
+  phone: z.string().max(30).optional(),
+  city: z.string().min(2, "City is required").max(100),
+  country: z.string().min(2, "Country is required").max(100),
+  occupation: z.string().max(200).optional(),
+  reason: z.string().max(2000).optional(),
 });
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimit(req, { key: "community:join", limit: 5, windowMs: 60 * 60 * 1000 });
+    if (!rl.ok) return rateLimitResponse(rl);
+
     const body = await req.json();
     const validation = joinSchema.safeParse(body);
 

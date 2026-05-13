@@ -20,6 +20,22 @@ export async function POST(request: Request) {
 
     const event = JSON.parse(body);
 
+    // Idempotency: Paystack does not provide a stable event id, but each
+    // event carries a unique reference + event name. Use the composite.
+    const paystackEventKey = `${event.event || "unknown"}:${event.data?.reference || event.data?.id || ""}`;
+    if (paystackEventKey.endsWith(":")) {
+      // No reference present; can't safely de-dupe — process anyway.
+    } else {
+      try {
+        await prisma.webhookEvent.create({
+          data: { provider: "paystack", eventId: paystackEventKey, eventType: event.event },
+        });
+      } catch {
+        console.log("[PAYSTACK_WEBHOOK] Duplicate event ignored:", paystackEventKey);
+        return NextResponse.json({ received: true, duplicate: true });
+      }
+    }
+
     switch (event.event) {
       case "charge.success": {
         const data = event.data;
