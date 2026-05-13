@@ -17,8 +17,22 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [error, setError] = useState("");
   const justRegistered = searchParams.get("registered") === "true";
+
+  // Surface OAuth errors that NextAuth appends as ?error=... to the login page
+  const oauthErrorCode = searchParams.get("error");
+  const oauthErrorMessages: Record<string, string> = {
+    OAuthSignin: "Could not start Google sign-in. Check your connection and try again.",
+    OAuthCallback: "Google sign-in was cancelled or failed. Please try again.",
+    OAuthCreateAccount: "Could not create your account from Google. Contact support.",
+    OAuthAccountNotLinked: "This email is already registered with a password. Sign in with email instead.",
+    Callback: "Sign-in callback failed. Please try again.",
+    AccessDenied: "Access was denied. Please try again.",
+    Configuration: "Server configuration error. Contact support.",
+  };
+  const [error, setError] = useState(
+    oauthErrorCode ? (oauthErrorMessages[oauthErrorCode] ?? `Sign-in error: ${oauthErrorCode}`) : ""
+  );
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
