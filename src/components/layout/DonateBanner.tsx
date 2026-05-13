@@ -23,7 +23,7 @@ export function DonateBanner() {
                 Support the Mission
               </h3>
               <p className="text-sm sm:text-base text-zinc-400 mt-1 max-w-md">
-                Your gift fuels schools, outreach, and men's formation across nations.
+                Your gift fuels schools, outreach, and men&apos;s formation across nations.
                 Every amount makes an eternal difference.
               </p>
             </div>

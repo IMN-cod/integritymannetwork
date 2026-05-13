@@ -118,7 +118,7 @@ export default function GhanaHeatMap({ regions }: GhanaHeatMapProps) {
         }).addTo(map);
 
         // Core hotspot
-        const marker = L.circleMarker([region.lat, region.lng], {
+        L.circleMarker([region.lat, region.lng], {
           radius: Math.max(8, radius * 0.5),
           fillColor: color,
           fillOpacity: 0.85,

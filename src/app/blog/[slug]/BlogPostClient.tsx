@@ -10,7 +10,6 @@ import {
   BookOpen,
   Tag,
   Eye,
-  MessageSquare,
   ChevronRight,
   Link2,
   CheckCircle2,

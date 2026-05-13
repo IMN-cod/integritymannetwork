@@ -1198,6 +1198,8 @@ function DonationStatus() {
   useEffect(() => {
     // When arriving from Paystack 3DS redirect, verify the transaction server-side
     if (status === "success" && trxref && verified === null && !verifying) {
+      // Verification kicked off on redirect arrival — setState here is the intended sync.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVerifying(true);
       fetch("/api/donate/verify", {
         method: "POST",

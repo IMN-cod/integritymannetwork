@@ -76,6 +76,8 @@ export default function AdminLayout({
   useEffect(() => {
     const role = session?.user?.role;
     if (role !== "ADMIN" && role !== "SUPER_ADMIN") return;
+    // Initial fetch is intentional: hydrate notifications on mount/role-change.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);

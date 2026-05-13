@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Heart,
-  TrendingUp,
   TrendingDown,
   Users,
   Calendar,
@@ -26,7 +25,6 @@ import {
   Filter,
   Trash2,
   AlertTriangle,
-  Download,
   BarChart3,
   Wallet,
   Zap,

@@ -82,7 +82,8 @@ export async function GET(req: NextRequest) {
     // Map events to include total ticket count instead of just registration row count
     const eventsWithTickets = events.map((e) => {
       const totalTickets = e.registrations.reduce((sum, r) => sum + r.ticketCount, 0);
-      const { registrations: _, ...rest } = e;
+      const { registrations, ...rest } = e;
+      void registrations;
       return { ...rest, _count: { registrations: totalTickets } };
     });
 

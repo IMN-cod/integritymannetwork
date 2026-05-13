@@ -103,6 +103,8 @@ export default function LiveChatWidget() {
   useEffect(() => {
     const token = localStorage.getItem(STORAGE_KEY);
     if (token) {
+      // Hydrating from localStorage on mount is the intended sync point.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadSession(token);
     }
   }, [loadSession]);

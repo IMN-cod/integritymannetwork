@@ -83,8 +83,10 @@ export function buildOgImage({
         {/* Header: logo + brand name */}
         <div style={{ display: "flex", alignItems: "center" }}>
           {logoSrc ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={logoSrc}
+              alt=""
               width={60}
               height={60}
               style={{ objectFit: "contain" }}
