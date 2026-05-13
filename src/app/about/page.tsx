@@ -227,90 +227,82 @@ function BioSection() {
               </div>
             </motion.div>
 
-            <motion.p {...fadeInUp} className="text-base sm:text-lg md:text-xl text-zinc-300 leading-relaxed mb-6 sm:mb-8 font-light italic border-l-2 border-orange-500/60 pl-4 sm:pl-5">
+            <motion.p {...fadeInUp} className="text-base sm:text-lg md:text-xl text-zinc-300 leading-relaxed font-light italic border-l-2 border-orange-500/60 pl-4 sm:pl-5">
               {FOUNDER_BIO.intro}
             </motion.p>
 
-            <div className="space-y-4 sm:space-y-6">
-              {/* First paragraph always visible as a preview */}
-              {FOUNDER_BIO.paragraphs.slice(0, 1).map((p, i) => (
-                <motion.p key={i} {...fadeInUp} className="text-sm sm:text-base md:text-lg text-zinc-400 leading-relaxed">
-                  {p}
-                </motion.p>
-              ))}
-
-              {/* Remaining paragraphs collapse behind Read more */}
-              <AnimatePresence initial={false}>
-                {bioExpanded && (
-                  <motion.div
-                    key="bio-rest"
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                    className="overflow-hidden"
-                  >
-                    <div className="space-y-4 sm:space-y-6 pt-4 sm:pt-6">
-                      {FOUNDER_BIO.paragraphs.slice(1).map((p, i) => (
-                        <p key={i} className="text-sm sm:text-base md:text-lg text-zinc-400 leading-relaxed">
-                          {p}
-                        </p>
-                      ))}
-                    </div>
-                  </motion.div>
+            {/* Read more toggle — sits right below the italicised intro */}
+            <div className="mt-5 sm:mt-6">
+              <button
+                type="button"
+                onClick={() => setBioExpanded((v) => !v)}
+                aria-expanded={bioExpanded}
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-orange-400 hover:text-orange-300 transition-colors"
+              >
+                {bioExpanded ? (
+                  <>
+                    Show less <ChevronUp className="w-4 h-4" />
+                  </>
+                ) : (
+                  <>
+                    Read more <ChevronDown className="w-4 h-4" />
+                  </>
                 )}
-              </AnimatePresence>
-
-              {FOUNDER_BIO.paragraphs.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => setBioExpanded((v) => !v)}
-                  aria-expanded={bioExpanded}
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-orange-400 hover:text-orange-300 transition-colors"
-                >
-                  {bioExpanded ? (
-                    <>
-                      Show less <ChevronUp className="w-4 h-4" />
-                    </>
-                  ) : (
-                    <>
-                      Read more <ChevronDown className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
-              )}
+              </button>
             </div>
 
-            {/* Founder of */}
-            <motion.div {...fadeInUp} className="mt-10 sm:mt-12">
-              <div className="flex items-center gap-2 mb-4 sm:mb-5">
-                <Sparkles className="w-4 h-4 text-orange-500" />
-                <h3 className="text-xs sm:text-sm uppercase tracking-[0.2em] text-orange-400 font-semibold">Founder Of</h3>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                {FOUNDER_BIO.founderOf.map((item) => (
-                  <Card key={item} variant="light" className="p-4 sm:p-5 hover:border-orange-500/30 transition-all duration-500">
-                    <p className="text-sm sm:text-base font-semibold text-zinc-900">{item}</p>
-                  </Card>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Prayer platforms */}
-            <motion.div {...fadeInUp} className="mt-10 sm:mt-12">
-              <div className="flex items-center gap-2 mb-4 sm:mb-5">
-                <Sunrise className="w-4 h-4 text-orange-500" />
-                <h3 className="text-xs sm:text-sm uppercase tracking-[0.2em] text-orange-400 font-semibold">Altar of Righteousness — Prayer Platforms</h3>
-              </div>
-              <div className="space-y-3 sm:space-y-4">
-                {FOUNDER_BIO.prayerPlatforms.map((p) => (
-                  <div key={p.name} className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 border-l-2 border-zinc-800 hover:border-orange-500/60 pl-4 sm:pl-5 py-2 transition-colors">
-                    <p className="text-base sm:text-lg font-semibold text-white">{p.name}</p>
-                    <p className="text-xs sm:text-sm text-zinc-500">{p.description}</p>
+            {/* Everything below is collapsed until Read more is tapped */}
+            <AnimatePresence initial={false}>
+              {bioExpanded && (
+                <motion.div
+                  key="bio-expanded"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                  className="overflow-hidden"
+                >
+                  <div className="space-y-4 sm:space-y-6 pt-6 sm:pt-8">
+                    {FOUNDER_BIO.paragraphs.map((p, i) => (
+                      <p key={i} className="text-sm sm:text-base md:text-lg text-zinc-400 leading-relaxed">
+                        {p}
+                      </p>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </motion.div>
+
+                  {/* Founder of */}
+                  <div className="mt-10 sm:mt-12">
+                    <div className="flex items-center gap-2 mb-4 sm:mb-5">
+                      <Sparkles className="w-4 h-4 text-orange-500" />
+                      <h3 className="text-xs sm:text-sm uppercase tracking-[0.2em] text-orange-400 font-semibold">Founder Of</h3>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                      {FOUNDER_BIO.founderOf.map((item) => (
+                        <Card key={item} variant="light" className="p-4 sm:p-5 hover:border-orange-500/30 transition-all duration-500">
+                          <p className="text-sm sm:text-base font-semibold text-zinc-900">{item}</p>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Prayer platforms */}
+                  <div className="mt-10 sm:mt-12">
+                    <div className="flex items-center gap-2 mb-4 sm:mb-5">
+                      <Sunrise className="w-4 h-4 text-orange-500" />
+                      <h3 className="text-xs sm:text-sm uppercase tracking-[0.2em] text-orange-400 font-semibold">Altar of Righteousness — Prayer Platforms</h3>
+                    </div>
+                    <div className="space-y-3 sm:space-y-4">
+                      {FOUNDER_BIO.prayerPlatforms.map((p) => (
+                        <div key={p.name} className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 border-l-2 border-zinc-800 hover:border-orange-500/60 pl-4 sm:pl-5 py-2 transition-colors">
+                          <p className="text-base sm:text-lg font-semibold text-white">{p.name}</p>
+                          <p className="text-xs sm:text-sm text-zinc-500">{p.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>
