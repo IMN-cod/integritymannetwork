@@ -401,7 +401,7 @@ export default function CommunityPage() {
   // ═══════════════════════════════════════════
 
   return (
-    <div className="h-screen bg-zinc-950 flex overflow-hidden">
+    <div className="h-[calc(100dvh-4rem)] sm:h-[calc(100dvh-5rem)] mt-16 sm:mt-20 bg-zinc-950 flex overflow-hidden">
       {/* ── LEFT SIDEBAR ── */}
       <aside className={cn(
         "w-72 bg-zinc-900/60 border-r border-zinc-800/50 flex flex-col shrink-0 transition-transform duration-300",
