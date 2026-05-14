@@ -7,7 +7,7 @@ import { DonateBanner } from "@/components/layout/DonateBanner";
 import { CartDrawer } from "@/components/cart/CartDrawer";
 import LiveChatWidget from "@/components/chat/LiveChatWidget";
 
-const NO_DONATE_BANNER = ["/auth", "/admin", "/checkout", "/dashboard", "/donate", "/community"];
+const NO_DONATE_BANNER = ["/auth", "/admin", "/checkout", "/dashboard", "/donate", "/community", "/contact"];
 const NO_FOOTER = ["/auth", "/admin", "/community"];
 
 export function LayoutShell({ children }: { children: React.ReactNode }) {
