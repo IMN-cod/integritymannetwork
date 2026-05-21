@@ -28,12 +28,14 @@ const shippingSchema = z.object({
 const orderSchema = z.object({
   shipping: shippingSchema,
   paymentMethod: z.enum(["PAYSTACK", "STRIPE", "PAYPAL"]),
+  discountCode: z.string().optional(),
+  discountPercent: z.coerce.number().min(0).max(100).optional(),
   items: z.array(
     z.object({
       productId: z.string(),
       variantId: z.string().optional(),
-      quantity: z.number().int().min(1),
-      price: z.number(),
+      quantity: z.coerce.number().int().min(1),
+      price: z.coerce.number().min(0),
     })
   ),
 });
@@ -187,8 +189,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ order, paymentUrl }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
+      const firstIssue = error.errors[0];
+      const field = firstIssue?.path.join(".") || "unknown";
       return NextResponse.json(
-        { error: "Invalid data", details: error.errors },
+        { error: `Invalid order data (field: ${field}): ${firstIssue?.message}`, details: error.errors },
         { status: 400 }
       );
     }
