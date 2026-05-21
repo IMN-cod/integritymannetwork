@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET /api/store — Public product listing
+// GET /api/store — Public product listing with advanced filtering
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -12,21 +12,62 @@ export async function GET(req: NextRequest) {
     const sort = searchParams.get("sort") || "newest";
     const featured = searchParams.get("featured") === "true";
 
+    // New filter params
+    const minPrice = searchParams.get("minPrice") ? parseFloat(searchParams.get("minPrice")!) : null;
+    const maxPrice = searchParams.get("maxPrice") ? parseFloat(searchParams.get("maxPrice")!) : null;
+    const productType = searchParams.get("type") || ""; // "physical" | "digital"
+    const inStockOnly = searchParams.get("inStock") === "true";
+    const tag = searchParams.get("tag") || "";
+    const ids = searchParams.get("ids")?.split(",").filter(Boolean) || [];
+
     const where: Record<string, unknown> = { isActive: true };
 
     if (featured) where.isFeatured = true;
+
+    if (ids.length > 0) {
+      where.id = { in: ids };
+    }
 
     if (category) {
       where.category = { slug: category };
     }
 
+    if (productType === "digital") where.isDigital = true;
+    else if (productType === "physical") where.isDigital = false;
+
+    if (minPrice !== null || maxPrice !== null) {
+      where.price = {
+        ...(minPrice !== null ? { gte: minPrice } : {}),
+        ...(maxPrice !== null ? { lte: maxPrice } : {}),
+      };
+    }
+
+    // Compound AND conditions for search + inStock + tag
+    const andConditions: object[] = [];
+
     if (search) {
-      where.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
-        { summary: { contains: search, mode: "insensitive" } },
-        { tags: { hasSome: [search.toLowerCase()] } },
-      ];
+      andConditions.push({
+        OR: [
+          { name: { contains: search, mode: "insensitive" } },
+          { description: { contains: search, mode: "insensitive" } },
+          { summary: { contains: search, mode: "insensitive" } },
+          { tags: { hasSome: [search.toLowerCase()] } },
+        ],
+      });
+    }
+
+    if (inStockOnly) {
+      andConditions.push({
+        OR: [{ stock: { gt: 0 } }, { isDigital: true }],
+      });
+    }
+
+    if (tag) {
+      andConditions.push({ tags: { hasSome: [tag.toLowerCase()] } });
+    }
+
+    if (andConditions.length > 0) {
+      where.AND = andConditions;
     }
 
     type SortOrder = "asc" | "desc";
@@ -62,7 +103,6 @@ export async function GET(req: NextRequest) {
         take: limit,
       }),
       prisma.product.count({ where }),
-      // Get categories with product counts
       prisma.productCategory.findMany({
         select: {
           id: true,
