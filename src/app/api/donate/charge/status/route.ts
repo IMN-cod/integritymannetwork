@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyPaystackTransaction } from "@/lib/payments/paystack";
+import { checkChargeStatus } from "@/lib/payments/paystack";
 
 // ───────────────────────────────────────
 // GET /api/donate/charge/status?reference=xxx — Poll charge status
+// Uses Paystack /charge/{reference} endpoint (correct for MoMo/bank-transfer charges)
 // ───────────────────────────────────────
 
 export async function GET(req: NextRequest) {
@@ -17,42 +18,49 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const verification = await verifyPaystackTransaction(reference);
+    const charge = await checkChargeStatus(reference);
 
-    // Update donation if payment is successful
-    if (verification.status === "success") {
-      const donationId = verification.metadata?.donationId as string;
+    if (charge.status === "success") {
+      const donationId = charge.metadata?.donationId as string | undefined;
       if (donationId) {
         await prisma.donation.update({
           where: { id: donationId },
-          data: { status: "PAID", paymentId: verification.reference },
+          data: { status: "PAID", paymentId: charge.reference },
+        });
+      } else {
+        // Fallback: look up by paymentId reference
+        await prisma.donation.updateMany({
+          where: { paymentId: charge.reference },
+          data: { status: "PAID" },
         });
       }
     }
 
-    // Update donation if payment failed
-    if (verification.status === "failed") {
-      const donationId = verification.metadata?.donationId as string;
+    if (charge.status === "failed" || charge.status === "timeout") {
+      const donationId = charge.metadata?.donationId as string | undefined;
       if (donationId) {
         await prisma.donation.update({
           where: { id: donationId },
+          data: { status: "FAILED" },
+        });
+      } else {
+        await prisma.donation.updateMany({
+          where: { paymentId: charge.reference },
           data: { status: "FAILED" },
         });
       }
     }
 
     return NextResponse.json({
-      status: verification.status,
-      reference: verification.reference,
-      amount: verification.amount / 100,
-      channel: verification.channel,
-      currency: verification.currency,
+      status: charge.status,
+      reference: charge.reference,
+      amount: charge.amount / 100,
+      channel: charge.channel,
+      currency: charge.currency,
     });
   } catch (error) {
     console.error("[DONATE_STATUS_ERROR]", error);
-    return NextResponse.json(
-      { error: "Could not check payment status" },
-      { status: 500 }
-    );
+    // Return pending so the frontend keeps polling rather than showing an error
+    return NextResponse.json({ status: "pending" }, { status: 200 });
   }
 }

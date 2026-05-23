@@ -1,4 +1,4 @@
-export { useCartStore } from "./cart-store";
+export { useCartStore, FREE_SHIPPING_THRESHOLD, SHIPPING_FEE, PROMO_CODES } from "./cart-store";
 export { useUIStore } from "./ui-store";
 export { useWishlistStore } from "./wishlist-store";
 export { useRecentlyViewedStore } from "./recently-viewed-store";

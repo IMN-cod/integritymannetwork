@@ -69,7 +69,7 @@ interface RelatedProduct {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const SHIPPING_INFO = [
-  { icon: Truck, title: "Free Shipping", desc: "On orders over GH₵500" },
+  { icon: Truck, title: "Free Shipping", desc: "On Orders over GHS 2000" },
   { icon: Shield, title: "Secure Payment", desc: "256-bit SSL encrypted" },
   { icon: RotateCcw, title: "30-Day Returns", desc: "Hassle-free returns" },
   { icon: Package, title: "Quality Guaranteed", desc: "Premium materials" },
@@ -319,7 +319,7 @@ export default function ProductPage() {
   // Simulated live viewer count
   const [viewerCount] = useState(() => Math.floor(Math.random() * 18) + 4);
 
-  const { addItem, openCart } = useCartStore();
+  const { addItem, openCart, totalItems } = useCartStore();
   const { addProduct } = useRecentlyViewedStore();
   const { toggleItem: toggleWishlist, isWishlisted } = useWishlistStore();
 
@@ -616,7 +616,7 @@ export default function ProductPage() {
                     </>
                   )}
                 </div>
-                {effectivePrice >= 500 && (
+                {effectivePrice >= 2000 && (
                   <p className="text-xs text-emerald-400/80 flex items-center gap-1.5 mt-1">
                     <Truck className="w-3.5 h-3.5" />Eligible for free shipping
                   </p>
@@ -698,10 +698,22 @@ export default function ProductPage() {
                       <><ShoppingCart className="w-5 h-5" />Add to Cart — {formatCurrency(effectivePrice * quantity)}</>
                     )}
                   </Button>
+                  {totalItems() > 0 && (
+                    <Button size="xl" variant="secondary" className="shrink-0 cursor-pointer" onClick={openCart} aria-label="View cart">
+                      <ShoppingBag className="w-5 h-5" />
+                    </Button>
+                  )}
                 </div>
-                <Button size="lg" variant="secondary" className="w-full cursor-pointer" onClick={handleBuyNow} disabled={!inStock}>
-                  <Zap className="w-4 h-4 text-orange-500" />Buy Now
-                </Button>
+                <div className="flex gap-3">
+                  <Button size="lg" variant="secondary" className="flex-1 cursor-pointer" onClick={handleBuyNow} disabled={!inStock}>
+                    <Zap className="w-4 h-4 text-orange-500" />Buy Now
+                  </Button>
+                  {totalItems() > 0 && (
+                    <Button size="lg" variant="outline" className="flex-1 cursor-pointer border-orange-500/40 text-orange-500 hover:bg-orange-500/10" onClick={openCart}>
+                      View Cart ({totalItems()})
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {/* Guarantees */}
@@ -854,6 +866,17 @@ export default function ProductPage() {
               <ShoppingCart className="w-4 h-4" />
               {addedToCart ? "Added!" : inStock ? "Add to Cart" : "Out of Stock"}
             </Button>
+            {totalItems() > 0 && (
+              <Button
+                variant="outline"
+                className="shrink-0 cursor-pointer border-orange-500/40 text-orange-500 hover:bg-orange-500/10 px-3"
+                onClick={openCart}
+                aria-label="View cart"
+              >
+                <ShoppingBag className="w-4 h-4" />
+                <span className="text-xs font-bold">{totalItems()}</span>
+              </Button>
+            )}
           </div>
         </div>
       </div>

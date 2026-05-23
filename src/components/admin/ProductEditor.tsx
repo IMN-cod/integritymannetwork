@@ -7,6 +7,7 @@ import {
   ArrowLeft, Save, Eye, Loader2, X, Plus, Tag, DollarSign,
   Package, ShoppingBag, Star, Globe, Settings, AlertCircle,
   CheckCircle2, Layers, Barcode, Weight, Truck, Sparkles, Trash2,
+  Ruler, Info, ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +65,15 @@ interface ProductData {
   metaTitle: string;
   metaDescription: string;
   variants: Variant[];
+  // Per-product shipping
+  shippingClass: string;
+  dimensionL: string;
+  dimensionW: string;
+  dimensionH: string;
+  freeShipping: boolean;
+  handlingFee: string;
+  shippingNote: string;
+  shippingRestrictions: string;
 }
 
 const INITIAL_PRODUCT: ProductData = {
@@ -87,6 +97,15 @@ const INITIAL_PRODUCT: ProductData = {
   metaTitle: "",
   metaDescription: "",
   variants: [],
+  // Per-product shipping
+  shippingClass: "STANDARD",
+  dimensionL: "",
+  dimensionW: "",
+  dimensionH: "",
+  freeShipping: false,
+  handlingFee: "",
+  shippingNote: "",
+  shippingRestrictions: "",
 };
 
 const BADGE_OPTIONS = ["", "Bestseller", "New", "Limited", "Sale", "Popular", "Exclusive"];
@@ -98,7 +117,7 @@ export default function ProductEditor({ productId }: { productId?: string }) {
   const [loading, setLoading] = useState(!!productId);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
-  const [activeTab, setActiveTab] = useState<"general" | "inventory" | "seo" | "settings">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "inventory" | "shipping" | "seo" | "settings">("general");
   const [slugManual, setSlugManual] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [showCategoryInput, setShowCategoryInput] = useState(false);
@@ -153,6 +172,14 @@ export default function ProductEditor({ productId }: { productId?: string }) {
           stock: v.stock,
           sku: v.sku || "",
         })),
+        shippingClass: p.shippingClass || "STANDARD",
+        dimensionL: p.dimensionL ? String(Number(p.dimensionL)) : "",
+        dimensionW: p.dimensionW ? String(Number(p.dimensionW)) : "",
+        dimensionH: p.dimensionH ? String(Number(p.dimensionH)) : "",
+        freeShipping: p.freeShipping || false,
+        handlingFee: p.handlingFee ? String(Number(p.handlingFee)) : "",
+        shippingNote: p.shippingNote || "",
+        shippingRestrictions: p.shippingRestrictions || "",
       });
       setSlugManual(true);
     } catch {
@@ -284,6 +311,15 @@ export default function ProductEditor({ productId }: { productId?: string }) {
         metaTitle: product.metaTitle || generateSeoTitle(),
         metaDescription: product.metaDescription || generateSeoDescription(),
         variants: product.variants,
+        // Shipping
+        shippingClass: product.shippingClass,
+        dimensionL: product.dimensionL ? parseFloat(product.dimensionL) : null,
+        dimensionW: product.dimensionW ? parseFloat(product.dimensionW) : null,
+        dimensionH: product.dimensionH ? parseFloat(product.dimensionH) : null,
+        freeShipping: product.freeShipping,
+        handlingFee: product.handlingFee ? parseFloat(product.handlingFee) : null,
+        shippingNote: product.shippingNote || null,
+        shippingRestrictions: product.shippingRestrictions || null,
       };
 
       const url = product.id
@@ -666,6 +702,7 @@ export default function ProductEditor({ productId }: { productId?: string }) {
                     [
                       { id: "general", label: "General", icon: Settings },
                       { id: "inventory", label: "Inventory", icon: Package },
+                      { id: "shipping", label: "Shipping", icon: Truck },
                       { id: "seo", label: "SEO", icon: Globe },
                       { id: "settings", label: "More", icon: Sparkles },
                     ] as const
@@ -914,6 +951,194 @@ export default function ProductEditor({ productId }: { productId?: string }) {
                     </>
                   )}
 
+                  {/* ── SHIPPING TAB ── */}
+                  {activeTab === "shipping" && (
+                    <>
+                      {/* Product Type */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                          <Package className="w-3.5 h-3.5 text-gray-400" />
+                          Shipping Class
+                        </label>
+                        <select
+                          value={product.shippingClass}
+                          onChange={(e) => setProduct((p) => ({ ...p, shippingClass: e.target.value, ...(e.target.value === "DIGITAL" ? { isDigital: true } : {}) }))}
+                          className="w-full h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                        >
+                          <option value="STANDARD">Standard — regular packaging</option>
+                          <option value="BULKY">Bulky / Oversized — extra space needed</option>
+                          <option value="FRAGILE">Fragile — protective packaging required</option>
+                          <option value="DIGITAL">Digital — no physical shipping</option>
+                        </select>
+                        {product.shippingClass === "BULKY" && (
+                          <p className="text-[10px] text-orange-600 bg-orange-50 px-2.5 py-1.5 rounded-lg border border-orange-100">
+                            Bulky surcharge will be added at checkout. Set the surcharge amount in Admin → Shipping → Shipping Classes.
+                          </p>
+                        )}
+                        {product.shippingClass === "FRAGILE" && (
+                          <p className="text-[10px] text-blue-600 bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-100">
+                            Fragile surcharge may be added at checkout. Configure in Admin → Shipping → Shipping Classes.
+                          </p>
+                        )}
+                        {product.shippingClass === "DIGITAL" && (
+                          <p className="text-[10px] text-emerald-700 bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-100">
+                            Digital product — no shipping required. Customer will receive download access.
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="h-px bg-gray-100" />
+
+                      {/* Weight */}
+                      {product.shippingClass !== "DIGITAL" && (
+                        <>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                              <Weight className="w-3.5 h-3.5 text-gray-400" />
+                              Weight (kg)
+                            </label>
+                            <Input
+                              variant="admin"
+                              type="number"
+                              step="0.01"
+                              value={product.weight}
+                              onChange={(e) => setProduct((p) => ({ ...p, weight: e.target.value }))}
+                              placeholder="0.00"
+                              className="text-sm"
+                            />
+                          </div>
+
+                          {/* Dimensions */}
+                          <div>
+                            <label className="text-xs font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                              <Ruler className="w-3.5 h-3.5 text-gray-400" />
+                              Package Dimensions (cm)
+                            </label>
+                            <div className="grid grid-cols-3 gap-2">
+                              <div>
+                                <label className="block text-[10px] text-gray-400 mb-1 text-center">Length</label>
+                                <Input variant="admin" type="number" step="0.1" min="0" placeholder="0.0"
+                                  value={product.dimensionL}
+                                  onChange={(e) => setProduct((p) => ({ ...p, dimensionL: e.target.value }))}
+                                  className="text-sm text-center" />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] text-gray-400 mb-1 text-center">Width</label>
+                                <Input variant="admin" type="number" step="0.1" min="0" placeholder="0.0"
+                                  value={product.dimensionW}
+                                  onChange={(e) => setProduct((p) => ({ ...p, dimensionW: e.target.value }))}
+                                  className="text-sm text-center" />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] text-gray-400 mb-1 text-center">Height</label>
+                                <Input variant="admin" type="number" step="0.1" min="0" placeholder="0.0"
+                                  value={product.dimensionH}
+                                  onChange={(e) => setProduct((p) => ({ ...p, dimensionH: e.target.value }))}
+                                  className="text-sm text-center" />
+                              </div>
+                            </div>
+                            {/* Volumetric weight preview */}
+                            {product.dimensionL && product.dimensionW && product.dimensionH && (
+                              <p className="text-[10px] text-gray-400 mt-1.5">
+                                Volumetric weight:{" "}
+                                <span className="font-medium text-gray-600">
+                                  {((parseFloat(product.dimensionL) * parseFloat(product.dimensionW) * parseFloat(product.dimensionH)) / 5000).toFixed(2)} kg
+                                </span>
+                                {" "}(L×W×H ÷ 5000)
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="h-px bg-gray-100" />
+
+                          {/* Special rules */}
+                          <div className="space-y-3">
+                            <p className="text-xs font-semibold text-gray-700">Special Rules</p>
+
+                            <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors">
+                              <input
+                                type="checkbox"
+                                checked={product.freeShipping}
+                                onChange={(e) => setProduct((p) => ({ ...p, freeShipping: e.target.checked }))}
+                                className="w-4 h-4 rounded border-gray-300 text-blue-600 mt-0.5"
+                              />
+                              <div>
+                                <p className="text-sm text-gray-700 font-medium">Always Free Shipping</p>
+                                <p className="text-[10px] text-gray-500 mt-0.5">
+                                  Override — this product always ships free regardless of order total or shipping class.
+                                </p>
+                              </div>
+                            </label>
+
+                            <div>
+                              <label className="text-xs font-medium text-gray-600 mb-1.5 flex items-center gap-1.5">
+                                Additional Handling Fee (GHS)
+                              </label>
+                              <Input
+                                variant="admin"
+                                type="number"
+                                step="0.50"
+                                min="0"
+                                value={product.handlingFee}
+                                onChange={(e) => setProduct((p) => ({ ...p, handlingFee: e.target.value }))}
+                                placeholder="0.00"
+                                className="text-sm"
+                              />
+                              <p className="text-[10px] text-gray-400 mt-1">
+                                Per-item extra fee charged on top of standard shipping. e.g. 10.00 for special packaging.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="h-px bg-gray-100" />
+
+                          {/* Notes */}
+                          <div className="space-y-3">
+                            <p className="text-xs font-semibold text-gray-700">Notes & Restrictions</p>
+
+                            <div>
+                              <label className="text-xs font-medium text-gray-600 mb-1 block">
+                                Shipping Note (shown to customer)
+                              </label>
+                              <Input
+                                variant="admin"
+                                value={product.shippingNote}
+                                onChange={(e) => setProduct((p) => ({ ...p, shippingNote: e.target.value }))}
+                                placeholder="e.g. Ships within 3 days. Handle with care."
+                                className="text-sm"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-xs font-medium text-gray-600 mb-1 block">
+                                Shipping Restrictions (internal)
+                              </label>
+                              <Input
+                                variant="admin"
+                                value={product.shippingRestrictions}
+                                onChange={(e) => setProduct((p) => ({ ...p, shippingRestrictions: e.target.value }))}
+                                placeholder="e.g. Cannot ship outside Accra. Perishable — no overnight."
+                                className="text-sm"
+                              />
+                              <p className="text-[10px] text-gray-400 mt-1">Internal reference only — not shown to customers.</p>
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Link to global shipping config */}
+                      <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700">
+                        <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        <span>
+                          Class surcharges and zone pricing are set globally.{" "}
+                          <a href="/admin/shipping" target="_blank" className="font-semibold underline inline-flex items-center gap-0.5">
+                            Admin → Shipping <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </span>
+                      </div>
+                    </>
+                  )}
+
                   {/* ── SEO TAB ── */}
                   {activeTab === "seo" && (
                     <>
@@ -1083,27 +1308,6 @@ export default function ProductEditor({ productId }: { productId?: string }) {
                   {/* ── SETTINGS TAB ── */}
                   {activeTab === "settings" && (
                     <>
-                      <div>
-                        <label className="text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-                          <Truck className="w-3.5 h-3.5 text-gray-400" />
-                          Shipping
-                        </label>
-                        <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={product.isDigital}
-                              onChange={(e) => setProduct((prev) => ({ ...prev, isDigital: e.target.checked }))}
-                              className="w-4 h-4 rounded bg-white border-gray-300 text-blue-600"
-                            />
-                            <div>
-                              <p className="text-sm text-gray-700 font-medium">Digital product</p>
-                              <p className="text-[10px] text-gray-500">No shipping required</p>
-                            </div>
-                          </label>
-                        </div>
-                      </div>
-
                       {/* Product info */}
                       {product.id && (
                         <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 space-y-2">

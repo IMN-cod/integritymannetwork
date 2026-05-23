@@ -130,11 +130,16 @@ export async function POST(req: NextRequest) {
       name, description, summary, price, comparePrice, images,
       categoryId, sku, stock, lowStockAlert, isActive, isFeatured,
       isDigital, weight, tags, badge, metaTitle, metaDescription, variants,
+      shippingClass, dimensionL, dimensionW, dimensionH,
+      freeShipping, handlingFee, shippingNote, shippingRestrictions,
     } = body;
 
     if (!name || price === undefined) {
       return NextResponse.json({ error: "Name and price are required" }, { status: 400 });
     }
+
+    // Sync isDigital with shippingClass
+    const effectiveIsDigital = isDigital || shippingClass === "DIGITAL";
 
     const slug = slugify(name);
     const existing = await prisma.product.findUnique({ where: { slug } });
@@ -155,12 +160,20 @@ export async function POST(req: NextRequest) {
         lowStockAlert: lowStockAlert ?? 5,
         isActive: isActive ?? true,
         isFeatured: isFeatured || false,
-        isDigital: isDigital || false,
+        isDigital: effectiveIsDigital,
         weight: weight || null,
         tags: tags || [],
         badge: badge || null,
         metaTitle: metaTitle || null,
         metaDescription: metaDescription || null,
+        shippingClass: shippingClass || "STANDARD",
+        dimensionL: dimensionL || null,
+        dimensionW: dimensionW || null,
+        dimensionH: dimensionH || null,
+        freeShipping: freeShipping || false,
+        handlingFee: handlingFee || null,
+        shippingNote: shippingNote || null,
+        shippingRestrictions: shippingRestrictions || null,
         ...(variants?.length > 0 && {
           variants: {
             create: variants.map((v: { name: string; value: string; price?: number; stock?: number; sku?: string }) => ({

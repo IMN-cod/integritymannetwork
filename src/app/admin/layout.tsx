@@ -26,6 +26,7 @@ import {
   ClipboardList,
   Bot,
   GraduationCap,
+  Truck,
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,7 @@ const sidebarLinks = [
   { label: "Events", href: "/admin/events", icon: Calendar },
   { label: "Products", href: "/admin/products", icon: ShoppingBag },
   { label: "Orders", href: "/admin/orders", icon: ClipboardList },
+  { label: "Shipping", href: "/admin/shipping", icon: Truck },
   { label: "Donations", href: "/admin/donations", icon: Heart },
   { label: "Messages", href: "/admin/messages", icon: MessageSquare },
   { label: "Live Chat", href: "/admin/chat", icon: Bot },

@@ -1,20 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   ShoppingBag, Shield, Lock, CreditCard, ChevronLeft,
-  Check, Truck, Loader2, AlertCircle, Tag, X, UserCircle,
+  Check, Truck, Loader2, AlertCircle, Tag, X, UserCircle, PackageCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCartStore } from "@/stores";
 import { formatCurrency } from "@/lib/utils";
 import { useSession } from "next-auth/react";
+import type { ShippingMethod } from "@/app/api/store/shipping/route";
 
-type Step = "shipping" | "payment" | "review";
+type Step = "shipping" | "delivery" | "payment" | "review";
 
 interface ShippingInfo {
   firstName: string;
@@ -32,10 +33,12 @@ export default function CheckoutPage() {
   const isGuest = sessionStatus !== "loading" && !session?.user;
 
   const {
-    items, subtotal, totalItems, clearCart,
-    discountCode, discountPercent, discountAmount, shippingCost, total,
-    applyDiscount, removeDiscount,
+    items, clearCart,
+    discountCode, discountPercent,
+    applyDiscount, removeDiscount, checkoutItems,
   } = useCartStore();
+
+  const checkoutList = checkoutItems();
 
   const [step, setStep] = useState<Step>("shipping");
   const [paymentMethod, setPaymentMethod] = useState<"PAYSTACK" | "STRIPE" | "PAYPAL">("PAYSTACK");
@@ -50,11 +53,48 @@ export default function CheckoutPage() {
     address: "", city: "", state: "", country: "Ghana",
   });
 
-  const sub = subtotal();
-  const discount = discountAmount();
-  const shipCost = shippingCost();
-  const grandTotal = total();
+  // ── Shipping methods ───────────────────────────────────────────────
+  const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([]);
+  const [freeShippingEnabled, setFreeShippingEnabled] = useState(true);
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState(2000);
+  const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null);
+  const [methodsLoading, setMethodsLoading] = useState(true);
 
+  const fetchShippingMethods = useCallback(async () => {
+    try {
+      const res = await fetch("/api/store/shipping");
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      const methods: ShippingMethod[] = data.methods || [];
+      setShippingMethods(methods);
+      setFreeShippingEnabled(data.freeShippingEnabled ?? true);
+      setFreeShippingThreshold(data.freeShippingThreshold ?? 2000);
+      if (methods.length > 0 && !selectedMethodId) {
+        setSelectedMethodId(methods[0].id);
+      }
+    } catch {
+      // Fallback to a single standard method
+      const fallback: ShippingMethod = { id: "standard", name: "Standard Delivery", description: "", price: 35, estimatedDays: "5-7 business days", enabled: true };
+      setShippingMethods([fallback]);
+      setSelectedMethodId("standard");
+    } finally {
+      setMethodsLoading(false);
+    }
+  }, [selectedMethodId]);
+
+  useEffect(() => { fetchShippingMethods(); }, [fetchShippingMethods]);
+
+  const selectedMethod = shippingMethods.find((m) => m.id === selectedMethodId) ?? shippingMethods[0] ?? null;
+
+  // ── Cost calculation ───────────────────────────────────────────────
+  const sub = checkoutList.reduce((s, item) => s + (item.salePrice ?? item.price) * item.quantity, 0);
+  const discount = (sub * discountPercent) / 100;
+  const afterDiscount = sub - discount;
+  const isFreeShipping = freeShippingEnabled && afterDiscount >= freeShippingThreshold;
+  const shipCost = isFreeShipping ? 0 : (selectedMethod?.price ?? 0);
+  const grandTotal = afterDiscount + shipCost;
+
+  // ── Actions ────────────────────────────────────────────────────────
   const handleApplyCoupon = () => {
     const code = coupon.trim();
     if (!code) return;
@@ -85,7 +125,9 @@ export default function CheckoutPage() {
           paymentMethod,
           discountCode: discountCode ?? undefined,
           discountPercent: discountPercent || undefined,
-          items: items.map((item) => ({
+          shippingMethodId: selectedMethod?.id ?? "standard",
+          shippingMethodName: selectedMethod?.name ?? "Standard Delivery",
+          items: checkoutList.map((item) => ({
             productId: item.id,
             variantId: item.variant || undefined,
             quantity: item.quantity,
@@ -97,10 +139,7 @@ export default function CheckoutPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        if (res.status === 401) {
-          setOrderError("__AUTH__");
-          return;
-        }
+        if (res.status === 401) { setOrderError("__AUTH__"); return; }
         setOrderError(data.error || "Something went wrong with your order. Please check your details and try again.");
         return;
       }
@@ -132,7 +171,8 @@ export default function CheckoutPage() {
   }
 
   const steps: { key: Step; label: string; icon: typeof Truck }[] = [
-    { key: "shipping", label: "Shipping", icon: Truck },
+    { key: "shipping", label: "Address", icon: Truck },
+    { key: "delivery", label: "Delivery", icon: PackageCheck },
     { key: "payment", label: "Payment", icon: CreditCard },
     { key: "review", label: "Review", icon: Check },
   ];
@@ -143,7 +183,7 @@ export default function CheckoutPage() {
       <h3 className="text-sm font-semibold text-white mb-4">Order Summary</h3>
 
       <div className="space-y-3 mb-4 max-h-52 overflow-y-auto pr-1">
-        {items.map((item) => (
+        {checkoutList.map((item) => (
           <div key={`${item.id}-${item.variant}`} className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-md bg-zinc-800/50 border border-zinc-700/50 flex items-center justify-center shrink-0 overflow-hidden relative">
               {item.image ? (
@@ -165,17 +205,14 @@ export default function CheckoutPage() {
         ))}
       </div>
 
-      {/* Promo code in sidebar */}
+      {/* Promo code */}
       <div className="mb-4">
         {discountCode ? (
           <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
             <span className="text-xs text-orange-400 font-medium flex items-center gap-1.5">
               <Tag className="w-3.5 h-3.5" /><strong>{discountCode}</strong> ({discountPercent}% off)
             </span>
-            <button
-              onClick={removeDiscount}
-              className="text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
-            >
+            <button onClick={removeDiscount} className="text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -189,12 +226,7 @@ export default function CheckoutPage() {
                 onKeyDown={(e) => e.key === "Enter" && handleApplyCoupon()}
                 className="flex-1 h-8 text-xs bg-zinc-900 border-zinc-700/60 placeholder:text-zinc-600"
               />
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-zinc-700 text-zinc-400 hover:text-white text-xs cursor-pointer h-8 px-3"
-                onClick={handleApplyCoupon}
-              >
+              <Button variant="outline" size="sm" className="border-zinc-700 text-zinc-400 hover:text-white text-xs cursor-pointer h-8 px-3" onClick={handleApplyCoupon}>
                 Apply
               </Button>
             </div>
@@ -215,11 +247,18 @@ export default function CheckoutPage() {
           </div>
         )}
         <div className="flex justify-between text-sm">
-          <span className="text-zinc-400">Shipping</span>
-          <span className={shipCost === 0 ? "text-emerald-400 font-medium" : "text-white"}>
-            {shipCost === 0 ? "Free" : formatCurrency(shipCost)}
+          <span className="text-zinc-400">
+            Shipping{selectedMethod && !isFreeShipping ? ` · ${selectedMethod.name}` : ""}
+          </span>
+          <span className={isFreeShipping ? "text-emerald-400 font-medium" : "text-white"}>
+            {isFreeShipping ? "Free" : selectedMethod ? formatCurrency(selectedMethod.price) : "—"}
           </span>
         </div>
+        {isFreeShipping && (
+          <p className="text-[10px] text-emerald-500/70">
+            Free shipping applied (order ≥ {formatCurrency(freeShippingThreshold)})
+          </p>
+        )}
         <div className="flex justify-between text-base font-bold pt-2 border-t border-zinc-800/50">
           <span className="text-white">Total</span>
           <span className="text-orange-500">{formatCurrency(grandTotal)}</span>
@@ -228,7 +267,7 @@ export default function CheckoutPage() {
 
       <div className="mt-5 pt-4 border-t border-zinc-800/50">
         <div className="flex items-center gap-2 text-xs text-zinc-500">
-          <Shield className="w-3.5 h-3.5 text-green-400" />Secure checkout — SSL encrypted
+          <Shield className="w-3.5 h-3.5 text-green-400" />IMN Secure Pay — 256-bit SSL encrypted
         </div>
       </div>
     </div>
@@ -248,7 +287,7 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Guest auth warning banner */}
+        {/* Guest warning */}
         {isGuest && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
@@ -276,16 +315,16 @@ export default function CheckoutPage() {
         )}
 
         {/* Progress Steps */}
-        <div className="flex items-center justify-center gap-2 sm:gap-3 mb-10 flex-wrap">
+        <div className="flex items-center justify-center gap-1 sm:gap-2 mb-10 flex-wrap">
           {steps.map((s, idx) => {
             const isActive = s.key === step;
             const stepIndex = steps.findIndex((x) => x.key === step);
             const isDone = idx < stepIndex;
             return (
-              <div key={s.key} className="flex items-center gap-2 sm:gap-3">
+              <div key={s.key} className="flex items-center gap-1 sm:gap-2">
                 <button
                   onClick={() => { if (isDone) setStep(s.key); }}
-                  className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm transition-all ${
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-2 rounded-full text-[11px] sm:text-sm transition-all ${
                     isActive
                       ? "bg-orange-500/10 border border-orange-500/30 text-orange-500"
                       : isDone
@@ -293,20 +332,19 @@ export default function CheckoutPage() {
                       : "bg-zinc-800/30 border border-zinc-800/50 text-zinc-500 cursor-default"
                   }`}
                 >
-                  {isDone ? <Check className="w-4 h-4" /> : <s.icon className="w-4 h-4" />}
+                  {isDone ? <Check className="w-3.5 h-3.5" /> : <s.icon className="w-3.5 h-3.5" />}
                   {s.label}
                 </button>
-                {idx < steps.length - 1 && <div className="w-6 sm:w-8 h-px bg-zinc-800" />}
+                {idx < steps.length - 1 && <div className="w-4 sm:w-6 h-px bg-zinc-800" />}
               </div>
             );
           })}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Form Sections */}
           <div className="lg:col-span-2 space-y-6">
 
-            {/* SHIPPING */}
+            {/* ── STEP 1: SHIPPING ADDRESS ── */}
             {step === "shipping" && (
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
@@ -314,7 +352,7 @@ export default function CheckoutPage() {
                 className="bg-zinc-900/50 rounded-xl border border-zinc-800/50 p-6 space-y-5"
               >
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Truck className="w-5 h-5 text-orange-500" />Shipping Information
+                  <Truck className="w-5 h-5 text-orange-500" />Shipping Address
                 </h2>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -359,14 +397,96 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="flex justify-end pt-2">
-                  <Button onClick={() => { if (validateShipping()) setStep("payment"); }} disabled={!validateShipping()}>
+                  <Button onClick={() => { if (validateShipping()) setStep("delivery"); }} disabled={!validateShipping()}>
+                    Continue to Delivery
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── STEP 2: DELIVERY METHOD ── */}
+            {step === "delivery" && (
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="bg-zinc-900/50 rounded-xl border border-zinc-800/50 p-6 space-y-5"
+              >
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <PackageCheck className="w-5 h-5 text-orange-500" />Delivery Method
+                </h2>
+
+                {methodsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 text-orange-500 animate-spin" />
+                  </div>
+                ) : shippingMethods.length === 0 ? (
+                  <p className="text-sm text-zinc-500 py-4">No delivery methods available. Please contact support.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {shippingMethods.map((method) => {
+                      const effectivePrice = isFreeShipping ? 0 : method.price;
+                      const isSelected = selectedMethodId === method.id;
+                      return (
+                        <label
+                          key={method.id}
+                          className={`flex items-center gap-4 p-4 rounded-lg border cursor-pointer transition-all ${
+                            isSelected
+                              ? "border-orange-500/30 bg-orange-500/5"
+                              : "border-zinc-800/50 bg-zinc-800/20 hover:border-zinc-700/50"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="delivery"
+                            value={method.id}
+                            checked={isSelected}
+                            onChange={() => setSelectedMethodId(method.id)}
+                            className="w-4 h-4 accent-orange-500 shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-white">{method.name}</p>
+                            {method.description && <p className="text-xs text-zinc-500 mt-0.5">{method.description}</p>}
+                            <p className="text-xs text-zinc-500 mt-0.5">{method.estimatedDays}</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            {isFreeShipping ? (
+                              <>
+                                <p className="text-sm font-semibold text-emerald-400">Free</p>
+                                <p className="text-[10px] text-zinc-600 line-through">{formatCurrency(method.price)}</p>
+                              </>
+                            ) : (
+                              <p className="text-sm font-semibold text-white">{effectivePrice === 0 ? "Free" : formatCurrency(effectivePrice)}</p>
+                            )}
+                          </div>
+                        </label>
+                      );
+                    })}
+
+                    {/* Free shipping notice */}
+                    {freeShippingEnabled && !isFreeShipping && (
+                      <div className="p-3 rounded-lg bg-zinc-800/30 border border-zinc-700/30 text-xs text-zinc-400">
+                        Add {formatCurrency(freeShippingThreshold - afterDiscount)} more to qualify for free shipping.
+                      </div>
+                    )}
+                    {isFreeShipping && (
+                      <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 flex items-center gap-2">
+                        <Check className="w-3.5 h-3.5" />
+                        Free shipping applied to your order!
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex justify-between pt-2">
+                  <Button variant="ghost" onClick={() => setStep("shipping")}>Back</Button>
+                  <Button onClick={() => setStep("payment")} disabled={!selectedMethodId}>
                     Continue to Payment
                   </Button>
                 </div>
               </motion.div>
             )}
 
-            {/* PAYMENT */}
+            {/* ── STEP 3: PAYMENT ── */}
             {step === "payment" && (
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
@@ -378,43 +498,39 @@ export default function CheckoutPage() {
                 </h2>
 
                 <div className="space-y-3">
-                  {[
-                    { id: "PAYSTACK" as const, label: "Paystack", desc: "Pay with card, bank transfer, mobile money, or USSD" },
-                    { id: "STRIPE" as const, label: "Stripe", desc: "International card payments (Visa, Mastercard)" },
-                    { id: "PAYPAL" as const, label: "PayPal", desc: "Pay with your PayPal account" },
-                  ].map((method) => (
-                    <label
-                      key={method.id}
-                      className={`flex items-center gap-4 p-4 rounded-lg border cursor-pointer transition-all ${
-                        paymentMethod === method.id
-                          ? "border-orange-500/30 bg-orange-500/5"
-                          : "border-zinc-800/50 bg-zinc-800/20 hover:border-zinc-700/50"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="payment"
-                        value={method.id}
-                        checked={paymentMethod === method.id}
-                        onChange={() => setPaymentMethod(method.id)}
-                        className="w-4 h-4 accent-orange-500"
-                      />
-                      <div>
-                        <p className="text-sm font-medium text-white">{method.label}</p>
-                        <p className="text-xs text-zinc-500">{method.desc}</p>
+                  <label
+                    className="flex items-center gap-4 p-4 rounded-lg border cursor-pointer transition-all border-orange-500/30 bg-orange-500/5"
+                  >
+                    <input
+                      type="radio"
+                      name="payment"
+                      value="PAYSTACK"
+                      checked={paymentMethod === "PAYSTACK"}
+                      onChange={() => setPaymentMethod("PAYSTACK")}
+                      className="w-4 h-4 accent-orange-500"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-white">IMN Secure Pay</p>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-400 font-semibold border border-orange-500/20">Recommended</span>
                       </div>
-                    </label>
-                  ))}
+                      <p className="text-xs text-zinc-500 mt-0.5">Card · Mobile Money (MTN, Vodafone, AirtelTigo) · Bank Transfer · USSD</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Shield className="w-3.5 h-3.5 text-green-400" />
+                      <span className="text-[10px] text-green-400 font-medium">Secured</span>
+                    </div>
+                  </label>
                 </div>
 
                 <div className="flex justify-between pt-2">
-                  <Button variant="ghost" onClick={() => setStep("shipping")}>Back</Button>
+                  <Button variant="ghost" onClick={() => setStep("delivery")}>Back</Button>
                   <Button onClick={() => setStep("review")}>Review Order</Button>
                 </div>
               </motion.div>
             )}
 
-            {/* REVIEW */}
+            {/* ── STEP 4: REVIEW ── */}
             {step === "review" && (
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
@@ -425,7 +541,7 @@ export default function CheckoutPage() {
                   <Check className="w-5 h-5 text-orange-500" />Order Review
                 </h2>
 
-                {/* Shipping summary */}
+                {/* Shipping address summary */}
                 <div className="p-4 rounded-lg bg-zinc-800/20 border border-zinc-800/30 space-y-1">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Shipping To</h3>
@@ -437,21 +553,41 @@ export default function CheckoutPage() {
                   <p className="text-xs text-zinc-500">{shipping.address}, {shipping.city}, {shipping.state}, {shipping.country}</p>
                 </div>
 
+                {/* Delivery method summary */}
+                <div className="p-4 rounded-lg bg-zinc-800/20 border border-zinc-800/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Delivery Method</h3>
+                    <button onClick={() => setStep("delivery")} className="text-[10px] text-orange-500 hover:text-orange-400 transition-colors cursor-pointer">Edit</button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-white">{selectedMethod?.name ?? "Standard Delivery"}</p>
+                      {selectedMethod?.estimatedDays && (
+                        <p className="text-xs text-zinc-500">{selectedMethod.estimatedDays}</p>
+                      )}
+                    </div>
+                    <p className="text-sm font-semibold text-white">
+                      {isFreeShipping ? <span className="text-emerald-400">Free</span> : formatCurrency(shipCost)}
+                    </p>
+                  </div>
+                </div>
+
                 {/* Payment summary */}
                 <div className="p-4 rounded-lg bg-zinc-800/20 border border-zinc-800/30">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Payment</h3>
                     <button onClick={() => setStep("payment")} className="text-[10px] text-orange-500 hover:text-orange-400 transition-colors cursor-pointer">Edit</button>
                   </div>
-                  <p className="text-sm text-white">
-                    {paymentMethod === "PAYSTACK" ? "Paystack" : paymentMethod === "STRIPE" ? "Stripe" : "PayPal"}
-                  </p>
+                  <p className="text-sm text-white">IMN Secure Pay</p>
+                  <p className="text-xs text-zinc-500">Card · Mobile Money · Bank Transfer · USSD</p>
                 </div>
 
                 {/* Order items */}
                 <div className="space-y-3">
-                  <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Items ({totalItems()})</h3>
-                  {items.map((item) => (
+                  <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                    Items ({checkoutList.reduce((s, i) => s + i.quantity, 0)})
+                  </h3>
+                  {checkoutList.map((item) => (
                     <div key={`${item.id}-${item.variant}`} className="flex items-center justify-between py-3 border-b border-zinc-800/30 last:border-0">
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-lg bg-zinc-800/50 border border-zinc-700/30 flex items-center justify-center shrink-0 overflow-hidden relative">
@@ -486,9 +622,9 @@ export default function CheckoutPage() {
                     </div>
                   )}
                   <div className="flex justify-between text-sm">
-                    <span className="text-zinc-400">Shipping</span>
-                    <span className={shipCost === 0 ? "text-emerald-400 font-medium" : "text-white"}>
-                      {shipCost === 0 ? "Free" : formatCurrency(shipCost)}
+                    <span className="text-zinc-400">Shipping · {selectedMethod?.name}</span>
+                    <span className={isFreeShipping ? "text-emerald-400 font-medium" : "text-white"}>
+                      {isFreeShipping ? "Free" : formatCurrency(shipCost)}
                     </span>
                   </div>
                   <div className="flex justify-between text-base font-bold pt-2 border-t border-zinc-800/50">
@@ -543,7 +679,7 @@ export default function CheckoutPage() {
             )}
           </div>
 
-          {/* Order Summary Sidebar */}
+          {/* Sidebar */}
           <div className="lg:col-span-1">
             <OrderSummary />
           </div>

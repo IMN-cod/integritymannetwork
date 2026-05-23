@@ -26,17 +26,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Update donation record
-    const donationId =
-      (verification.metadata?.donationId as string) || null;
+    // Update donation record — use metadata.donationId if present, otherwise fall back to paymentId lookup
+    const donationId = (verification.metadata?.donationId as string) || null;
 
     if (donationId) {
       await prisma.donation.update({
         where: { id: donationId },
-        data: {
-          status: "PAID",
-          paymentId: verification.reference,
-        },
+        data: { status: "PAID", paymentId: verification.reference },
+      });
+    } else {
+      await prisma.donation.updateMany({
+        where: { paymentId: verification.reference },
+        data: { status: "PAID" },
       });
     }
 

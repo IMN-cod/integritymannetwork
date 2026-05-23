@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Heart, ShoppingCart, Trash2, ArrowLeft, ShoppingBag,
-  Loader2, Share2, Check, X, Truck,
+  Loader2, Share2, Check, X,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -272,12 +272,6 @@ export default function WishlistPage() {
                             )}
                           </div>
 
-                          {price >= 500 && (
-                            <p className="text-[10px] text-emerald-400/70 mb-3 flex items-center gap-1">
-                              <Truck className="w-3 h-3" />Free shipping
-                            </p>
-                          )}
-
                           <div className="flex gap-2 mt-2">
                             <Button
                               size="sm"
@@ -311,7 +305,7 @@ export default function WishlistPage() {
 
               {/* Items saved but not yet loaded */}
               {ids.filter((id) => !products.find((p) => p.id === id)).map((id) => (
-                <div key={id} className="rounded-2xl border border-zinc-800/40 bg-zinc-900/20 aspect-[3/4] animate-pulse" />
+                <div key={id} className="rounded-2xl border border-zinc-800/40 bg-zinc-900/20 aspect-3/4 animate-pulse" />
               ))}
             </div>
           )}

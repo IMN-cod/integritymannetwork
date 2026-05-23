@@ -225,6 +225,36 @@ export async function chargeBankTransfer({
 }
 
 /**
+ * Check the status of a charge (mobile money / bank transfer / USSD)
+ * Uses GET /charge/{reference} — NOT /transaction/verify which is for standard transactions only
+ */
+export async function checkChargeStatus(reference: string) {
+  const response = await fetch(
+    `${PAYSTACK_BASE_URL}/charge/${encodeURIComponent(reference)}`,
+    {
+      method: "GET",
+      headers: getHeaders(),
+    }
+  );
+
+  const data = await response.json();
+
+  if (!data.status) {
+    throw new Error(data.message || "Could not check charge status");
+  }
+
+  return data.data as {
+    reference: string;
+    status: string; // "success" | "failed" | "pending" | "pay_offline" | "send_otp" | "timeout"
+    display_text: string;
+    amount: number;
+    currency: string;
+    channel: string;
+    metadata: Record<string, unknown>;
+  };
+}
+
+/**
  * Submit OTP for a pending charge
  */
 export async function submitChargeOTP({

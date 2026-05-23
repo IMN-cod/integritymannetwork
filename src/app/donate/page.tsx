@@ -284,9 +284,7 @@ function DonationForm() {
     script.src = "https://js.paystack.co/v1/inline.js";
     script.async = true;
     script.onload = () => setPaystackReady(true);
-    if (formRef.current) {
-      formRef.current.appendChild(script);
-    }
+    document.body.appendChild(script);
     return () => {
       script.remove();
       if (pollRef.current) clearInterval(pollRef.current);
@@ -910,10 +908,10 @@ function DonationForm() {
               <div className="rounded-xl bg-zinc-800/40 border border-zinc-700/30 p-4 sm:p-5">
                 <div className="flex items-center gap-3 mb-3">
                   <Lock className="w-4 h-4 text-green-500" />
-                  <span className="text-xs text-zinc-400">Secure card payment powered by Paystack</span>
+                  <span className="text-xs text-zinc-400">Secure card payment — PCI-compliant</span>
                 </div>
                 <p className="text-[10px] text-zinc-600 leading-relaxed">
-                  You&apos;ll enter your card details in a secure, PCI-compliant form. Your card information never touches our servers.
+                  Your card details are entered in a secure, encrypted form. Your card information never touches our servers.
                 </p>
               </div>
 
@@ -949,7 +947,7 @@ function DonationForm() {
         <div className="flex items-center justify-center gap-1.5 text-zinc-600 pt-2">
           <Lock className="w-3 h-3" />
           <span className="text-[10px] sm:text-xs">
-            256-bit SSL encrypted &middot; Powered by Paystack
+            256-bit SSL encrypted &middot; IMN Secure Pay
           </span>
         </div>
       </motion.div>
@@ -1137,7 +1135,7 @@ function DonationForm() {
         <div className="flex items-center justify-center gap-1.5 text-zinc-600">
           <Lock className="w-3 h-3" />
           <span className="text-[10px] sm:text-xs">
-            256-bit SSL encrypted &middot; Powered by Paystack
+            256-bit SSL encrypted &middot; IMN Secure Pay
           </span>
         </div>
       </div>

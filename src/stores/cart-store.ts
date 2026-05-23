@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export const FREE_SHIPPING_THRESHOLD = 500;
+export const FREE_SHIPPING_THRESHOLD = 2000;
 export const SHIPPING_FEE = 35;
 
 export const PROMO_CODES: Record<string, number> = {
@@ -26,6 +26,7 @@ interface CartState {
   isOpen: boolean;
   discountCode: string | null;
   discountPercent: number;
+  selectedIds: string[] | null; // null = all selected; each entry is `${id}-${variant ?? ''}`
 
   // Actions
   addItem: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
@@ -37,6 +38,8 @@ interface CartState {
   closeCart: () => void;
   applyDiscount: (code: string) => boolean;
   removeDiscount: () => void;
+  toggleItemSelection: (key: string) => void;
+  selectAllItems: () => void;
 
   // Computed
   totalItems: () => number;
@@ -44,6 +47,7 @@ interface CartState {
   discountAmount: () => number;
   shippingCost: () => number;
   total: () => number;
+  checkoutItems: () => CartItem[];
 }
 
 export const useCartStore = create<CartState>()(
@@ -53,6 +57,7 @@ export const useCartStore = create<CartState>()(
       isOpen: false,
       discountCode: null,
       discountPercent: 0,
+      selectedIds: null,
 
       addItem: (item, quantity = 1) => {
         set((state) => {
@@ -98,6 +103,19 @@ export const useCartStore = create<CartState>()(
 
       removeDiscount: () => set({ discountCode: null, discountPercent: 0 }),
 
+      toggleItemSelection: (key) => {
+        set((state) => {
+          const allKeys = state.items.map((i) => `${i.id}-${i.variant ?? ""}`);
+          const current = state.selectedIds ?? allKeys;
+          const next = current.includes(key)
+            ? current.filter((k) => k !== key)
+            : [...current, key];
+          return { selectedIds: next.length === allKeys.length ? null : next };
+        });
+      },
+
+      selectAllItems: () => set({ selectedIds: null }),
+
       totalItems: () => get().items.reduce((sum, item) => sum + item.quantity, 0),
 
       subtotal: () =>
@@ -114,6 +132,12 @@ export const useCartStore = create<CartState>()(
       },
 
       total: () => get().subtotal() - get().discountAmount() + get().shippingCost(),
+
+      checkoutItems: () => {
+        const { items, selectedIds } = get();
+        if (!selectedIds) return items;
+        return items.filter((i) => selectedIds.includes(`${i.id}-${i.variant ?? ""}`));
+      },
     }),
     {
       name: "timn-cart",

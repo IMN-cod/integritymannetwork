@@ -56,13 +56,14 @@ export async function PUT(
       name, description, summary, price, comparePrice, images,
       categoryId, sku, stock, lowStockAlert, isActive, isFeatured,
       isDigital, weight, tags, badge, metaTitle, metaDescription, variants,
+      shippingClass, dimensionL, dimensionW, dimensionH,
+      freeShipping, handlingFee, shippingNote, shippingRestrictions,
     } = body;
 
     // Build the update data
     const data: Record<string, unknown> = {};
     if (name !== undefined) {
       data.name = name;
-      // Only regenerate slug if name changed and slug not explicitly set
       if (!body.slug) data.slug = slugify(name);
       else data.slug = body.slug;
     }
@@ -77,12 +78,26 @@ export async function PUT(
     if (lowStockAlert !== undefined) data.lowStockAlert = parseInt(String(lowStockAlert));
     if (isActive !== undefined) data.isActive = isActive;
     if (isFeatured !== undefined) data.isFeatured = isFeatured;
-    if (isDigital !== undefined) data.isDigital = isDigital;
     if (weight !== undefined) data.weight = weight || null;
     if (tags !== undefined) data.tags = tags;
     if (badge !== undefined) data.badge = badge || null;
     if (metaTitle !== undefined) data.metaTitle = metaTitle || null;
     if (metaDescription !== undefined) data.metaDescription = metaDescription || null;
+    // Shipping fields
+    if (shippingClass !== undefined) {
+      data.shippingClass = shippingClass || "STANDARD";
+      // Keep isDigital in sync with DIGITAL class
+      data.isDigital = isDigital !== undefined ? isDigital : shippingClass === "DIGITAL";
+    } else if (isDigital !== undefined) {
+      data.isDigital = isDigital;
+    }
+    if (dimensionL !== undefined) data.dimensionL = dimensionL || null;
+    if (dimensionW !== undefined) data.dimensionW = dimensionW || null;
+    if (dimensionH !== undefined) data.dimensionH = dimensionH || null;
+    if (freeShipping !== undefined) data.freeShipping = freeShipping;
+    if (handlingFee !== undefined) data.handlingFee = handlingFee || null;
+    if (shippingNote !== undefined) data.shippingNote = shippingNote || null;
+    if (shippingRestrictions !== undefined) data.shippingRestrictions = shippingRestrictions || null;
 
     // Handle variants: delete existing and recreate
     if (variants !== undefined) {

@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  X, ShoppingBag, Plus, Minus, Trash2, ArrowRight, Truck,
-  Tag, Check, Heart, ChevronRight,
+  X, ShoppingBag, Plus, Minus, Trash2, ArrowRight,
+  Tag, Check, Heart, ChevronRight, CheckSquare, Square,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -13,29 +13,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatCurrency, cn } from "@/lib/utils";
 
-const FREE_SHIPPING_THRESHOLD = 500;
-
-// ─── Promo codes (demo — extend with API validation) ──────────────────────────
-const PROMO_CODES: Record<string, number> = {
-  TIMN10: 10,
-  INTEGRITY15: 15,
-  WELCOME20: 20,
-};
-
 export function CartDrawer() {
-  const { items, isOpen, closeCart, removeItem, updateQuantity, subtotal, totalItems } = useCartStore();
+  const {
+    items, isOpen, closeCart, removeItem, updateQuantity, subtotal, totalItems,
+    discountCode, discountPercent, discountAmount, shippingCost, total,
+    applyDiscount, removeDiscount,
+    selectedIds, toggleItemSelection, selectAllItems, checkoutItems,
+  } = useCartStore();
+
+  const allSelected = selectedIds === null;
+  const selectedCount = allSelected ? items.length : (selectedIds?.length ?? 0);
+  const checkoutList = checkoutItems();
 
   const [coupon, setCoupon] = useState("");
-  const [appliedCode, setAppliedCode] = useState<string | null>(null);
   const [couponError, setCouponError] = useState("");
 
   const sub = subtotal();
-  const discountPercent = appliedCode ? (PROMO_CODES[appliedCode] ?? 0) : 0;
-  const discountAmount = (sub * discountPercent) / 100;
-  const shippingCost = sub - discountAmount >= FREE_SHIPPING_THRESHOLD ? 0 : 35;
-  const total = sub - discountAmount + shippingCost;
-  const shippingProgress = Math.min(100, (sub / FREE_SHIPPING_THRESHOLD) * 100);
-  const shippingRemaining = Math.max(0, FREE_SHIPPING_THRESHOLD - sub);
+  const discount = discountAmount();
+  const shipping = shippingCost();
+  const grandTotal = total();
 
   const savings = items.reduce((acc, item) => {
     if (item.salePrice != null) return acc + (item.price - item.salePrice) * item.quantity;
@@ -43,15 +39,14 @@ export function CartDrawer() {
   }, 0);
 
   const handleApplyCoupon = () => {
-    const code = coupon.trim().toUpperCase();
+    const code = coupon.trim();
     if (!code) return;
-    if (PROMO_CODES[code] != null) {
-      setAppliedCode(code);
+    const ok = applyDiscount(code);
+    if (ok) {
       setCoupon("");
       setCouponError("");
     } else {
       setCouponError("Invalid promo code. Try TIMN10.");
-      setAppliedCode(null);
     }
   };
 
@@ -59,25 +54,25 @@ export function CartDrawer() {
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop — z-[51] keeps it above header but below drawer */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[51] bg-black/60 backdrop-blur-sm"
             onClick={closeCart}
           />
 
-          {/* Drawer */}
+          {/* Drawer — z-[52] ensures it is always on top of the backdrop + chat widget */}
           <motion.aside
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="fixed top-0 right-0 z-50 w-full max-w-md h-screen bg-zinc-950 border-l border-zinc-800/50 flex flex-col shadow-2xl"
+            className="fixed top-0 right-0 z-[52] w-full max-w-md h-screen bg-zinc-950 border-l border-zinc-800/50 flex flex-col shadow-2xl"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-800/50">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-800/50 shrink-0">
               <div className="flex items-center gap-3">
                 <ShoppingBag className="w-5 h-5 text-orange-500" />
                 <h2 className="text-lg font-bold text-white font-display">Your Cart</h2>
@@ -95,38 +90,36 @@ export function CartDrawer() {
               </div>
               <button
                 onClick={closeCart}
-                className="w-8 h-8 rounded-lg bg-zinc-800/50 hover:bg-zinc-700/50 flex items-center justify-center transition-colors cursor-pointer"
+                className="w-9 h-9 rounded-lg bg-zinc-800/50 hover:bg-zinc-700/50 flex items-center justify-center transition-colors cursor-pointer"
                 aria-label="Close cart"
               >
                 <X className="w-4 h-4 text-zinc-400" />
               </button>
             </div>
 
-            {/* Free shipping progress */}
+
+            {/* Select All row — shown only when there are items */}
             {items.length > 0 && (
-              <div className="px-6 py-3 border-b border-zinc-800/40 bg-zinc-900/30">
-                <div className="flex items-center justify-between text-xs mb-2">
-                  <span className="text-zinc-400">
-                    {shippingRemaining > 0 ? (
-                      <>
-                        Add{" "}
-                        <span className="text-orange-400 font-semibold">{formatCurrency(shippingRemaining)}</span>{" "}
-                        for free shipping
-                      </>
-                    ) : (
-                      <span className="text-emerald-400 font-semibold">Free shipping unlocked!</span>
-                    )}
-                  </span>
-                  <Truck className={cn("w-4 h-4", shippingRemaining === 0 ? "text-emerald-400" : "text-zinc-600")} />
-                </div>
-                <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                  <motion.div
-                    className={cn("h-full rounded-full transition-colors", shippingProgress >= 100 ? "bg-emerald-500" : "bg-orange-500")}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${shippingProgress}%` }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
-                  />
-                </div>
+              <div className="flex items-center justify-between px-6 py-2 border-b border-zinc-800/40 shrink-0">
+                <button
+                  onClick={allSelected ? () => toggleItemSelection("__none__") : selectAllItems}
+                  className="flex items-center gap-2 text-xs text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  {allSelected ? (
+                    <CheckSquare className="w-4 h-4 text-orange-500" />
+                  ) : (
+                    <Square className="w-4 h-4" />
+                  )}
+                  {allSelected ? "All selected" : `${selectedCount} of ${items.length} selected`}
+                </button>
+                {!allSelected && (
+                  <button
+                    onClick={selectAllItems}
+                    className="text-xs text-orange-500 hover:text-orange-400 transition-colors cursor-pointer"
+                  >
+                    Select All
+                  </button>
+                )}
               </div>
             )}
 
@@ -141,7 +134,11 @@ export function CartDrawer() {
                     <Button variant="outline" onClick={closeCart} asChild>
                       <Link href="/store">Browse Store</Link>
                     </Button>
-                    <Link href="/store/wishlist" onClick={closeCart} className="flex items-center justify-center gap-2 text-sm text-zinc-500 hover:text-red-400 transition-colors cursor-pointer">
+                    <Link
+                      href="/store/wishlist"
+                      onClick={closeCart}
+                      className="flex items-center justify-center gap-2 text-sm text-zinc-500 hover:text-red-400 transition-colors cursor-pointer"
+                    >
                       <Heart className="w-4 h-4" />View Wishlist
                     </Link>
                   </div>
@@ -154,23 +151,47 @@ export function CartDrawer() {
                       return (
                         <motion.div
                           key={`${item.id}-${item.variant}`}
+                          layout
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: "auto" }}
                           exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.2 }}
+                          transition={{ duration: 0.22 }}
                         >
-                          <div className="flex gap-3.5 p-3.5 rounded-xl bg-zinc-900/50 border border-zinc-800/30">
-                            {/* Image */}
-                            <div className="w-16 h-16 rounded-lg bg-zinc-800/50 border border-zinc-700/30 flex items-center justify-center shrink-0 overflow-hidden relative">
-                              {item.image ? (
-                                <Image src={item.image} alt={item.name} fill className="object-cover" sizes="64px" />
+                          <div className={cn(
+                            "flex gap-3.5 p-3.5 rounded-xl border transition-colors",
+                            (allSelected || (selectedIds?.includes(`${item.id}-${item.variant ?? ""}`)))
+                              ? "bg-zinc-900/50 border-zinc-800/30"
+                              : "bg-zinc-900/20 border-zinc-800/20 opacity-60"
+                          )}>
+                            {/* Checkbox */}
+                            <button
+                              onClick={() => toggleItemSelection(`${item.id}-${item.variant ?? ""}`)}
+                              className="shrink-0 mt-1 cursor-pointer"
+                              aria-label="Toggle item selection"
+                            >
+                              {(allSelected || selectedIds?.includes(`${item.id}-${item.variant ?? ""}`)) ? (
+                                <CheckSquare className="w-4 h-4 text-orange-500" />
                               ) : (
-                                <ShoppingBag className="w-5 h-5 text-zinc-600" />
+                                <Square className="w-4 h-4 text-zinc-600" />
                               )}
-                            </div>
+                            </button>
+                            {/* Tappable image → product page */}
+                            <Link href={`/store/${item.slug}`} onClick={closeCart} className="shrink-0">
+                              <div className="w-16 h-16 rounded-lg bg-zinc-800/50 border border-zinc-700/30 flex items-center justify-center overflow-hidden relative cursor-pointer hover:border-orange-500/30 transition-colors">
+                                {item.image ? (
+                                  <Image src={item.image} alt={item.name} fill className="object-cover" sizes="64px" />
+                                ) : (
+                                  <ShoppingBag className="w-5 h-5 text-zinc-600" />
+                                )}
+                              </div>
+                            </Link>
 
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-white truncate leading-snug">{item.name}</p>
+                              <Link href={`/store/${item.slug}`} onClick={closeCart}>
+                                <p className="text-sm font-medium text-white truncate leading-snug hover:text-orange-400 transition-colors cursor-pointer">
+                                  {item.name}
+                                </p>
+                              </Link>
                               {item.variant && (
                                 <p className="text-[11px] text-zinc-500 mt-0.5">{item.variant}</p>
                               )}
@@ -182,20 +203,21 @@ export function CartDrawer() {
                               </div>
 
                               <div className="flex items-center justify-between mt-2.5">
+                                {/* Quantity stepper */}
                                 <div className="flex items-center border border-zinc-700/50 rounded-lg overflow-hidden">
                                   <button
                                     onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                    className="w-7 h-7 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+                                    className="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-800 active:bg-zinc-700 transition-colors cursor-pointer touch-manipulation"
                                     aria-label="Decrease quantity"
                                   >
                                     <Minus className="w-3 h-3" />
                                   </button>
-                                  <span className="w-7 text-center text-xs text-white font-semibold border-x border-zinc-800/50">
+                                  <span className="w-8 text-center text-xs text-white font-semibold border-x border-zinc-800/50 h-8 flex items-center justify-center">
                                     {item.quantity}
                                   </span>
                                   <button
                                     onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                    className="w-7 h-7 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+                                    className="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-800 active:bg-zinc-700 transition-colors cursor-pointer touch-manipulation"
                                     aria-label="Increase quantity"
                                   >
                                     <Plus className="w-3 h-3" />
@@ -203,7 +225,7 @@ export function CartDrawer() {
                                 </div>
                                 <button
                                   onClick={() => removeItem(item.id)}
-                                  className="text-zinc-600 hover:text-red-400 transition-colors cursor-pointer p-1"
+                                  className="w-8 h-8 flex items-center justify-center text-zinc-600 hover:text-red-400 active:text-red-500 transition-colors cursor-pointer touch-manipulation rounded-lg hover:bg-red-500/10"
                                   aria-label="Remove item"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
@@ -221,7 +243,7 @@ export function CartDrawer() {
 
             {/* Footer */}
             {items.length > 0 && (
-              <div className="px-6 py-5 border-t border-zinc-800/50 space-y-4">
+              <div className="px-6 py-5 border-t border-zinc-800/50 space-y-4 shrink-0">
                 {/* Savings badge */}
                 <AnimatePresence>
                   {savings > 0 && (
@@ -241,15 +263,16 @@ export function CartDrawer() {
 
                 {/* Promo code */}
                 <div className="space-y-2">
-                  {appliedCode ? (
+                  {discountCode ? (
                     <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
                       <span className="text-xs text-orange-400 font-medium flex items-center gap-1.5">
                         <Tag className="w-3.5 h-3.5" />
-                        Code <strong>{appliedCode}</strong> applied ({discountPercent}% off)
+                        Code <strong>{discountCode}</strong> ({discountPercent}% off)
                       </span>
                       <button
-                        onClick={() => setAppliedCode(null)}
-                        className="text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                        onClick={removeDiscount}
+                        className="text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer w-6 h-6 flex items-center justify-center"
+                        aria-label="Remove promo code"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -286,34 +309,53 @@ export function CartDrawer() {
                     <span>Subtotal</span>
                     <span>{formatCurrency(sub)}</span>
                   </div>
-                  {discountAmount > 0 && (
+                  {discount > 0 && (
                     <div className="flex items-center justify-between text-emerald-400">
                       <span>Discount ({discountPercent}%)</span>
-                      <span>-{formatCurrency(discountAmount)}</span>
+                      <span>-{formatCurrency(discount)}</span>
                     </div>
                   )}
                   <div className="flex items-center justify-between text-zinc-400">
                     <span>Shipping</span>
-                    <span className={shippingCost === 0 ? "text-emerald-400 font-medium" : ""}>
-                      {shippingCost === 0 ? "Free" : formatCurrency(shippingCost)}
+                    <span className={shipping === 0 ? "text-emerald-400 font-medium" : ""}>
+                      {shipping === 0 ? "Free" : formatCurrency(shipping)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t border-zinc-800/50 text-base font-bold text-white">
                     <span>Total</span>
-                    <span>{formatCurrency(total)}</span>
+                    <span>{formatCurrency(grandTotal)}</span>
                   </div>
                 </div>
 
-                <Button className="w-full gap-2 cursor-pointer" onClick={closeCart} asChild>
-                  <Link href="/checkout">
-                    Checkout
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
+                <Button
+                  className="w-full gap-2 cursor-pointer"
+                  onClick={closeCart}
+                  disabled={selectedCount === 0}
+                  asChild={selectedCount > 0}
+                >
+                  {selectedCount > 0 ? (
+                    <Link href="/checkout">
+                      Checkout ({selectedCount} {selectedCount === 1 ? "item" : "items"})
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  ) : (
+                    <span>Select items to checkout</span>
+                  )}
                 </Button>
 
                 <div className="flex items-center justify-between text-[11px] text-zinc-600">
-                  <Link href="/store" onClick={closeCart} className="hover:text-zinc-400 transition-colors cursor-pointer">Continue Shopping</Link>
-                  <Link href="/store/wishlist" onClick={closeCart} className="flex items-center gap-1 hover:text-red-400 transition-colors cursor-pointer">
+                  <Link
+                    href="/store"
+                    onClick={closeCart}
+                    className="hover:text-zinc-400 transition-colors cursor-pointer"
+                  >
+                    Continue Shopping
+                  </Link>
+                  <Link
+                    href="/store/wishlist"
+                    onClick={closeCart}
+                    className="flex items-center gap-1 hover:text-red-400 transition-colors cursor-pointer"
+                  >
                     <Heart className="w-3 h-3" />Wishlist
                     <ChevronRight className="w-3 h-3" />
                   </Link>

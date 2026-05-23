@@ -332,6 +332,15 @@ model Product {
   salesCount      Int      @default(0)
   metaTitle       String?
   metaDescription String?
+  // Per-product shipping configuration
+  shippingClass        String   @default("STANDARD")
+  dimensionL           Decimal? @db.Decimal(8, 2)
+  dimensionW           Decimal? @db.Decimal(8, 2)
+  dimensionH           Decimal? @db.Decimal(8, 2)
+  freeShipping         Boolean  @default(false)
+  handlingFee          Decimal? @db.Decimal(10, 2)
+  shippingNote         String?
+  shippingRestrictions String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

@@ -6,6 +6,7 @@ import { createStripeCheckoutSession } from "@/lib/payments/stripe";
 import { initializePaystackTransaction } from "@/lib/payments/paystack";
 import { createPayPalOrder } from "@/lib/payments/paypal";
 import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { DEFAULT_SHIPPING_CONFIG, ShippingConfig } from "@/app/api/store/shipping/route";
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -30,6 +31,8 @@ const orderSchema = z.object({
   paymentMethod: z.enum(["PAYSTACK", "STRIPE", "PAYPAL"]),
   discountCode: z.string().optional(),
   discountPercent: z.coerce.number().min(0).max(100).optional(),
+  shippingMethodId: z.string().optional(),
+  shippingMethodName: z.string().optional(),
   items: z.array(
     z.object({
       productId: z.string(),
@@ -58,8 +61,82 @@ export async function POST(request: Request) {
       (sum, item) => sum + item.price * item.quantity,
       0
     );
-    const shippingCost = subtotal > 50000 ? 0 : 3500;
-    const total = subtotal + shippingCost;
+
+    // ── Load shipping config ──────────────────────────────────────────────────
+    const shippingConfigSetting = await prisma.siteSetting.findUnique({
+      where: { key: "shippingConfig" },
+    });
+    let shippingConfig: ShippingConfig = DEFAULT_SHIPPING_CONFIG;
+    if (shippingConfigSetting?.value) {
+      try {
+        const parsed = JSON.parse(shippingConfigSetting.value) as Partial<ShippingConfig>;
+        shippingConfig = {
+          ...DEFAULT_SHIPPING_CONFIG,
+          ...parsed,
+          zones: parsed.zones ?? DEFAULT_SHIPPING_CONFIG.zones,
+          classes: parsed.classes ?? DEFAULT_SHIPPING_CONFIG.classes,
+        };
+      } catch { /* use default */ }
+    }
+
+    // ── Resolve delivery method price ─────────────────────────────────────────
+    const afterDiscount = subtotal * (1 - (data.discountPercent ?? 0) / 100);
+    let methodPrice = shippingConfig.methods.find((m) => m.enabled)?.price ?? DEFAULT_SHIPPING_CONFIG.methods[0].price;
+    if (data.shippingMethodId) {
+      const chosen = shippingConfig.methods.find((m) => m.id === data.shippingMethodId && m.enabled);
+      if (chosen) methodPrice = chosen.price;
+    }
+
+    // ── Per-product shipping data ─────────────────────────────────────────────
+    const productDetails = await prisma.product.findMany({
+      where: { id: { in: data.items.map((i) => i.productId) } },
+      select: {
+        id: true,
+        shippingClass: true,
+        freeShipping: true,
+        handlingFee: true,
+        isDigital: true,
+      },
+    });
+    const productMap = new Map(productDetails.map((p) => [p.id, p]));
+
+    // Sum per-item handling fees (multiplied by quantity)
+    const totalHandlingFee = data.items.reduce((sum, item) => {
+      const p = productMap.get(item.productId);
+      if (!p || !p.handlingFee) return sum;
+      return sum + Number(p.handlingFee) * item.quantity;
+    }, 0);
+
+    // Find the highest-surcharge shipping class present in the cart (non-digital, non-individually-free items)
+    const cartClasses = data.items
+      .map((item) => productMap.get(item.productId))
+      .filter((p) => p && !p.isDigital && !p.freeShipping)
+      .map((p) => p!.shippingClass ?? "STANDARD");
+
+    const classSurcharge = cartClasses.reduce((max, classId) => {
+      const classCfg = shippingConfig.classes.find((c) => c.id === classId);
+      return Math.max(max, classCfg?.extraFee ?? 0);
+    }, 0);
+
+    // Check free-shipping eligibility: all non-digital items must be in eligible classes
+    const hasIneligibleClass = cartClasses.some((classId) => {
+      const cls = shippingConfig.classes.find((c) => c.id === classId);
+      return cls ? !cls.freeShippingEligible : false;
+    });
+    const allItemsInCartAreFree = data.items.every((item) => {
+      const p = productMap.get(item.productId);
+      return p?.isDigital || p?.freeShipping;
+    });
+
+    const isFreeShipping =
+      allItemsInCartAreFree ||
+      (!hasIneligibleClass && shippingConfig.freeShippingEnabled && afterDiscount >= shippingConfig.freeShippingThreshold);
+
+    const shippingCost = isFreeShipping
+      ? totalHandlingFee   // handling fees still apply even on free shipping
+      : methodPrice + classSurcharge + totalHandlingFee;
+
+    const total = afterDiscount + shippingCost;
 
     // Generate order number
     const orderCount = await prisma.order.count();

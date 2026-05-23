@@ -5,10 +5,10 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ShoppingBag, Search, ShoppingCart, Eye, Truck, Shield, Tag,
+  ShoppingBag, Search, ShoppingCart, Eye, Shield, Tag,
   ChevronDown, X, Grid3X3, LayoutList, ArrowUpDown, Package,
   CheckCircle2, Loader2, ChevronLeft, ChevronRight, Heart,
-  Star, RotateCcw, Flame, Filter, Clock, Minus, Plus,
+  Star, RotateCcw, Filter, Clock, Minus, Plus,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -79,70 +79,6 @@ const CAT_GRADIENTS = [
   "from-rose-500/15 to-rose-600/5",
 ];
 
-// ─── Countdown hook ──────────────────────────────────────────────────────────
-
-function useCountdown() {
-  const [time, setTime] = useState({ h: 0, m: 0, s: 0 });
-  useEffect(() => {
-    const getRemaining = () => {
-      const end = new Date();
-      end.setHours(24, 0, 0, 0);
-      return Math.max(0, Math.floor((end.getTime() - Date.now()) / 1000));
-    };
-    let secs = getRemaining();
-    const tick = () => {
-      secs = Math.max(0, secs - 1);
-      setTime({ h: Math.floor(secs / 3600), m: Math.floor((secs % 3600) / 60), s: secs % 60 });
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, []);
-  return time;
-}
-
-// ─── Flash Sale Banner ────────────────────────────────────────────────────────
-
-function FlashSaleBanner({ onDismiss }: { onDismiss: () => void }) {
-  const { h, m, s } = useCountdown();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return (
-    <motion.div
-      initial={{ height: 0, opacity: 0 }}
-      animate={{ height: "auto", opacity: 1 }}
-      exit={{ height: 0, opacity: 0 }}
-      transition={{ duration: 0.3 }}
-      className="relative overflow-hidden bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500"
-    >
-      <div className="flex items-center justify-center gap-2 sm:gap-4 py-2.5 px-10 text-white">
-        <Flame className="w-3.5 h-3.5 shrink-0 animate-pulse" />
-        <span className="text-xs sm:text-sm font-black tracking-widest uppercase">Flash Sale</span>
-        <span className="hidden sm:inline text-orange-100 text-xs">— Deals end in</span>
-        <div className="flex items-center gap-0.5 bg-black/20 rounded-md px-2.5 py-0.5 font-mono text-sm font-bold">
-          <span>{pad(h)}</span>
-          <span className="opacity-60 animate-pulse">:</span>
-          <span>{pad(m)}</span>
-          <span className="opacity-60 animate-pulse">:</span>
-          <span>{pad(s)}</span>
-        </div>
-        <Link
-          href="/store?sort=popular"
-          className="text-[11px] underline underline-offset-2 text-orange-100 hover:text-white transition-colors hidden sm:inline cursor-pointer"
-        >
-          Shop all deals →
-        </Link>
-      </div>
-      <button
-        onClick={onDismiss}
-        className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center cursor-pointer transition-colors"
-        aria-label="Dismiss"
-      >
-        <X className="w-3.5 h-3.5" />
-      </button>
-    </motion.div>
-  );
-}
-
 // ─── Store Hero ───────────────────────────────────────────────────────────────
 
 function StoreHero({ totalProducts }: { totalProducts: number }) {
@@ -172,7 +108,6 @@ function StoreHero({ totalProducts }: { totalProducts: number }) {
           <div className="flex flex-wrap items-center gap-5 sm:gap-8">
             {[
               { icon: Package, value: `${totalProducts || "50"}+`, label: "Products" },
-              { icon: Truck, value: "Free", label: "Shipping over GH₵500" },
               { icon: Shield, value: "100%", label: "Secure Checkout" },
               { icon: RotateCcw, value: "30-Day", label: "Returns Policy" },
             ].map((stat) => (
@@ -595,11 +530,6 @@ function ProductCard({
             <span className="text-lg font-bold text-white">{formatCurrency(price)}</span>
             {comparePrice && <span className="text-xs text-zinc-600 line-through">{formatCurrency(comparePrice)}</span>}
           </div>
-          {price >= 500 && (
-            <p className="text-[10px] text-emerald-400/70 mt-1.5 flex items-center gap-1">
-              <Truck className="w-3 h-3" />Free shipping
-            </p>
-          )}
         </div>
       </div>
     </Link>
@@ -661,7 +591,6 @@ export default function StorePage() {
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
-  const [showFlashBanner, setShowFlashBanner] = useState(true);
 
   const allTags = useMemo(() => {
     const s = new Set<string>();
@@ -720,11 +649,6 @@ export default function StorePage() {
 
   return (
     <>
-      {/* Flash sale banner */}
-      <AnimatePresence>
-        {showFlashBanner && <FlashSaleBanner onDismiss={() => setShowFlashBanner(false)} />}
-      </AnimatePresence>
-
       <StoreHero totalProducts={totalProductCount} />
 
       {/* Featured categories — only shown when browsing all */}
@@ -844,12 +768,6 @@ export default function StorePage() {
                 </div>
               )}
 
-              {/* Promo box */}
-              <div className="rounded-xl bg-gradient-to-br from-orange-500/10 to-orange-600/5 border border-orange-500/20 p-4">
-                <Truck className="w-5 h-5 text-orange-500 mb-2" />
-                <p className="text-sm font-bold text-white font-display mb-1">Free Shipping</p>
-                <p className="text-[11px] text-zinc-400 leading-relaxed">On all orders over GH₵500. No code needed.</p>
-              </div>
 
               {/* Wishlist link */}
               <Link
