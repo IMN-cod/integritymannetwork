@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, ShoppingBag, Plus, Minus, Trash2, ArrowRight,
@@ -16,7 +16,7 @@ import { formatCurrency, cn } from "@/lib/utils";
 export function CartDrawer() {
   const {
     items, isOpen, closeCart, removeItem, updateQuantity, subtotal, totalItems,
-    discountCode, discountPercent, discountAmount, shippingCost, total,
+    discountCode, discountPercent, discountAmount,
     applyDiscount, removeDiscount,
     selectedIds, toggleItemSelection, selectAllItems, checkoutItems,
   } = useCartStore();
@@ -28,10 +28,27 @@ export function CartDrawer() {
   const [coupon, setCoupon] = useState("");
   const [couponError, setCouponError] = useState("");
 
+  // Fetch the admin-configured shipping base price and free-shipping threshold
+  // so the cart drawer reflects actual settings instead of hardcoded values.
+  const [baseShippingFee, setBaseShippingFee] = useState(35);
+  const [freeThreshold, setFreeThreshold] = useState(2000);
+  useEffect(() => {
+    fetch("/api/store/shipping")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data) return;
+        const firstMethod = (data.methods ?? [])[0];
+        if (firstMethod) setBaseShippingFee(firstMethod.price);
+        if (data.freeShippingThreshold != null) setFreeThreshold(data.freeShippingThreshold);
+      })
+      .catch(() => { /* keep defaults */ });
+  }, []);
+
   const sub = subtotal();
   const discount = discountAmount();
-  const shipping = shippingCost();
-  const grandTotal = total();
+  const afterDiscount = sub - discount;
+  const shipping = afterDiscount >= freeThreshold ? 0 : baseShippingFee;
+  const grandTotal = afterDiscount + shipping;
 
   const savings = items.reduce((acc, item) => {
     if (item.salePrice != null) return acc + (item.price - item.salePrice) * item.quantity;
@@ -316,7 +333,7 @@ export function CartDrawer() {
                     </div>
                   )}
                   <div className="flex items-center justify-between text-zinc-400">
-                    <span>Shipping</span>
+                    <span>Est. shipping</span>
                     <span className={shipping === 0 ? "text-emerald-400 font-medium" : ""}>
                       {shipping === 0 ? "Free" : formatCurrency(shipping)}
                     </span>
