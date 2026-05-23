@@ -15,8 +15,8 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "20");
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20")));
     const search = searchParams.get("search") || "";
     const role = searchParams.get("role") || "";
 
@@ -91,14 +91,22 @@ export async function PATCH(req: NextRequest) {
 
     const { userId, role, isActive } = await req.json();
 
-    if (!userId) {
+    if (!userId || typeof userId !== "string") {
       return NextResponse.json(
         { error: "User ID is required" },
         { status: 400 }
       );
     }
 
-    // Prevent non-super-admins from making other super admins
+    // Prevent self-modification (could lock yourself out or escalate own role)
+    if (userId === session.user.id) {
+      return NextResponse.json(
+        { error: "Cannot modify your own account via this endpoint" },
+        { status: 400 }
+      );
+    }
+
+    // Prevent non-super-admins from assigning SUPER_ADMIN role
     if (role === "SUPER_ADMIN" && session.user.role !== "SUPER_ADMIN") {
       return NextResponse.json(
         { error: "Only super admins can assign super admin role" },
@@ -106,9 +114,27 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
+    // Prevent non-super-admins from modifying SUPER_ADMIN users at all
+    if (session.user.role !== "SUPER_ADMIN") {
+      const targetUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { role: true },
+      });
+      if (targetUser?.role === "SUPER_ADMIN") {
+        return NextResponse.json(
+          { error: "Only super admins can modify other super admin accounts" },
+          { status: 403 }
+        );
+      }
+    }
+
     const data: Record<string, unknown> = {};
     if (role !== undefined) data.role = role;
     if (isActive !== undefined) data.isActive = isActive;
+
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json({ error: "No changes specified" }, { status: 400 });
+    }
 
     const user = await prisma.user.update({
       where: { id: userId },

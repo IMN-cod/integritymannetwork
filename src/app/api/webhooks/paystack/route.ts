@@ -22,18 +22,20 @@ export async function POST(request: Request) {
 
     // Idempotency: Paystack does not provide a stable event id, but each
     // event carries a unique reference + event name. Use the composite.
-    const paystackEventKey = `${event.event || "unknown"}:${event.data?.reference || event.data?.id || ""}`;
-    if (paystackEventKey.endsWith(":")) {
-      // No reference present; can't safely de-dupe — process anyway.
-    } else {
-      try {
-        await prisma.webhookEvent.create({
-          data: { provider: "paystack", eventId: paystackEventKey, eventType: event.event },
-        });
-      } catch {
-        console.log("[PAYSTACK_WEBHOOK] Duplicate event ignored:", paystackEventKey);
-        return NextResponse.json({ received: true, duplicate: true });
-      }
+    const reference = event.data?.reference || event.data?.id;
+    if (!reference) {
+      console.warn("[PAYSTACK_WEBHOOK] Event missing reference/id — rejected:", event.event);
+      return NextResponse.json({ error: "Missing event reference" }, { status: 400 });
+    }
+
+    const paystackEventKey = `${event.event || "unknown"}:${reference}`;
+    try {
+      await prisma.webhookEvent.create({
+        data: { provider: "paystack", eventId: paystackEventKey, eventType: event.event },
+      });
+    } catch {
+      console.log("[PAYSTACK_WEBHOOK] Duplicate event ignored:", paystackEventKey);
+      return NextResponse.json({ received: true, duplicate: true });
     }
 
     switch (event.event) {
@@ -42,30 +44,34 @@ export async function POST(request: Request) {
         const { reference, metadata } = data;
 
         if (metadata?.orderId) {
-          await prisma.order.update({
-            where: { id: metadata.orderId },
+          const updated = await prisma.order.updateMany({
+            where: { id: metadata.orderId, paymentStatus: "PENDING" },
             data: {
               paymentStatus: "PAID",
               status: "CONFIRMED",
               paymentId: reference,
             },
           });
-          sendOrderPaidNotifications(metadata.orderId).catch((err) =>
-            console.error("[PAYSTACK_WEBHOOK_NOTIFY]", err)
-          );
+          if (updated.count > 0) {
+            sendOrderPaidNotifications(metadata.orderId).catch((err) =>
+              console.error("[PAYSTACK_WEBHOOK_NOTIFY]", err)
+            );
+          }
         }
 
         if (metadata?.donationId) {
-          await prisma.donation.update({
-            where: { id: metadata.donationId },
+          const updated = await prisma.donation.updateMany({
+            where: { id: metadata.donationId, status: "PENDING" },
             data: {
               status: "PAID",
               paymentId: reference,
             },
           });
-          sendDonationPaidNotifications(metadata.donationId).catch((err) =>
-            console.error("[PAYSTACK_WEBHOOK_NOTIFY]", err)
-          );
+          if (updated.count > 0) {
+            sendDonationPaidNotifications(metadata.donationId).catch((err) =>
+              console.error("[PAYSTACK_WEBHOOK_NOTIFY]", err)
+            );
+          }
         }
         break;
       }

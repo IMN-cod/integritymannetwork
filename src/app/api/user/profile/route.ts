@@ -40,14 +40,20 @@ export async function GET() {
         role: true,
         createdAt: true,
         updatedAt: true,
-        // Check if user has a password (for showing password change form)
-        password: true,
+        _count: { select: { accounts: true } },
       },
     });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
+
+    // Determine hasPassword without fetching the hash itself
+    const pwCheck = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { password: true },
+    });
+    const hasPassword = !!pwCheck?.password;
 
     // Get notification preferences from SiteSetting (user-specific keys)
     const prefKeys = [
@@ -79,7 +85,7 @@ export async function GET() {
         phone: user.phone,
         bio: user.bio,
         role: user.role,
-        hasPassword: !!user.password,
+        hasPassword,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },

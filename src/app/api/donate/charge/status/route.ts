@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkChargeStatus } from "@/lib/payments/paystack";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // ───────────────────────────────────────
 // GET /api/donate/charge/status?reference=xxx — Poll charge status
@@ -9,9 +10,12 @@ import { checkChargeStatus } from "@/lib/payments/paystack";
 
 export async function GET(req: NextRequest) {
   try {
+    const rl = rateLimit(req, { key: "donate:charge:status", limit: 30, windowMs: 60 * 1000 });
+    if (!rl.ok) return rateLimitResponse(rl);
+
     const reference = req.nextUrl.searchParams.get("reference");
 
-    if (!reference) {
+    if (!reference || reference.length > 200) {
       return NextResponse.json(
         { error: "Reference is required" },
         { status: 400 }
@@ -23,14 +27,14 @@ export async function GET(req: NextRequest) {
     if (charge.status === "success") {
       const donationId = charge.metadata?.donationId as string | undefined;
       if (donationId) {
-        await prisma.donation.update({
-          where: { id: donationId },
+        // Only update if currently PENDING — prevents overwriting a completed record
+        await prisma.donation.updateMany({
+          where: { id: donationId, status: "PENDING" },
           data: { status: "PAID", paymentId: charge.reference },
         });
       } else {
-        // Fallback: look up by paymentId reference
         await prisma.donation.updateMany({
-          where: { paymentId: charge.reference },
+          where: { paymentId: charge.reference, status: "PENDING" },
           data: { status: "PAID" },
         });
       }
@@ -39,13 +43,13 @@ export async function GET(req: NextRequest) {
     if (charge.status === "failed" || charge.status === "timeout") {
       const donationId = charge.metadata?.donationId as string | undefined;
       if (donationId) {
-        await prisma.donation.update({
-          where: { id: donationId },
+        await prisma.donation.updateMany({
+          where: { id: donationId, status: "PENDING" },
           data: { status: "FAILED" },
         });
       } else {
         await prisma.donation.updateMany({
-          where: { paymentId: charge.reference },
+          where: { paymentId: charge.reference, status: "PENDING" },
           data: { status: "FAILED" },
         });
       }

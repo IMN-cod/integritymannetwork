@@ -148,10 +148,27 @@ export async function POST(
     }
 
     const { slug } = await params;
-    const { content, type, mediaUrl, parentId } = await req.json();
+    const body = await req.json();
+    const { content, type, mediaUrl, parentId } = body;
 
     if (!content?.trim()) {
       return NextResponse.json({ error: "Content is required" }, { status: 400 });
+    }
+
+    if (typeof content !== "string" || content.length > 4000) {
+      return NextResponse.json({ error: "Message must be under 4000 characters" }, { status: 400 });
+    }
+
+    // Validate mediaUrl is a real URL if provided (prevents injecting arbitrary strings)
+    if (mediaUrl !== undefined && mediaUrl !== null) {
+      try {
+        const parsed = new URL(mediaUrl);
+        if (!["https:", "http:"].includes(parsed.protocol)) {
+          return NextResponse.json({ error: "Invalid media URL" }, { status: 400 });
+        }
+      } catch {
+        return NextResponse.json({ error: "Invalid media URL" }, { status: 400 });
+      }
     }
 
     const channel = await prisma.chatChannel.findUnique({

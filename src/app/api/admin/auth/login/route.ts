@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { logAdminAction, logLoginAttempt } from "@/lib/audit";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
@@ -15,6 +16,10 @@ const loginSchema = z.object({
 // POST /api/admin/auth/login — Admin-only login validation
 export async function POST(req: NextRequest) {
   try {
+    // IP-level rate limit — 10 attempts per 15 min per IP regardless of account
+    const rl = rateLimit(req, { key: "admin:login", limit: 10, windowMs: 15 * 60 * 1000 });
+    if (!rl.ok) return rateLimitResponse(rl, "Too many login attempts. Please wait before trying again.");
+
     const body = await req.json();
     const validation = loginSchema.safeParse(body);
 

@@ -33,14 +33,15 @@ const orderSchema = z.object({
   discountPercent: z.coerce.number().min(0).max(100).optional(),
   shippingMethodId: z.string().optional(),
   shippingMethodName: z.string().optional(),
+  shippingZoneId: z.string().optional(),
   items: z.array(
     z.object({
       productId: z.string(),
       variantId: z.string().optional(),
-      quantity: z.coerce.number().int().min(1),
-      price: z.coerce.number().min(0),
+      quantity: z.coerce.number().int().min(1).max(999),
+      // price is NOT trusted from the client — we resolve it from the DB below
     })
-  ),
+  ).min(1),
 });
 
 export async function POST(request: Request) {
@@ -56,8 +57,56 @@ export async function POST(request: Request) {
     const body = await request.json();
     const data = orderSchema.parse(body);
 
-    // Calculate totals
-    const subtotal = data.items.reduce(
+    // ── Resolve authoritative prices from DB (never trust client-supplied prices) ──
+    const productIds = data.items.map((i) => i.productId);
+    const dbProducts = await prisma.product.findMany({
+      where: { id: { in: productIds }, isActive: true },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        stock: true,
+        isDigital: true,
+        shippingClass: true,
+        freeShipping: true,
+        handlingFee: true,
+        variants: {
+          select: { id: true, price: true, stock: true },
+        },
+      },
+    });
+    const dbProductMap = new Map(dbProducts.map((p) => [p.id, p]));
+
+    // Validate every ordered item exists and has enough stock
+    for (const item of data.items) {
+      const p = dbProductMap.get(item.productId);
+      if (!p) {
+        return NextResponse.json(
+          { error: `Product not found or unavailable` },
+          { status: 400 }
+        );
+      }
+      if (!p.isDigital && p.stock < item.quantity) {
+        return NextResponse.json(
+          { error: `Insufficient stock for "${p.name}"` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Resolve each item's price from DB (variant price if specified, else product price)
+    const resolvedItems = data.items.map((item) => {
+      const p = dbProductMap.get(item.productId)!;
+      let price = Number(p.price);
+      if (item.variantId) {
+        const variant = p.variants.find((v) => v.id === item.variantId);
+        if (variant?.price != null) price = Number(variant.price);
+      }
+      return { ...item, price };
+    });
+
+    // Calculate totals using server-authoritative prices
+    const subtotal = resolvedItems.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0
     );
@@ -87,28 +136,26 @@ export async function POST(request: Request) {
       if (chosen) methodPrice = chosen.price;
     }
 
-    // ── Per-product shipping data ─────────────────────────────────────────────
-    const productDetails = await prisma.product.findMany({
-      where: { id: { in: data.items.map((i) => i.productId) } },
-      select: {
-        id: true,
-        shippingClass: true,
-        freeShipping: true,
-        handlingFee: true,
-        isDigital: true,
-      },
-    });
+    // ── Zone surcharge ────────────────────────────────────────────────────────
+    let zoneSurcharge = 0;
+    if (data.shippingZoneId) {
+      const zone = shippingConfig.zones.find((z) => z.id === data.shippingZoneId && z.enabled);
+      if (zone) zoneSurcharge = zone.extraFee;
+    }
+
+    // ── Per-product shipping data (already fetched in dbProductMap) ───────────
+    const productDetails = dbProducts;
     const productMap = new Map(productDetails.map((p) => [p.id, p]));
 
     // Sum per-item handling fees (multiplied by quantity)
-    const totalHandlingFee = data.items.reduce((sum, item) => {
+    const totalHandlingFee = resolvedItems.reduce((sum, item) => {
       const p = productMap.get(item.productId);
       if (!p || !p.handlingFee) return sum;
       return sum + Number(p.handlingFee) * item.quantity;
     }, 0);
 
     // Find the highest-surcharge shipping class present in the cart (non-digital, non-individually-free items)
-    const cartClasses = data.items
+    const cartClasses = resolvedItems
       .map((item) => productMap.get(item.productId))
       .filter((p) => p && !p.isDigital && !p.freeShipping)
       .map((p) => p!.shippingClass ?? "STANDARD");
@@ -123,7 +170,7 @@ export async function POST(request: Request) {
       const cls = shippingConfig.classes.find((c) => c.id === classId);
       return cls ? !cls.freeShippingEligible : false;
     });
-    const allItemsInCartAreFree = data.items.every((item) => {
+    const allItemsInCartAreFree = resolvedItems.every((item) => {
       const p = productMap.get(item.productId);
       return p?.isDigital || p?.freeShipping;
     });
@@ -134,7 +181,7 @@ export async function POST(request: Request) {
 
     const shippingCost = isFreeShipping
       ? totalHandlingFee   // handling fees still apply even on free shipping
-      : methodPrice + classSurcharge + totalHandlingFee;
+      : methodPrice + zoneSurcharge + classSurcharge + totalHandlingFee;
 
     const total = afterDiscount + shippingCost;
 
@@ -144,15 +191,10 @@ export async function POST(request: Request) {
       orderCount + 1
     ).padStart(4, "0")}`;
 
-    // Fetch product names for order items
-    const productIds = data.items.map((item) => item.productId);
-    const products = await prisma.product.findMany({
-      where: { id: { in: productIds } },
-      select: { id: true, name: true },
-    });
-    const productNameMap = new Map(products.map((p: { id: string; name: string }) => [p.id, p.name]));
+    // productNameMap from already-fetched dbProducts
+    const productNameMap = new Map(dbProducts.map((p) => [p.id, p.name]));
 
-    // Create order with items
+    // Create order with items — use server-resolved prices only
     const order = await prisma.order.create({
       data: {
         userId: session.user.id,
@@ -165,7 +207,7 @@ export async function POST(request: Request) {
         paymentStatus: "PENDING",
         shippingAddress: data.shipping as Record<string, string>,
         items: {
-          create: data.items.map((item) => ({
+          create: resolvedItems.map((item) => ({
             productId: item.productId,
             productName: productNameMap.get(item.productId) || "Unknown Product",
             variantInfo: item.variantId || null,
@@ -192,14 +234,13 @@ export async function POST(request: Request) {
 
     // Initialize payment gateway
     let paymentUrl: string;
-    const customerEmail =
-      (data.shipping.email as string) || session.user.email || "";
+    const customerEmail = session.user.email || data.shipping.email || "";
 
     switch (data.paymentMethod) {
       case "STRIPE": {
         const stripeSession = await createStripeCheckoutSession({
           orderId: order.id,
-          items: data.items.map((item) => ({
+          items: resolvedItems.map((item) => ({
             name: productNameMap.get(item.productId) || "Product",
             price: item.price,
             quantity: item.quantity,
@@ -293,8 +334,8 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "10")));
     const skip = (page - 1) * limit;
 
     const isAdmin = ["ADMIN", "SUPER_ADMIN"].includes(
