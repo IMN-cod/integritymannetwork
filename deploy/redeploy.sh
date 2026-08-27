@@ -47,7 +47,9 @@ echo "==> Backing up PostgreSQL"
 BACKUP_DIR="/var/backups/imn"
 sudo install -d -m 700 -o deploy -g deploy "$BACKUP_DIR"
 BACKUP_FILE="$BACKUP_DIR/predeploy-$(date -u +%Y%m%dT%H%M%SZ)-${RELEASE_ID:0:12}.dump"
-pg_dump --format=custom --no-owner --file="$BACKUP_FILE" "$DATABASE_URL"
+PG_DUMP_URL="$(node -e 'const url = new URL(process.env.DATABASE_URL); url.searchParams.delete("schema"); process.stdout.write(url.toString())')"
+pg_dump --format=custom --no-owner --file="$BACKUP_FILE" "$PG_DUMP_URL"
+unset PG_DUMP_URL
 chmod 600 "$BACKUP_FILE"
 
 echo "==> Applying non-destructive schema synchronization"
