@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const projectRoot = process.cwd();
+
 // Optional analytics origin (Plausible self-hosted or hosted).
 const PLAUSIBLE_SRC = process.env.NEXT_PUBLIC_PLAUSIBLE_SRC || "";
 let plausibleOrigin = "";
@@ -54,6 +56,10 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // ── Output mode (standalone for Render / Docker) ──
   output: "standalone",
+  outputFileTracingRoot: projectRoot,
+  turbopack: {
+    root: projectRoot,
+  },
 
   // ── Compiler optimizations ──
   compiler: {
