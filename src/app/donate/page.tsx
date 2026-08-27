@@ -98,7 +98,7 @@ function DonateHero() {
             {[
               { icon: Lock, text: "Secure Payments" },
               { icon: Globe, text: "Give From Anywhere" },
-              { icon: Shield, text: "Tax-Deductible" },
+              { icon: Shield, text: "Purpose-Driven" },
             ].map((item) => (
               <div key={item.text} className="flex items-center gap-2">
                 <item.icon className="w-3.5 h-3.5 text-orange-500/60" />
@@ -1284,7 +1284,7 @@ function DonatePageContent() {
                     { icon: Shield, label: "Verified Ministry" },
                     { icon: Lock, label: "Data Protected" },
                     { icon: Globe, label: "Global Reach" },
-                    { icon: Heart, label: "100% To Mission" },
+                    { icon: Heart, label: "Mission Focused" },
                   ].map((item) => (
                     <div key={item.label} className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
