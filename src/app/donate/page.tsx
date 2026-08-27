@@ -24,26 +24,6 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
-// Paystack inline type
-declare global {
-  interface Window {
-    PaystackPop: {
-      setup: (config: {
-        key: string;
-        email: string;
-        amount: number;
-        currency?: string;
-        ref?: string;
-        access_code?: string;
-        channels?: string[];
-        label?: string;
-        onClose: () => void;
-        callback: (response: { reference: string; status: string }) => void;
-      }) => { openIframe: () => void };
-    };
-  }
-}
-
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
   whileInView: { opacity: 1, y: 0 },
@@ -271,19 +251,11 @@ function DonationForm() {
   const [otp, setOtp] = useState("");
   const [otpSubmitting, setOtpSubmitting] = useState(false);
 
-  // Paystack popup for card (loaded dynamically)
-  const [paystackReady, setPaystackReady] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "https://js.paystack.co/v1/inline.js";
-    script.async = true;
-    script.onload = () => setPaystackReady(true);
-    document.body.appendChild(script);
     return () => {
-      script.remove();
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, []);
@@ -436,15 +408,11 @@ function DonationForm() {
     }
   };
 
-  // ── Step 2b: Card payment (uses Paystack popup — PCI requirement) ──
+  // ── Step 2b: Card payment (Paystack-hosted checkout) ──
   const handleCardPayment = async () => {
-    if (!paystackReady || !window.PaystackPop) {
-      setError("Card payment is loading. Please wait a moment.");
-      return;
-    }
     if (!donationId) return;
 
-    setDonationState({ step: "processing", message: "Opening secure card form..." });
+    setDonationState({ step: "processing", message: "Opening secure Paystack checkout..." });
 
     try {
       // Initialize Paystack transaction using the existing donation record
@@ -456,47 +424,11 @@ function DonationForm() {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to initialize card payment");
+      if (!data.paymentUrl || typeof data.paymentUrl !== "string") {
+        throw new Error("Paystack did not return a checkout URL");
+      }
 
-      const handler = window.PaystackPop.setup({
-        key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "",
-        email: donorEmail,
-        amount: Math.round((currentAmount || 0) * 100),
-        currency: "GHS",
-        access_code: data.accessCode,
-        channels: ["card"],
-        label: donorName || undefined,
-        callback: (response: { reference: string; status: string }) => {
-          // Verify the payment
-          setDonationState({ step: "processing", message: "Verifying payment..." });
-          fetch("/api/donate/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ reference: response.reference }),
-          })
-            .then((r) => r.json())
-            .then((d) => {
-              if (d.success) {
-                setDonationState({
-                  step: "success",
-                  reference: response.reference,
-                  amount: d.amount,
-                  channel: d.channel,
-                });
-              } else {
-                setDonationState({ step: "failed", message: d.error || "Verification failed" });
-              }
-            })
-            .catch(() => {
-              setDonationState({ step: "failed", message: "Could not verify payment." });
-            });
-        },
-        onClose: () => {
-          setDonationState({ step: "payment" });
-          setError("Card payment was cancelled. You can try again.");
-        },
-      });
-
-      handler.openIframe();
+      window.location.assign(data.paymentUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setDonationState({ step: "payment" });
@@ -1285,7 +1217,7 @@ function DonatePageContent() {
             <SectionHeading
               label="Give"
               title="Make Your Donation"
-              description="Choose your amount, frequency, and preferred payment method to support the vision."
+              description="Choose your amount, details, and preferred payment method to support the vision."
             />
           </motion.div>
 

@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
         donationId: donation.id,
         type: "donation",
       },
+      channels: ["card"],
     });
 
     await prisma.donation.update({

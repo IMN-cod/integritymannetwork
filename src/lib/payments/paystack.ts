@@ -43,12 +43,23 @@ export async function initializePaystackTransaction({
   reference,
   callbackUrl,
   metadata,
+  channels,
 }: {
   email: string;
   amount: number; // In GHS — will be converted to Pesewas
   reference: string;
   callbackUrl: string;
   metadata?: Record<string, unknown>;
+  channels?: Array<
+    | "card"
+    | "bank"
+    | "ussd"
+    | "qr"
+    | "eft"
+    | "mobile_money"
+    | "bank_transfer"
+    | "apple_pay"
+  >;
 }) {
   const response = await fetch(`${PAYSTACK_BASE_URL}/transaction/initialize`, {
     method: "POST",
@@ -61,6 +72,7 @@ export async function initializePaystackTransaction({
       callback_url: callbackUrl,
       metadata: metadata || {},
       currency: "GHS",
+      ...(channels?.length ? { channels } : {}),
     }),
   });
 
