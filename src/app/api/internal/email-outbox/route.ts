@@ -5,11 +5,19 @@ export const dynamic = "force-dynamic";
 
 function isLocalRequest(request: NextRequest) {
   const host = request.headers.get("host") || "";
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  return (
-    !forwardedFor &&
-    (host === "127.0.0.1:3000" || host === "localhost:3000")
-  );
+  const forwardedFor = request.headers.get("x-forwarded-for")?.trim();
+  const isLoopbackHost =
+    host === "127.0.0.1:3000" || host === "localhost:3000";
+  const isLoopbackPeer =
+    !forwardedFor ||
+    forwardedFor === "127.0.0.1" ||
+    forwardedFor === "::1" ||
+    forwardedFor === "::ffff:127.0.0.1";
+
+  // Next.js standalone synthesizes x-forwarded-for from the direct socket
+  // address even when nginx was bypassed. Accept only an exact loopback host
+  // and peer; public nginx requests always carry the real client address.
+  return isLoopbackHost && isLoopbackPeer;
 }
 
 export async function POST(request: NextRequest) {
