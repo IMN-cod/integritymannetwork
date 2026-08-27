@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { initializePaystackTransaction } from "@/lib/payments/paystack";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -11,6 +12,9 @@ const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimit(req, { key: "donate:init-card", limit: 10, windowMs: 60 * 1000 });
+    if (!rl.ok) return rateLimitResponse(rl);
+
     const { donationId } = await req.json();
 
     if (!donationId || typeof donationId !== "string") {
@@ -31,10 +35,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (donation.status === "PAID") {
+    if (donation.status !== "PENDING" || donation.paymentMethod !== "PAYSTACK") {
       return NextResponse.json(
-        { error: "This donation has already been paid" },
-        { status: 400 }
+        { error: "Donation is not available for a new Paystack transaction" },
+        { status: 409 }
       );
     }
 

@@ -177,10 +177,10 @@ export async function optimizeImage(
   }
 
   // Step 4 — build resize options
-  const resizeOptions: sharp.ResizeOptions = {
+  const resizeOptions = {
     width: preset.width,
     height: preset.height,
-    fit: preset.fit as sharp.FitEnum[keyof sharp.FitEnum],
+    fit: preset.fit,
     withoutEnlargement: true,
     ...(preset.fit === "cover" && preset.useAttentionCrop
       ? { position: sharp.strategy.attention }

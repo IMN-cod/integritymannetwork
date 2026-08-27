@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { validatePaystackWebhook } from "@/lib/payments/paystack";
-import { sendOrderPaidNotifications, sendDonationPaidNotifications } from "@/lib/email";
+import {
+  validatePaystackWebhook,
+  verifyPaystackTransaction,
+} from "@/lib/payments/paystack";
+import { finalizePaystackPayment } from "@/lib/payments/finalize";
 
 export async function POST(request: Request) {
   try {
@@ -18,7 +21,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const event = JSON.parse(body);
+    const event = JSON.parse(body) as {
+      event?: string;
+      data?: {
+        id?: string | number;
+        reference?: string;
+        metadata?: Record<string, unknown>;
+      };
+    };
 
     // Idempotency: Paystack does not provide a stable event id, but each
     // event carries a unique reference + event name. Use the composite.
@@ -29,73 +39,46 @@ export async function POST(request: Request) {
     }
 
     const paystackEventKey = `${event.event || "unknown"}:${reference}`;
-    try {
-      await prisma.webhookEvent.create({
-        data: { provider: "paystack", eventId: paystackEventKey, eventType: event.event },
-      });
-    } catch {
-      console.log("[PAYSTACK_WEBHOOK] Duplicate event ignored:", paystackEventKey);
-      return NextResponse.json({ received: true, duplicate: true });
-    }
 
     switch (event.event) {
       case "charge.success": {
-        const data = event.data;
-        const { reference, metadata } = data;
-
-        if (metadata?.orderId) {
-          const updated = await prisma.order.updateMany({
-            where: { id: metadata.orderId, paymentStatus: "PENDING" },
-            data: {
-              paymentStatus: "PAID",
-              status: "CONFIRMED",
-              paymentId: reference,
-            },
-          });
-          if (updated.count > 0) {
-            sendOrderPaidNotifications(metadata.orderId).catch((err) =>
-              console.error("[PAYSTACK_WEBHOOK_NOTIFY]", err)
-            );
-          }
+        const verified = await verifyPaystackTransaction(String(reference));
+        if (verified.reference !== String(reference)) {
+          return NextResponse.json(
+            { error: "Verified reference mismatch" },
+            { status: 400 }
+          );
         }
-
-        if (metadata?.donationId) {
-          const updated = await prisma.donation.updateMany({
-            where: { id: metadata.donationId, status: "PENDING" },
-            data: {
-              status: "PAID",
-              paymentId: reference,
-            },
-          });
-          if (updated.count > 0) {
-            sendDonationPaidNotifications(metadata.donationId).catch((err) =>
-              console.error("[PAYSTACK_WEBHOOK_NOTIFY]", err)
-            );
-          }
-        }
+        await finalizePaystackPayment(verified);
         break;
       }
 
       case "transfer.failed":
       case "charge.failed": {
-        const failData = event.data;
+        const failData = event.data || {};
         console.error(
           `[PAYSTACK_WEBHOOK] ${event.event}:`,
-          failData.reference
+          failData.reference || failData.id
         );
 
-        // Mark donation as FAILED in database
-        if (failData.metadata?.donationId) {
-          await prisma.donation.update({
-            where: { id: failData.metadata.donationId },
+        const failedReference = String(failData.reference || failData.id || "");
+        const donationId = typeof failData.metadata?.donationId === "string"
+          ? failData.metadata.donationId
+          : undefined;
+        const orderId = typeof failData.metadata?.orderId === "string"
+          ? failData.metadata.orderId
+          : undefined;
+
+        if (donationId) {
+          await prisma.donation.updateMany({
+            where: { id: donationId, paymentId: failedReference, status: "PENDING" },
             data: { status: "FAILED" },
           });
         }
 
-        // Mark order as FAILED if applicable
-        if (failData.metadata?.orderId) {
-          await prisma.order.update({
-            where: { id: failData.metadata.orderId },
+        if (orderId) {
+          await prisma.order.updateMany({
+            where: { id: orderId, paymentId: failedReference, paymentStatus: "PENDING" },
             data: { paymentStatus: "FAILED" },
           });
         }
@@ -104,6 +87,14 @@ export async function POST(request: Request) {
 
       default:
         console.log(`[PAYSTACK_WEBHOOK] Unhandled event: ${event.event}`);
+    }
+
+    try {
+      await prisma.webhookEvent.create({
+        data: { provider: "paystack", eventId: paystackEventKey, eventType: event.event },
+      });
+    } catch {
+      return NextResponse.json({ received: true, duplicate: true });
     }
 
     return NextResponse.json({ received: true });

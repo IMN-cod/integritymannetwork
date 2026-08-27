@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { useCartStore } from "@/stores";
 import { formatCurrency } from "@/lib/utils";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import type { ShippingMethod, ShippingZone, ShippingClassConfig } from "@/app/api/store/shipping/route";
 
 // ── Ghana location data ───────────────────────────────────────────────────────
@@ -147,11 +148,12 @@ interface ShippingInfo {
 }
 
 export default function CheckoutPage() {
+  const router = useRouter();
   const { data: session, status: sessionStatus } = useSession();
   const isGuest = sessionStatus !== "loading" && !session?.user;
 
   const {
-    items, clearCart,
+    items,
     discountCode, discountPercent,
     applyDiscount, removeDiscount, checkoutItems,
   } = useCartStore();
@@ -159,7 +161,7 @@ export default function CheckoutPage() {
   const checkoutList = checkoutItems();
 
   const [step, setStep] = useState<Step>("shipping");
-  const [paymentMethod, setPaymentMethod] = useState<"PAYSTACK" | "STRIPE" | "PAYPAL">("PAYSTACK");
+  const [paymentMethod, setPaymentMethod] = useState<"PAYSTACK">("PAYSTACK");
   const [placing, setPlacing] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
 
@@ -415,11 +417,10 @@ export default function CheckoutPage() {
         return;
       }
 
-      clearCart();
       if (data.paymentUrl) {
         window.location.href = data.paymentUrl;
       } else {
-        window.location.href = `/dashboard?order=success&ref=${data.order?.orderNumber}`;
+        router.push(`/dashboard/orders?payment=success&ref=${data.order?.orderNumber}`);
       }
     } catch {
       setOrderError("Something went wrong. Please try again.");

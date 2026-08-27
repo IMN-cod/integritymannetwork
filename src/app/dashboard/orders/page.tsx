@@ -10,10 +10,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { formatCurrency, cn, formatDate } from "@/lib/utils";
+import { useCartStore } from "@/stores";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -305,6 +305,10 @@ function OrderCard({ order }: { order: Order }) {
 export default function OrdersPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const paymentResult = searchParams.get("payment");
+  const paymentReference = searchParams.get("ref");
+  const clearCart = useCartStore((state) => state.clearCart);
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -316,8 +320,11 @@ export default function OrdersPage() {
   }, [status, router]);
 
   useEffect(() => {
+    if (paymentResult === "success") clearCart();
+  }, [paymentResult, clearCart]);
+
+  useEffect(() => {
     if (status !== "authenticated") return;
-    setLoading(true);
     fetch("/api/orders")
       .then((r) => r.json())
       .then((data) => setOrders(Array.isArray(data) ? data : data.orders ?? []))
@@ -372,6 +379,24 @@ export default function OrdersPage() {
       </section>
 
       <div className="divider-gradient" />
+
+      {paymentResult && (
+        <div className="container-wide max-w-4xl pt-8">
+          <div
+            role="status"
+            className={cn(
+              "rounded-xl border px-5 py-4 text-sm",
+              paymentResult === "success"
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                : "border-red-500/30 bg-red-500/10 text-red-200"
+            )}
+          >
+            {paymentResult === "success"
+              ? `Payment verified${paymentReference ? ` for ${paymentReference}` : ""}. Your receipt has been queued for email delivery.`
+              : "We could not verify that payment. No order was marked paid; please retry or contact support if your account was charged."}
+          </div>
+        </div>
+      )}
 
       <section className="py-10 sm:py-14">
         <div className="container-wide max-w-4xl">

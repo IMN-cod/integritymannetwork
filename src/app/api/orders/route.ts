@@ -2,13 +2,12 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { createStripeCheckoutSession } from "@/lib/payments/stripe";
 import { initializePaystackTransaction } from "@/lib/payments/paystack";
-import { createPayPalOrder } from "@/lib/payments/paypal";
 import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { DEFAULT_SHIPPING_CONFIG, ShippingConfig } from "@/app/api/store/shipping/route";
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+const PROMO_CODES: Record<string, number> = { TIMN10: 10 };
 
 // ═══════════════════════════════════════════════════════
 // POST /api/orders — Create new order
@@ -28,9 +27,8 @@ const shippingSchema = z.object({
 
 const orderSchema = z.object({
   shipping: shippingSchema,
-  paymentMethod: z.enum(["PAYSTACK", "STRIPE", "PAYPAL"]),
-  discountCode: z.string().optional(),
-  discountPercent: z.coerce.number().min(0).max(100).optional(),
+  paymentMethod: z.literal("PAYSTACK"),
+  discountCode: z.string().trim().max(50).optional(),
   shippingMethodId: z.string().optional(),
   shippingMethodName: z.string().optional(),
   shippingZoneId: z.string().optional(),
@@ -129,7 +127,14 @@ export async function POST(request: Request) {
     }
 
     // ── Resolve delivery method price ─────────────────────────────────────────
-    const afterDiscount = subtotal * (1 - (data.discountPercent ?? 0) / 100);
+    const normalizedDiscountCode = data.discountCode?.toUpperCase();
+    const discountPercent = normalizedDiscountCode
+      ? PROMO_CODES[normalizedDiscountCode]
+      : 0;
+    if (normalizedDiscountCode && discountPercent === undefined) {
+      return NextResponse.json({ error: "Invalid promo code" }, { status: 400 });
+    }
+    const afterDiscount = subtotal * (1 - discountPercent / 100);
     let methodPrice = shippingConfig.methods.find((m) => m.enabled)?.price ?? DEFAULT_SHIPPING_CONFIG.methods[0].price;
     if (data.shippingMethodId) {
       const chosen = shippingConfig.methods.find((m) => m.id === data.shippingMethodId && m.enabled);
@@ -186,10 +191,10 @@ export async function POST(request: Request) {
     const total = afterDiscount + shippingCost;
 
     // Generate order number
-    const orderCount = await prisma.order.count();
-    const orderNumber = `ORD-${new Date().getFullYear()}-${String(
-      orderCount + 1
-    ).padStart(4, "0")}`;
+    const orderNumber = `ORD-${new Date().getFullYear()}-${crypto.randomUUID()
+      .replace(/-/g, "")
+      .slice(0, 10)
+      .toUpperCase()}`;
 
     // productNameMap from already-fetched dbProducts
     const productNameMap = new Map(dbProducts.map((p) => [p.id, p.name]));
@@ -206,6 +211,8 @@ export async function POST(request: Request) {
         status: "PENDING",
         paymentStatus: "PENDING",
         shippingAddress: data.shipping as Record<string, string>,
+        customerEmail: data.shipping.email,
+        customerPhone: data.shipping.phone,
         items: {
           create: resolvedItems.map((item) => ({
             productId: item.productId,
@@ -227,42 +234,16 @@ export async function POST(request: Request) {
       },
     });
 
-    // Clear cart after order
-    await prisma.cartItem.deleteMany({
-      where: { userId: session.user.id },
-    });
-
     // Initialize payment gateway
     let paymentUrl: string;
     const customerEmail = session.user.email || data.shipping.email || "";
 
-    switch (data.paymentMethod) {
-      case "STRIPE": {
-        const stripeSession = await createStripeCheckoutSession({
-          orderId: order.id,
-          items: resolvedItems.map((item) => ({
-            name: productNameMap.get(item.productId) || "Product",
-            price: item.price,
-            quantity: item.quantity,
-          })),
-          customerEmail,
-          successUrl: `${BASE_URL}/dashboard?order=success&ref=${order.orderNumber}`,
-          cancelUrl: `${BASE_URL}/checkout?status=cancelled`,
-        });
-        paymentUrl = stripeSession.url!;
-        await prisma.order.update({
-          where: { id: order.id },
-          data: { paymentId: stripeSession.id },
-        });
-        break;
-      }
-
-      case "PAYSTACK": {
+    try {
         const paystackResult = await initializePaystackTransaction({
           email: customerEmail,
           amount: total,
           reference: order.orderNumber,
-          callbackUrl: `${BASE_URL}/dashboard?order=success&ref=${order.orderNumber}`,
+          callbackUrl: `${BASE_URL}/api/orders/paystack/callback`,
           metadata: {
             orderId: order.id,
             orderNumber: order.orderNumber,
@@ -274,36 +255,13 @@ export async function POST(request: Request) {
           where: { id: order.id },
           data: { paymentId: paystackResult.reference },
         });
-        break;
-      }
-
-      case "PAYPAL": {
-        const paypalOrder = await createPayPalOrder({
-          amount: total,
-          currency: "GHS",
-          description: `Order ${order.orderNumber} — The Integrity Man Network`,
-          orderId: order.id,
-          returnUrl: `${BASE_URL}/dashboard?order=success&ref=${order.orderNumber}`,
-          cancelUrl: `${BASE_URL}/checkout?status=cancelled`,
-        });
-        const approveLink = paypalOrder.links.find(
-          (l) => l.rel === "approve"
-        );
-        paymentUrl = approveLink?.href || "";
-        await prisma.order.update({
-          where: { id: order.id },
-          data: { paymentId: paypalOrder.id },
-        });
-        break;
-      }
-
-      default:
-        return NextResponse.json(
-          { error: "Unsupported payment method" },
-          { status: 400 }
-        );
+    } catch (error) {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { paymentStatus: "FAILED" },
+      });
+      throw error;
     }
-
     return NextResponse.json({ order, paymentUrl }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {

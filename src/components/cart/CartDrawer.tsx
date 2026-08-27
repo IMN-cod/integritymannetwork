@@ -18,12 +18,11 @@ export function CartDrawer() {
     items, isOpen, closeCart, removeItem, updateQuantity, subtotal, totalItems,
     discountCode, discountPercent, discountAmount,
     applyDiscount, removeDiscount,
-    selectedIds, toggleItemSelection, selectAllItems, checkoutItems,
+    selectedIds, toggleItemSelection, selectAllItems,
   } = useCartStore();
 
   const allSelected = selectedIds === null;
   const selectedCount = allSelected ? items.length : (selectedIds?.length ?? 0);
-  const checkoutList = checkoutItems();
 
   const [coupon, setCoupon] = useState("");
   const [couponError, setCouponError] = useState("");

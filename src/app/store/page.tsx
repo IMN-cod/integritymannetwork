@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ShoppingBag, Search, ShoppingCart, Eye, Shield, Tag,
+  ShoppingBag, Search, ShoppingCart, Eye, Shield,
   ChevronDown, X, Grid3X3, LayoutList, ArrowUpDown, Package,
   CheckCircle2, Loader2, ChevronLeft, ChevronRight, Heart,
   Star, RotateCcw, Filter, Clock, Minus, Plus,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ShoppingBag, Star, Minus, Plus, ShoppingCart, ArrowLeft,
@@ -10,10 +10,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useCartStore, useWishlistStore, useRecentlyViewedStore } from "@/stores";
 
@@ -300,6 +299,7 @@ function ReviewsSection({ product }: { product: ProductDetail }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ProductPage() {
+  const router = useRouter();
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
 
@@ -385,7 +385,7 @@ export default function ProductPage() {
     openCart();
   };
 
-  const handleBuyNow = () => { handleAddToCart(); window.location.href = "/checkout"; };
+  const handleBuyNow = () => { handleAddToCart(); router.push("/checkout"); };
 
   const handleShare = async () => {
     if (navigator.share) {

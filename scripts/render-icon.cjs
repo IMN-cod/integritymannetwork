@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 // Builds the official IMN icon by masking the supplied photo (Icon Main.jpeg)
 // inside a shield shape on a rounded black background, in monochrome.
 // Outputs SVG (vector wrapper around embedded PNG) + 128/192/256/512/1024 PNGs.

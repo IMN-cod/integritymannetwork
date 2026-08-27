@@ -33,19 +33,21 @@ export default function WishlistPage() {
   const { addItem, openCart } = useCartStore();
 
   const [products, setProducts] = useState<WishlistProduct[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loadedIdsKey, setLoadedIdsKey] = useState("");
   const [shared, setShared] = useState(false);
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (ids.length === 0) { setProducts([]); return; }
-    setLoading(true);
+    if (ids.length === 0) return;
+    const idsKey = ids.join(",");
     fetch(`/api/store?ids=${ids.join(",")}&limit=100`)
       .then((r) => r.json())
       .then((data) => setProducts(data.products ?? []))
       .catch(() => setProducts([]))
-      .finally(() => setLoading(false));
+      .finally(() => setLoadedIdsKey(idsKey));
   }, [ids]);
+
+  const loading = ids.length > 0 && loadedIdsKey !== ids.join(",");
 
   const handleAddToCart = (product: WishlistProduct) => {
     const price = Number(product.price);

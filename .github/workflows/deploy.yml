@@ -12,26 +12,54 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
-      - name: Set up SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.HETZNER_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ secrets.HETZNER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+      - name: Check out release
+        uses: actions/checkout@v4
 
-      - name: Trigger redeploy on server
+      - name: Package tracked source
+        run: git archive --format=tar.gz --output=imn-release.tar.gz HEAD
+
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.HETZNER_SSH_KEY }}
+          SSH_HOST: ${{ secrets.HETZNER_HOST }}
+        run: |
+          test -n "$SSH_KEY"
+          test -n "$SSH_HOST"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Upload release
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_HOST }}
+        run: |
+          scp -i ~/.ssh/id_ed25519 \
+            -o StrictHostKeyChecking=yes \
+            imn-release.tar.gz \
+            "deploy@$SSH_HOST:/tmp/imn-${GITHUB_SHA}-${GITHUB_RUN_ID}.tar.gz"
+
+      - name: Build and activate release
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_HOST }}
         run: |
           ssh -i ~/.ssh/id_ed25519 \
-              -o StrictHostKeyChecking=accept-new \
-              -o ServerAliveInterval=30 \
-              deploy@${{ secrets.HETZNER_HOST }} \
-              'bash /var/www/imn/integrity-man-network/deploy/redeploy.sh'
+            -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=30 \
+            "deploy@$SSH_HOST" \
+            "set -euo pipefail
+             release='/var/www/imn/releases/${GITHUB_SHA}-${GITHUB_RUN_ID}'
+             archive='/tmp/imn-${GITHUB_SHA}-${GITHUB_RUN_ID}.tar.gz'
+             mkdir -p \"\$release\"
+             tar -xzf \"\$archive\" -C \"\$release\"
+             rm -f -- \"\$archive\"
+             bash \"\$release/deploy/redeploy.sh\" \"\$release\" '${GITHUB_SHA}'"
 
-      - name: Smoke check
+      - name: Production smoke checks
         run: |
-          sleep 5
-          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 https://www.integritymannetwork.com/)
-          echo "Production responded: $code"
-          [ "$code" = "200" ]
+          curl --fail --silent --show-error --max-time 15 \
+            https://www.integritymannetwork.com/api/health
+          curl --fail --silent --show-error --max-time 15 \
+            --output /dev/null https://www.integritymannetwork.com/

@@ -12,8 +12,6 @@ import {
   Globe,
   Building2,
   Users,
-  Zap,
-  Sparkles,
   CheckCircle2,
   XCircle,
   AlertCircle,
@@ -260,7 +258,6 @@ const MOMO_PROVIDERS: { id: MomoProvider; name: string; color: string }[] = [
 function DonationForm() {
   const [selectedAmount, setSelectedAmount] = useState<number | null>(200);
   const [customAmount, setCustomAmount] = useState<string>("");
-  const [donationType, setDonationType] = useState<"one-time" | "monthly">("one-time");
   const [donorEmail, setDonorEmail] = useState("");
   const [donorName, setDonorName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -356,7 +353,7 @@ function DonationForm() {
         body: JSON.stringify({
           amount: currentAmount,
           currency: "GHS",
-          isRecurring: donationType === "monthly",
+          isRecurring: false,
           paymentMethod: "PAYSTACK",
           donorEmail,
           donorName: donorName || undefined,
@@ -609,7 +606,7 @@ function DonationForm() {
           </div>
           <div className="flex items-center justify-between gap-8">
             <span className="text-xs text-zinc-500">Type</span>
-            <span className="text-xs text-zinc-300">{donationType === "monthly" ? "Monthly Recurring" : "One-Time"}</span>
+            <span className="text-xs text-zinc-300">One-Time</span>
           </div>
         </div>
 
@@ -784,7 +781,7 @@ function DonationForm() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[10px] sm:text-xs text-zinc-400 uppercase tracking-wider font-medium">
-                {donationType === "monthly" ? "Monthly Donation" : "One-Time Donation"}
+                One-Time Donation
               </p>
               <p className="text-2xl sm:text-3xl font-bold text-white font-display mt-1">
                 {formatCurrency(currentAmount || 0)}
@@ -975,45 +972,14 @@ function DonationForm() {
           <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
             <span className="text-[10px] font-bold text-white">1</span>
           </div>
-          <span className="text-xs sm:text-sm font-semibold text-white tracking-wide">Choose Frequency</span>
+          <span className="text-xs sm:text-sm font-semibold text-white tracking-wide">Donation Type</span>
         </div>
-        <div className="flex gap-1.5 p-1 rounded-xl bg-zinc-800/60 border border-zinc-700/40 w-full sm:w-fit">
-          {(["one-time", "monthly"] as const).map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setDonationType(type)}
-              className={cn(
-                "flex-1 sm:flex-none px-5 sm:px-8 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-300 relative",
-                donationType === type
-                  ? "text-white"
-                  : "text-zinc-500 hover:text-zinc-300"
-              )}
-            >
-              {donationType === type && (
-                <motion.div
-                  layoutId="frequency-bg"
-                  className="absolute inset-0 bg-linear-to-r from-orange-500 to-orange-600 rounded-lg shadow-lg shadow-orange-500/25"
-                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                />
-              )}
-              <span className="relative z-10 flex items-center gap-1.5">
-                {type === "monthly" && <Zap className="w-3 h-3" />}
-                {type === "one-time" ? "One-Time" : "Monthly"}
-              </span>
-            </button>
-          ))}
+        <div className="inline-flex px-8 py-3 rounded-xl bg-linear-to-r from-orange-500 to-orange-600 text-white text-xs sm:text-sm font-semibold shadow-lg shadow-orange-500/25">
+          One-Time Donation
         </div>
-        {donationType === "monthly" && (
-          <motion.p
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            className="text-[10px] sm:text-xs text-orange-400/80 mt-2 flex items-center gap-1.5"
-          >
-            <Sparkles className="w-3 h-3" />
-            Monthly giving creates sustained, lasting impact
-          </motion.p>
-        )}
+        <p className="text-[10px] sm:text-xs text-zinc-500 mt-2">
+          You will authorize this payment once; no automatic recurring charge is created.
+        </p>
       </div>
 
       {/* ── Step 2: Amount ── */}
@@ -1206,7 +1172,7 @@ function DonationStatus() {
       })
         .then((r) => r.json())
         .then((d) => setVerified(d.success === true))
-        .catch(() => setVerified(true)) // Fallback: trust webhook
+        .catch(() => setVerified(false))
         .finally(() => setVerifying(false));
     }
   }, [status, trxref, verified, verifying]);
@@ -1214,7 +1180,7 @@ function DonationStatus() {
   if (!status) return null;
 
   // Show spinner while verifying a redirect-based payment
-  if (status === "success" && trxref && verifying) {
+  if (status === "success" && trxref && (verifying || verified === null)) {
     return (
       <section className="section-padding relative">
         <div className="container-wide max-w-2xl mx-auto text-center">
@@ -1244,7 +1210,7 @@ function DonationStatus() {
           transition={{ duration: 0.5 }}
           className="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 backdrop-blur-sm p-8 sm:p-12"
         >
-          {status === "success" ? (
+          {status === "success" && verified === true ? (
             <>
               <div className="w-16 h-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center mx-auto mb-6">
                 <CheckCircle2 className="w-8 h-8 text-green-500" />

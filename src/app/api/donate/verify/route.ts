@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyPaystackTransaction } from "@/lib/payments/paystack";
+import {
+  finalizePaystackDonation,
+  PaymentValidationError,
+} from "@/lib/payments/finalize";
 import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
-
-const TOLERANCE_GHS = 0.5; // allow GHC 0.50 rounding difference
 
 // ───────────────────────────────────────
 // POST /api/donate/verify — Verify payment after Paystack popup
@@ -32,54 +33,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Resolve the donation record first so we can validate the paid amount
-    const donationId = (verification.metadata?.donationId as string) || null;
-    let donation = null;
-
-    if (donationId) {
-      donation = await prisma.donation.findUnique({
-        where: { id: donationId },
-        select: { id: true, amount: true, status: true },
-      });
-    } else {
-      donation = await prisma.donation.findFirst({
-        where: { paymentId: verification.reference },
-        select: { id: true, amount: true, status: true },
-      });
-    }
-
-    if (!donation) {
-      console.error("[DONATE_VERIFY] No matching donation for reference:", reference);
-      return NextResponse.json({ error: "Donation record not found" }, { status: 404 });
-    }
-
-    // Amount guard: Paystack returns amount in Pesewas; convert to GHS for comparison
-    const paidAmountGHS = verification.amount / 100;
-    const expectedAmountGHS = Number(donation.amount);
-    if (Math.abs(paidAmountGHS - expectedAmountGHS) > TOLERANCE_GHS) {
-      console.error(
-        `[DONATE_VERIFY] Amount mismatch: paid=${paidAmountGHS} expected=${expectedAmountGHS} ref=${reference}`
-      );
-      return NextResponse.json({ error: "Payment amount does not match" }, { status: 400 });
-    }
-
-    // Idempotent: only update if still PENDING (prevent overwriting later states)
-    if (donation.status === "PENDING") {
-      await prisma.donation.update({
-        where: { id: donation.id },
-        data: { status: "PAID", paymentId: verification.reference },
-      });
-    }
+    const result = await finalizePaystackDonation(verification);
 
     return NextResponse.json({
       success: true,
-      donationId: donation.id,
+      donationId: result.id,
       reference: verification.reference,
-      amount: paidAmountGHS,
+      amount: verification.amount / 100,
       channel: verification.channel,
     });
   } catch (error) {
     console.error("[DONATE_VERIFY_ERROR]", error);
+    if (error instanceof PaymentValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     return NextResponse.json(
       { error: "Verification failed" },
       { status: 500 }

@@ -134,6 +134,87 @@ export async function verifySmtpConnection(override: SmtpOverride): Promise<{ ok
   }
 }
 
+export async function queueEmail(
+  dedupeKey: string,
+  { to, subject, html, replyTo }: EmailOptions
+): Promise<void> {
+  const recipients = Array.isArray(to) ? to : [to];
+  await prisma.emailOutbox.upsert({
+    where: { dedupeKey },
+    update: {},
+    create: {
+      dedupeKey,
+      recipients,
+      subject,
+      html,
+      replyTo,
+    },
+  });
+}
+
+function retryDelayMs(attempts: number) {
+  return Math.min(6 * 60 * 60 * 1000, 60 * 1000 * 2 ** Math.max(0, attempts - 1));
+}
+
+export async function processEmailOutbox(limit = 20) {
+  const now = new Date();
+  const staleSending = new Date(now.getTime() - 10 * 60 * 1000);
+  const deliveries = await prisma.emailOutbox.findMany({
+    where: {
+      OR: [
+        { status: { in: ["PENDING", "FAILED"] }, nextAttemptAt: { lte: now } },
+        { status: "SENDING", updatedAt: { lte: staleSending } },
+      ],
+    },
+    orderBy: { createdAt: "asc" },
+    take: Math.min(100, Math.max(1, limit)),
+  });
+
+  let sent = 0;
+  let failed = 0;
+
+  for (const delivery of deliveries) {
+    const claimed = await prisma.emailOutbox.updateMany({
+      where: { id: delivery.id, status: delivery.status },
+      data: { status: "SENDING", attempts: { increment: 1 } },
+    });
+    if (claimed.count === 0) continue;
+
+    const recipients = Array.isArray(delivery.recipients)
+      ? delivery.recipients.filter((value): value is string => typeof value === "string")
+      : [];
+    const result = recipients.length
+      ? await sendEmail({
+          to: recipients,
+          subject: delivery.subject,
+          html: delivery.html,
+          replyTo: delivery.replyTo || undefined,
+        })
+      : { ok: false, error: "No valid recipients" };
+
+    if (result.ok) {
+      await prisma.emailOutbox.update({
+        where: { id: delivery.id },
+        data: { status: "SENT", sentAt: new Date(), lastError: null },
+      });
+      sent++;
+    } else {
+      const attempts = delivery.attempts + 1;
+      await prisma.emailOutbox.update({
+        where: { id: delivery.id },
+        data: {
+          status: "FAILED",
+          lastError: (result.error || "Email delivery failed").slice(0, 2000),
+          nextAttemptAt: new Date(Date.now() + retryDelayMs(attempts)),
+        },
+      });
+      failed++;
+    }
+  }
+
+  return { processed: deliveries.length, sent, failed };
+}
+
 // ─── Admin notification helper ──────────────────────────────────────────────
 
 type NotifyEvent =
@@ -158,11 +239,13 @@ export async function notifyAdmins({
   subject,
   html,
   replyTo,
+  dedupeKey,
 }: {
   event: NotifyEvent;
   subject: string;
   html: string;
   replyTo?: string;
+  dedupeKey?: string;
 }): Promise<{ ok: boolean; error?: string; skipped?: boolean }> {
   const config = await getEmailSettings();
   const toggle = config[EVENT_TOGGLE[event]];
@@ -177,6 +260,11 @@ export async function notifyAdmins({
   if (recipients.length === 0) {
     console.warn("[EMAIL] No admin recipients configured for event:", event);
     return { ok: false, error: "No admin email configured" };
+  }
+
+  if (dedupeKey) {
+    await queueEmail(dedupeKey, { to: recipients, subject, html, replyTo });
+    return { ok: true };
   }
 
   return sendEmail({ to: recipients, subject, html, replyTo });
@@ -317,7 +405,7 @@ export async function sendOrderPaidNotifications(orderId: string): Promise<void>
       .join("");
 
     if (customerEmail) {
-      await sendEmail({
+      await queueEmail(`order:${order.id}:customer-receipt`, {
         to: customerEmail,
         subject: `Order confirmed — ${order.orderNumber}`,
         html: brandedEmail({
@@ -340,6 +428,7 @@ export async function sendOrderPaidNotifications(orderId: string): Promise<void>
 
     await notifyAdmins({
       event: "order",
+      dedupeKey: `order:${order.id}:admin-notification`,
       subject: `New paid order: ${order.orderNumber} (${formatMoney(Number(order.total))})`,
       html: brandedEmail({
         preheader: `Order ${order.orderNumber} paid`,
@@ -358,6 +447,7 @@ export async function sendOrderPaidNotifications(orderId: string): Promise<void>
     });
   } catch (error) {
     console.error("[ORDER_PAID_NOTIFY]", error);
+    throw error;
   }
 }
 
@@ -379,7 +469,7 @@ export async function sendDonationPaidNotifications(donationId: string): Promise
     const amount = formatMoney(Number(donation.amount), donation.currency || "GHS");
 
     if (donorEmail) {
-      await sendEmail({
+      await queueEmail(`donation:${donation.id}:donor-receipt`, {
         to: donorEmail,
         subject: `Thank you for your donation — ${amount}`,
         html: brandedEmail({
@@ -401,6 +491,7 @@ export async function sendDonationPaidNotifications(donationId: string): Promise
 
     await notifyAdmins({
       event: "donation",
+      dedupeKey: `donation:${donation.id}:admin-notification`,
       subject: `New donation received: ${amount}`,
       html: brandedEmail({
         preheader: "A new donation was received",
@@ -420,6 +511,7 @@ export async function sendDonationPaidNotifications(donationId: string): Promise
     });
   } catch (error) {
     console.error("[DONATION_PAID_NOTIFY]", error);
+    throw error;
   }
 }
 

@@ -2,18 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
-import { createStripeDonationSession } from "@/lib/payments/stripe";
 import { initializePaystackTransaction } from "@/lib/payments/paystack";
-import { createPayPalOrder } from "@/lib/payments/paypal";
 import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 const donationSchema = z.object({
   amount: z.number().positive("Amount must be greater than 0").max(1_000_000, "Amount exceeds maximum allowed"),
-  currency: z.string().default("GHS"),
-  isRecurring: z.boolean().default(false),
-  paymentMethod: z.enum(["PAYSTACK", "STRIPE", "PAYPAL"]),
+  currency: z.literal("GHS").default("GHS"),
+  isRecurring: z.literal(false).default(false),
+  paymentMethod: z.literal("PAYSTACK"),
   campaignId: z.string().optional(),
   message: z.string().max(1000).optional(),
   donorEmail: z.string().email().optional(),
@@ -81,74 +79,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let paymentUrl: string;
-    let accessCode: string | undefined;
-
-    switch (data.paymentMethod) {
-      case "STRIPE": {
-        const stripeSession = await createStripeDonationSession({
-          amount: data.amount,
-          donorEmail: email,
-          donationId: donation.id,
-          recurring: data.isRecurring,
-          successUrl: `${BASE_URL}/donate?status=success&ref=${donation.id}`,
-          cancelUrl: `${BASE_URL}/donate?status=cancelled`,
-        });
-        paymentUrl = stripeSession.url!;
-        // Store Stripe session ID for reference
-        await prisma.donation.update({
-          where: { id: donation.id },
-          data: { paymentId: stripeSession.id },
-        });
-        break;
-      }
-
-      case "PAYSTACK": {
-        const paystackResult = await initializePaystackTransaction({
-          email,
-          amount: data.amount,
-          reference: `DON-${donation.id}`,
-          callbackUrl: `${BASE_URL}/donate?status=success&ref=${donation.id}`,
-          metadata: {
-            donationId: donation.id,
-            type: "donation",
-          },
-        });
-        paymentUrl = paystackResult.authorization_url;
-        accessCode = paystackResult.access_code;
-        await prisma.donation.update({
-          where: { id: donation.id },
-          data: { paymentId: paystackResult.reference },
-        });
-        break;
-      }
-
-      case "PAYPAL": {
-        const paypalOrder = await createPayPalOrder({
-          amount: data.amount,
-          currency: data.currency,
-          description: "Donation — The Integrity Man Network",
-          orderId: donation.id,
-          returnUrl: `${BASE_URL}/donate?status=success&ref=${donation.id}`,
-          cancelUrl: `${BASE_URL}/donate?status=cancelled`,
-        });
-        const approveLink = paypalOrder.links.find(
-          (l) => l.rel === "approve"
-        );
-        paymentUrl = approveLink?.href || "";
-        await prisma.donation.update({
-          where: { id: donation.id },
-          data: { paymentId: paypalOrder.id },
-        });
-        break;
-      }
-
-      default:
-        return NextResponse.json(
-          { error: "Unsupported payment method" },
-          { status: 400 }
-        );
-    }
+    const paystackResult = await initializePaystackTransaction({
+      email,
+      amount: data.amount,
+      reference: `DON-${donation.id}`,
+      callbackUrl: `${BASE_URL}/donate?status=success&ref=${donation.id}`,
+      metadata: {
+        donationId: donation.id,
+        type: "donation",
+      },
+    });
+    const paymentUrl = paystackResult.authorization_url;
+    const accessCode = paystackResult.access_code;
+    await prisma.donation.update({
+      where: { id: donation.id },
+      data: { paymentId: paystackResult.reference },
+    });
 
     return NextResponse.json(
       {

@@ -4,14 +4,34 @@
 
 import crypto from "crypto";
 
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || "";
 const PAYSTACK_BASE_URL = "https://api.paystack.co";
+const PAYSTACK_TIMEOUT_MS = 15_000;
+
+function getSecretKey(): string {
+  const key = process.env.PAYSTACK_SECRET_KEY?.trim();
+  if (!key) throw new Error("Paystack is not configured");
+  return key;
+}
 
 function getHeaders(): Record<string, string> {
   return {
-    Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+    Authorization: `Bearer ${getSecretKey()}`,
     "Content-Type": "application/json",
   };
+}
+
+function requestSignal() {
+  return AbortSignal.timeout(PAYSTACK_TIMEOUT_MS);
+}
+
+function assertPaystackResponse(
+  response: Response,
+  data: { status?: boolean; message?: string },
+  fallbackMessage: string
+) {
+  if (!response.ok || data.status !== true) {
+    throw new Error(data.message || fallbackMessage);
+  }
 }
 
 /**
@@ -33,6 +53,7 @@ export async function initializePaystackTransaction({
   const response = await fetch(`${PAYSTACK_BASE_URL}/transaction/initialize`, {
     method: "POST",
     headers: getHeaders(),
+    signal: requestSignal(),
     body: JSON.stringify({
       email,
       amount: Math.round(amount * 100), // Convert to Pesewas
@@ -45,9 +66,7 @@ export async function initializePaystackTransaction({
 
   const data = await response.json();
 
-  if (!data.status) {
-    throw new Error(data.message || "Paystack initialization failed");
-  }
+  assertPaystackResponse(response, data, "Paystack initialization failed");
 
   return data.data as {
     authorization_url: string;
@@ -61,18 +80,17 @@ export async function initializePaystackTransaction({
  */
 export async function verifyPaystackTransaction(reference: string) {
   const response = await fetch(
-    `${PAYSTACK_BASE_URL}/transaction/verify/${reference}`,
+    `${PAYSTACK_BASE_URL}/transaction/verify/${encodeURIComponent(reference)}`,
     {
       method: "GET",
       headers: getHeaders(),
+      signal: requestSignal(),
     }
   );
 
   const data = await response.json();
 
-  if (!data.status) {
-    throw new Error(data.message || "Verification failed");
-  }
+  assertPaystackResponse(response, data, "Verification failed");
 
   return data.data as {
     status: string;
@@ -105,6 +123,7 @@ export async function createPaystackPlan({
   const response = await fetch(`${PAYSTACK_BASE_URL}/plan`, {
     method: "POST",
     headers: getHeaders(),
+    signal: requestSignal(),
     body: JSON.stringify({
       name,
       amount: Math.round(amount * 100),
@@ -115,9 +134,7 @@ export async function createPaystackPlan({
 
   const data = await response.json();
 
-  if (!data.status) {
-    throw new Error(data.message || "Plan creation failed");
-  }
+  assertPaystackResponse(response, data, "Plan creation failed");
 
   return data.data;
 }
@@ -129,11 +146,23 @@ export function validatePaystackWebhook(
   body: string,
   signature: string
 ): boolean {
+  if (!signature) return false;
+  let secretKey: string;
+  try {
+    secretKey = getSecretKey();
+  } catch {
+    return false;
+  }
   const hash = crypto
-    .createHmac("sha512", PAYSTACK_SECRET_KEY)
+    .createHmac("sha512", secretKey)
     .update(body)
     .digest("hex");
-  return hash === signature;
+  const hashBuffer = Buffer.from(hash, "utf8");
+  const signatureBuffer = Buffer.from(signature, "utf8");
+  return (
+    hashBuffer.length === signatureBuffer.length &&
+    crypto.timingSafeEqual(hashBuffer, signatureBuffer)
+  );
 }
 
 // ═══════════════════════════════════════════════════════
@@ -161,6 +190,7 @@ export async function chargeMobileMoney({
   const response = await fetch(`${PAYSTACK_BASE_URL}/charge`, {
     method: "POST",
     headers: getHeaders(),
+    signal: requestSignal(),
     body: JSON.stringify({
       email,
       amount: Math.round(amount * 100),
@@ -173,9 +203,7 @@ export async function chargeMobileMoney({
 
   const data = await response.json();
 
-  if (!data.status) {
-    throw new Error(data.message || "Mobile money charge failed");
-  }
+  assertPaystackResponse(response, data, "Mobile money charge failed");
 
   return data.data as {
     reference: string;
@@ -201,6 +229,7 @@ export async function chargeBankTransfer({
   const response = await fetch(`${PAYSTACK_BASE_URL}/charge`, {
     method: "POST",
     headers: getHeaders(),
+    signal: requestSignal(),
     body: JSON.stringify({
       email,
       amount: Math.round(amount * 100),
@@ -213,9 +242,7 @@ export async function chargeBankTransfer({
 
   const data = await response.json();
 
-  if (!data.status) {
-    throw new Error(data.message || "Bank transfer charge failed");
-  }
+  assertPaystackResponse(response, data, "Bank transfer charge failed");
 
   return data.data as {
     reference: string;
@@ -234,14 +261,13 @@ export async function checkChargeStatus(reference: string) {
     {
       method: "GET",
       headers: getHeaders(),
+      signal: requestSignal(),
     }
   );
 
   const data = await response.json();
 
-  if (!data.status) {
-    throw new Error(data.message || "Could not check charge status");
-  }
+  assertPaystackResponse(response, data, "Could not check charge status");
 
   return data.data as {
     reference: string;
@@ -267,14 +293,13 @@ export async function submitChargeOTP({
   const response = await fetch(`${PAYSTACK_BASE_URL}/charge/submit_otp`, {
     method: "POST",
     headers: getHeaders(),
+    signal: requestSignal(),
     body: JSON.stringify({ reference, otp }),
   });
 
   const data = await response.json();
 
-  if (!data.status) {
-    throw new Error(data.message || "OTP submission failed");
-  }
+  assertPaystackResponse(response, data, "OTP submission failed");
 
   return data.data as {
     reference: string;

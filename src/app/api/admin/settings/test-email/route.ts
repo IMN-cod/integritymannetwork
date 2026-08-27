@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { sendEmail, brandedEmail, verifySmtpConnection } from "@/lib/email";
+import { sendEmail, brandedEmail, getEmailSettings, verifySmtpConnection } from "@/lib/email";
 import { z } from "zod";
 
 const schema = z.object({
@@ -13,6 +13,8 @@ const schema = z.object({
   emailFromName: z.string().optional(),
   emailFromAddress: z.string().optional(),
 });
+
+const MASKED_SECRET = "••••••••";
 
 // POST /api/admin/settings/test-email — Send a test email
 export async function POST(req: NextRequest) {
@@ -34,7 +36,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { to, smtpHost, smtpPort, smtpUser, smtpPassword, emailFromName, emailFromAddress } = parsed.data;
+    const { to, smtpHost, smtpPort, smtpUser, emailFromName, emailFromAddress } = parsed.data;
+    let { smtpPassword } = parsed.data;
+    if (smtpPassword === MASKED_SECRET) {
+      smtpPassword = (await getEmailSettings()).smtpPassword;
+    }
 
     // If override credentials supplied, validate all required fields
     const useOverride = Boolean(smtpHost || smtpUser || smtpPassword);

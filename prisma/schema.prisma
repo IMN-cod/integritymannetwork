@@ -740,6 +740,31 @@ model SiteSetting {
   type  String @default("string")
 }
 
+model EmailOutbox {
+  id            String             @id @default(cuid())
+  dedupeKey     String             @unique
+  recipients    Json
+  subject       String
+  html          String             @db.Text
+  replyTo       String?
+  status        EmailOutboxStatus  @default(PENDING)
+  attempts      Int                @default(0)
+  lastError     String?            @db.Text
+  nextAttemptAt DateTime           @default(now())
+  sentAt        DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([status, nextAttemptAt])
+}
+
+enum EmailOutboxStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+}
+
 // ═══════════════════════════════════════════════════════
 // ADMIN AUDIT TRAIL & SECURITY
 // ═══════════════════════════════════════════════════════
