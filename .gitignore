@@ -36,6 +36,12 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# private operational credentials and exports
+/IMN-Master-Credentials.html
+/IMN-Master-Credentials.pdf
+/IMN Private Backup/
+/.secrets/
+
 # vercel
 .vercel
 
